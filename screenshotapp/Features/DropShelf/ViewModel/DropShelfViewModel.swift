@@ -3,11 +3,7 @@ import Combine
 import KeyboardShortcuts
 
 @MainActor
-final class DropShelfViewModel: ObservableObject {
-    /// Shared instance so other modules (e.g. the screenshot shelf's "Add to Shelf"
-    /// action) can push items into the same shelf the app scene observes.
-    static let shared = DropShelfViewModel()
-
+final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     @Published private(set) var items: [DropShelfItem] = []
     @Published private(set) var isShelfVisible = false
     @Published private(set) var isDropTargeted = false

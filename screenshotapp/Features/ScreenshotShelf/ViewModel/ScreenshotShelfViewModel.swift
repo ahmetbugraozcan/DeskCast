@@ -13,8 +13,10 @@ final class ScreenshotShelfViewModel: ObservableObject {
     private var autoHideConfiguration: AutoHideConfiguration?
     private var toastController: ToastPanelController?
     private lazy var panelController = ScreenshotShelfPanelController(store: self)
+    private let shelfCollector: ShelfCollecting
 
-    init() {
+    init(shelfCollector: ShelfCollecting) {
+        self.shelfCollector = shelfCollector
         ScreenshotShelfSettings.registerDefaults()
         ToolboxSettings.registerDefaults()
         autoHideConfiguration = AutoHideConfiguration(settings: ScreenshotShelfSettings.snapshot())
@@ -156,7 +158,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
 
     func addToShelf(_ item: ScreenshotItem) {
         let name = ScreenshotExportNaming.timestampedFilename(for: item.createdAt)
-        DropShelfViewModel.shared.addScreenshot(item.image, name: name)
+        shelfCollector.addScreenshot(item.image, name: name)
     }
 
     func showInFinder(_ item: ScreenshotItem) {

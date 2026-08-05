@@ -13,8 +13,8 @@ struct DeskCastApp: App {
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var screenshotStore = ScreenshotShelfViewModel()
-    @StateObject private var dropShelfStore = DropShelfViewModel.shared
+    @StateObject private var screenshotStore: ScreenshotShelfViewModel
+    @StateObject private var dropShelfStore: DropShelfViewModel
     @AppStorage(ToolboxSettings.Keys.menuLayout)
     private var menuLayoutRaw = ToolboxSettings.defaultMenuLayout.rawValue
     @AppStorage(ToolboxSettings.Keys.language)
@@ -41,9 +41,11 @@ struct DeskCastApp: App {
     private var dropShelfShowInMenu = ToolboxSettings.defaultDropShelfShowInMenu
 
     init() {
-        ScreenshotShelfSettings.registerDefaults()
-        DropShelfSettings.registerDefaults()
-        ToolboxSettings.registerDefaults()
+        // Composition root wires the view models and their dependencies (and
+        // registers UserDefaults defaults) in one place.
+        let environment = AppEnvironment()
+        _screenshotStore = StateObject(wrappedValue: environment.screenshotShelf)
+        _dropShelfStore = StateObject(wrappedValue: environment.dropShelf)
     }
 
     var body: some Scene {
