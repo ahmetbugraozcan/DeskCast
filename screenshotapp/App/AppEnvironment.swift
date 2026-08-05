@@ -17,9 +17,14 @@ final class AppEnvironment {
         self.settings = settings
         settings.registerDefaults()
 
+        let toastPresenter = ToastPresenter()
+        let folderPicker = FolderPicker()
+
         let dropShelf = DropShelfViewModel(
             exporter: DropShelfExportService(),
-            settings: settings
+            settings: settings,
+            toastPresenter: toastPresenter,
+            folderPicker: folderPicker
         )
         let screenshotShelf = ScreenshotShelfViewModel(
             shelfCollector: dropShelf,
@@ -27,7 +32,8 @@ final class AppEnvironment {
             recognizer: OCRTextRecognitionService(),
             exporter: ScreenshotExportService(),
             finderPath: FinderPathService(),
-            settings: settings
+            settings: settings,
+            toastPresenter: toastPresenter
         )
 
         self.dropShelf = dropShelf

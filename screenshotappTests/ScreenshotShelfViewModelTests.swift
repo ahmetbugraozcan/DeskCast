@@ -34,6 +34,12 @@ private struct NoopFinderPath: FinderPathProviding {
 }
 
 @MainActor
+private final class SpyToastPresenter: ToastPresenting {
+    private(set) var messages: [String] = []
+    func show(_ message: String, systemImage: String) { messages.append(message) }
+}
+
+@MainActor
 struct ScreenshotShelfViewModelTests {
 
     private func makeViewModel(collector: FakeShelfCollector) -> ScreenshotShelfViewModel {
@@ -43,7 +49,8 @@ struct ScreenshotShelfViewModelTests {
             recognizer: NoopRecognizer(),
             exporter: NoopExporter(),
             finderPath: NoopFinderPath(),
-            settings: SettingsRepository()
+            settings: SettingsRepository(),
+            toastPresenter: SpyToastPresenter()
         )
     }
 

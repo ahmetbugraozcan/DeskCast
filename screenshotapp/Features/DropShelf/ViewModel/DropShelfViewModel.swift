@@ -11,15 +11,23 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
 
     private var defaultsObserver: AnyCancellable?
     private var activeObserver: AnyCancellable?
-    private var toastController: ToastPanelController?
     private let shakeMonitor = DropShelfShakeMonitor()
     weak var presenter: DropShelfPresenting?
     private let exporter: DropShelfExporting
     private let settings: SettingsProviding
+    private let toastPresenter: ToastPresenting
+    private let folderPicker: FolderPicking
 
-    init(exporter: DropShelfExporting, settings: SettingsProviding) {
+    init(
+        exporter: DropShelfExporting,
+        settings: SettingsProviding,
+        toastPresenter: ToastPresenting,
+        folderPicker: FolderPicking
+    ) {
         self.exporter = exporter
         self.settings = settings
+        self.toastPresenter = toastPresenter
+        self.folderPicker = folderPicker
 
         shakeMonitor.onShake = { [weak self] in
             self?.showShelf()
@@ -357,18 +365,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     }
 
     private func chooseDestinationDirectory() -> URL? {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.canCreateDirectories = true
-        panel.prompt = AppLocalization.string("Send")
-
-        guard panel.runModal() == .OK else {
-            return nil
-        }
-
-        return panel.url
+        folderPicker.pickDirectory(prompt: AppLocalization.string("Send"), canCreate: true)
     }
 
     private func applySettingsChange() {
@@ -387,8 +384,6 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     }
 
     private func showToast(_ message: String, systemImage: String = "checkmark.circle.fill") {
-        let controller = toastController ?? ToastPanelController()
-        toastController = controller
-        controller.show(message: message, systemImage: systemImage)
+        toastPresenter.show(message, systemImage: systemImage)
     }
 }

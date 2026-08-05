@@ -13,9 +13,14 @@ final class ImageTextSearchViewModel: ObservableObject {
 
     private var indexingTask: Task<Void, Never>?
     private let textRecognizer: TextRecognizing
+    private let folderPicker: FolderPicking
 
-    init(textRecognizer: TextRecognizing = OCRTextRecognitionService()) {
+    init(
+        textRecognizer: TextRecognizing = OCRTextRecognitionService(),
+        folderPicker: FolderPicking? = nil
+    ) {
         self.textRecognizer = textRecognizer
+        self.folderPicker = folderPicker ?? FolderPicker()
     }
 
     deinit {
@@ -66,14 +71,10 @@ final class ImageTextSearchViewModel: ObservableObject {
     }
 
     func chooseFolder() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.canCreateDirectories = false
-        panel.prompt = AppLocalization.string("Choose")
-
-        guard panel.runModal() == .OK, let url = panel.url else {
+        guard let url = folderPicker.pickDirectory(
+            prompt: AppLocalization.string("Choose"),
+            canCreate: false
+        ) else {
             return
         }
 

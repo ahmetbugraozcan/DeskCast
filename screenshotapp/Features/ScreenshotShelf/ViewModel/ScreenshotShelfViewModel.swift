@@ -11,7 +11,6 @@ final class ScreenshotShelfViewModel: ObservableObject {
     private var expirationTimers: [UUID: DispatchWorkItem] = [:]
     private var expirationTimerTokens: [UUID: UUID] = [:]
     private var autoHideConfiguration: AutoHideConfiguration?
-    private var toastController: ToastPanelController?
     weak var presenter: ScreenshotShelfPresenting?
     private let shelfCollector: ShelfCollecting
     private let capturer: ScreenshotCapturing
@@ -19,6 +18,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     private let exporter: ScreenshotExporting
     private let finderPath: FinderPathProviding
     private let settings: SettingsProviding
+    private let toastPresenter: ToastPresenting
 
     init(
         shelfCollector: ShelfCollecting,
@@ -26,7 +26,8 @@ final class ScreenshotShelfViewModel: ObservableObject {
         recognizer: TextRecognizing,
         exporter: ScreenshotExporting,
         finderPath: FinderPathProviding,
-        settings: SettingsProviding
+        settings: SettingsProviding,
+        toastPresenter: ToastPresenting
     ) {
         self.shelfCollector = shelfCollector
         self.capturer = capturer
@@ -34,6 +35,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         self.exporter = exporter
         self.finderPath = finderPath
         self.settings = settings
+        self.toastPresenter = toastPresenter
         autoHideConfiguration = AutoHideConfiguration(settings: settings.screenshotShelfSettings())
         defaultsObserver = NotificationCenter.default.publisher(
             for: UserDefaults.didChangeNotification,
@@ -423,9 +425,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     private func showToast(_ message: String, systemImage: String = "checkmark.circle.fill") {
-        let controller = toastController ?? ToastPanelController()
-        toastController = controller
-        controller.show(message: message, systemImage: systemImage)
+        toastPresenter.show(message, systemImage: systemImage)
     }
 
     private func trimToMaxStackCount(_ maxStackCount: Int) -> [UUID] {
