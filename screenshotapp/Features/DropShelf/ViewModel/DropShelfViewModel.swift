@@ -14,8 +14,10 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     private var toastController: ToastPanelController?
     private let shakeMonitor = DropShelfShakeMonitor()
     private lazy var panelController = DropShelfPanelController(store: self)
+    private let exporter: DropShelfExporting
 
-    init() {
+    init(exporter: DropShelfExporting) {
+        self.exporter = exporter
         DropShelfSettings.registerDefaults()
         ToolboxSettings.registerDefaults()
 
@@ -171,7 +173,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
                 return
             }
 
-            let url = try DropShelfExportService.previewURL(for: item)
+            let url = try exporter.previewURL(for: item)
             NSWorkspace.shared.open(url)
         } catch {
             NSSound.beep()
@@ -189,7 +191,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         }
 
         do {
-            let exportedURLs = try DropShelfExportService.export(items, to: directoryURL)
+            let exportedURLs = try exporter.export(items, to: directoryURL)
             showToast(
                 exportedURLs.count == 1
                     ? AppLocalization.formatted("Sent %ld item", exportedURLs.count)
@@ -207,7 +209,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         }
 
         do {
-            _ = try DropShelfExportService.export([item], to: directoryURL)
+            _ = try exporter.export([item], to: directoryURL)
             showToast(AppLocalization.formatted("Sent %@", item.displayName))
         } catch {
             NSSound.beep()
@@ -242,7 +244,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
 
     func draggingPasteboardWriter(for item: DropShelfItem) -> NSPasteboardWriting? {
         do {
-            let url = try DropShelfExportService.previewURL(for: item)
+            let url = try exporter.previewURL(for: item)
             return url as NSURL
         } catch {
             NSSound.beep()
@@ -253,7 +255,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
 
     func draggingPasteboardWritersForAllItems() -> [NSPasteboardWriting] {
         do {
-            return try DropShelfExportService.draggingURLs(for: items).map { $0 as NSURL }
+            return try exporter.draggingURLs(for: items).map { $0 as NSURL }
         } catch {
             NSSound.beep()
             showToast(AppLocalization.string("Could not drag items"), systemImage: "exclamationmark.triangle.fill")

@@ -1,6 +1,10 @@
 import Foundation
 
-enum FinderPathService {
+protocol FinderPathProviding {
+    func frontFinderWindowPath() throws -> String
+}
+
+struct FinderPathService: FinderPathProviding {
     enum FinderPathError: LocalizedError {
         case scriptCreationFailed
         case scriptFailed(String)
@@ -21,7 +25,7 @@ enum FinderPathService {
         }
     }
 
-    static func frontFinderWindowPath() throws -> String {
+    func frontFinderWindowPath() throws -> String {
         let scriptSource = """
         tell application "Finder"
             if not (exists front Finder window) then

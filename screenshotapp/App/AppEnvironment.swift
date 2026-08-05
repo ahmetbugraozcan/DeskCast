@@ -12,8 +12,14 @@ final class AppEnvironment {
         DropShelfSettings.registerDefaults()
         ToolboxSettings.registerDefaults()
 
-        let dropShelf = DropShelfViewModel()
+        let dropShelf = DropShelfViewModel(exporter: DropShelfExportService())
         self.dropShelf = dropShelf
-        self.screenshotShelf = ScreenshotShelfViewModel(shelfCollector: dropShelf)
+        self.screenshotShelf = ScreenshotShelfViewModel(
+            shelfCollector: dropShelf,
+            capturer: ScreenshotCaptureService(),
+            recognizer: OCRTextRecognitionService(),
+            exporter: ScreenshotExportService(),
+            finderPath: FinderPathService()
+        )
     }
 }

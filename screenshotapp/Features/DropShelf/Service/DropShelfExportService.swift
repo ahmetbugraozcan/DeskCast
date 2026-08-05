@@ -2,19 +2,26 @@ import AppKit
 import Foundation
 
 @MainActor
-enum DropShelfExportService {
-    static func export(_ items: [DropShelfItem], to directoryURL: URL) throws -> [URL] {
+protocol DropShelfExporting {
+    func export(_ items: [DropShelfItem], to directoryURL: URL) throws -> [URL]
+    func previewURL(for item: DropShelfItem) throws -> URL
+    func draggingURLs(for items: [DropShelfItem]) throws -> [URL]
+}
+
+@MainActor
+struct DropShelfExportService: DropShelfExporting {
+    func export(_ items: [DropShelfItem], to directoryURL: URL) throws -> [URL] {
         try FileManager.default.createDirectory(
             at: directoryURL,
             withIntermediateDirectories: true
         )
 
         return try items.map { item in
-            try materialize(item, in: directoryURL)
+            try Self.materialize(item, in: directoryURL)
         }
     }
 
-    static func previewURL(for item: DropShelfItem) throws -> URL {
+    func previewURL(for item: DropShelfItem) throws -> URL {
         if let fileURL = item.fileURL {
             return fileURL
         }
@@ -23,10 +30,10 @@ enum DropShelfExportService {
             .appendingPathComponent("\(AppConstants.appName)-DropShelf", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
 
-        return try materialize(item, in: directoryURL)
+        return try Self.materialize(item, in: directoryURL)
     }
 
-    static func draggingURLs(for items: [DropShelfItem]) throws -> [URL] {
+    func draggingURLs(for items: [DropShelfItem]) throws -> [URL] {
         let directoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(AppConstants.appName)-DropShelf-Drag", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -36,7 +43,7 @@ enum DropShelfExportService {
                 return fileURL
             }
 
-            return try materialize(item, in: directoryURL)
+            return try Self.materialize(item, in: directoryURL)
         }
     }
 

@@ -14,9 +14,23 @@ final class ScreenshotShelfViewModel: ObservableObject {
     private var toastController: ToastPanelController?
     private lazy var panelController = ScreenshotShelfPanelController(store: self)
     private let shelfCollector: ShelfCollecting
+    private let capturer: ScreenshotCapturing
+    private let recognizer: TextRecognizing
+    private let exporter: ScreenshotExporting
+    private let finderPath: FinderPathProviding
 
-    init(shelfCollector: ShelfCollecting) {
+    init(
+        shelfCollector: ShelfCollecting,
+        capturer: ScreenshotCapturing,
+        recognizer: TextRecognizing,
+        exporter: ScreenshotExporting,
+        finderPath: FinderPathProviding
+    ) {
         self.shelfCollector = shelfCollector
+        self.capturer = capturer
+        self.recognizer = recognizer
+        self.exporter = exporter
+        self.finderPath = finderPath
         ScreenshotShelfSettings.registerDefaults()
         ToolboxSettings.registerDefaults()
         autoHideConfiguration = AutoHideConfiguration(settings: ScreenshotShelfSettings.snapshot())
@@ -55,7 +69,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         isCapturing = true
         let settings = ScreenshotShelfSettings.snapshot()
         let screenAnchor = panelController.screenAnchorForNewCapture(settings: settings)
-        ScreenshotCaptureService.captureSelectedArea(
+        capturer.captureSelectedArea(
             preserveClipboard: !settings.copyCapturedScreenshotToClipboard
         ) { [weak self] result in
             guard let self else { return }
@@ -80,7 +94,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         }
 
         isCapturing = true
-        ScreenshotCaptureService.captureSelectedArea(preserveClipboard: true) { [weak self] result in
+        capturer.captureSelectedArea(preserveClipboard: true) { [weak self] result in
             guard let self else { return }
 
             switch result {
@@ -131,7 +145,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         guard ToolboxSettings.isEnabled(.copyFinderPath) else { return }
 
         do {
-            let path = try FinderPathService.frontFinderWindowPath()
+            let path = try finderPath.frontFinderWindowPath()
             copyPathToPasteboard(path)
         } catch FinderPathService.FinderPathError.noOpenFinderWindow {
             NSSound.beep()
@@ -146,7 +160,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func copyRecognizedText(_ item: ScreenshotItem) {
-        OCRTextRecognitionService.recognizeText(in: item.image) { result in
+        recognizer.recognizeText(in: item.image) { result in
             switch result {
             case .success(let text):
                 self.copyTextToPasteboard(text)
@@ -271,7 +285,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
 
     private func saveWithPanel(_ item: ScreenshotItem, suggestedFilename: String) {
         do {
-            guard let url = try ScreenshotExportService.save(
+            guard let url = try exporter.save(
                 item.image,
                 suggestedFilename: suggestedFilename
             ) else {
@@ -294,7 +308,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     ) -> URL? {
         do {
             let settings = ScreenshotShelfSettings.snapshot()
-            let url = try ScreenshotExportService.save(
+            let url = try exporter.save(
                 item.image,
                 to: settings.saveDirectoryURL,
                 suggestedFilename: suggestedFilename
@@ -352,7 +366,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     private func recognizeAndCopyText(from image: NSImage) {
-        OCRTextRecognitionService.recognizeText(in: image) { [weak self] result in
+        recognizer.recognizeText(in: image) { [weak self] result in
             guard let self else { return }
 
             isCapturing = false

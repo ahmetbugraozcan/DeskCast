@@ -12,6 +12,11 @@ final class ImageTextSearchViewModel: ObservableObject {
     @Published private(set) var indexedCount = 0
 
     private var indexingTask: Task<Void, Never>?
+    private let textRecognizer: TextRecognizing
+
+    init(textRecognizer: TextRecognizing = OCRTextRecognitionService()) {
+        self.textRecognizer = textRecognizer
+    }
 
     deinit {
         indexingTask?.cancel()
@@ -125,7 +130,7 @@ final class ImageTextSearchViewModel: ObservableObject {
                     item.indexState = .scanning
                 }
 
-                let result = await Self.recognizedText(at: imageURL)
+                let result = await Self.recognizedText(at: imageURL, using: textRecognizer)
 
                 if Task.isCancelled {
                     return
@@ -139,14 +144,15 @@ final class ImageTextSearchViewModel: ObservableObject {
     }
 
     private nonisolated static func recognizedText(
-        at imageURL: URL
+        at imageURL: URL,
+        using recognizer: TextRecognizing
     ) async -> (text: String?, state: ImageSearchIndexState) {
         guard let image = NSImage(contentsOf: imageURL) else {
             return (nil, .failed)
         }
 
         do {
-            let text = try await OCRTextRecognitionService.recognizeText(in: image)
+            let text = try await recognizer.recognizeText(in: image)
             return (text, .indexed)
         } catch {
             return (nil, .indexed)

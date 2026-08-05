@@ -2,8 +2,14 @@ import AppKit
 import UniformTypeIdentifiers
 
 @MainActor
-enum ScreenshotExportService {
-    static func save(
+protocol ScreenshotExporting {
+    func save(_ image: NSImage, to directoryURL: URL, suggestedFilename: String) throws -> URL
+    func save(_ image: NSImage, suggestedFilename: String) throws -> URL?
+}
+
+@MainActor
+struct ScreenshotExportService: ScreenshotExporting {
+    func save(
         _ image: NSImage,
         to directoryURL: URL,
         suggestedFilename: String
@@ -17,7 +23,7 @@ enum ScreenshotExportService {
             withIntermediateDirectories: true
         )
 
-        let url = uniqueDestinationURL(
+        let url = Self.uniqueDestinationURL(
             in: directoryURL,
             suggestedFilename: suggestedFilename
         )
@@ -25,7 +31,7 @@ enum ScreenshotExportService {
         return url
     }
 
-    static func save(
+    func save(
         _ image: NSImage,
         suggestedFilename: String
     ) throws -> URL? {

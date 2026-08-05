@@ -20,8 +20,15 @@ enum ScreenshotCaptureError: Error {
     }
 }
 
-enum ScreenshotCaptureService {
-    static func captureSelectedArea(
+protocol ScreenshotCapturing {
+    func captureSelectedArea(
+        preserveClipboard: Bool,
+        completion: @escaping (Result<NSImage, ScreenshotCaptureError>) -> Void
+    )
+}
+
+struct ScreenshotCaptureService: ScreenshotCapturing {
+    func captureSelectedArea(
         preserveClipboard: Bool,
         completion: @escaping (Result<NSImage, ScreenshotCaptureError>) -> Void
     ) {
@@ -57,7 +64,7 @@ enum ScreenshotCaptureService {
 
             guard process.terminationStatus == 0 else {
                 DispatchQueue.main.async {
-                    if isCancellation(status: process.terminationStatus, message: message) {
+                    if Self.isCancellation(status: process.terminationStatus, message: message) {
                         completion(.failure(.cancelled))
                         return
                     }
