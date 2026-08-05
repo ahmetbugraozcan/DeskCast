@@ -20,7 +20,7 @@ enum PrivacyPermissionService {
     static func request(_ permission: PrivacyPermissionID) async -> PrivacyPermissionStatus {
         switch permission {
         case .screenRecording:
-            return ScreenRecordingPermissionService.ensureAccess() ? .granted : .notGranted
+            return ScreenRecordingPermissionService().ensureAccess() ? .granted : .notGranted
         case .finderAutomation:
             return await Task.detached {
                 finderAutomationStatus(askUserIfNeeded: true)
@@ -38,7 +38,7 @@ enum PrivacyPermissionService {
     static func openSettings(for permission: PrivacyPermissionID) {
         switch permission {
         case .screenRecording:
-            ScreenRecordingPermissionService.openSettings()
+            ScreenRecordingPermissionService().openSettings()
         case .finderAutomation:
             if let automationURL = URL(
                 string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"

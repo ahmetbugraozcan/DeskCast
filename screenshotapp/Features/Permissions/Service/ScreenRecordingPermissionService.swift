@@ -2,12 +2,19 @@ import AppKit
 import CoreGraphics
 
 @MainActor
-enum ScreenRecordingPermissionService {
-    static var hasAccess: Bool {
+protocol ScreenRecordingChecking {
+    var hasAccess: Bool { get }
+    func ensureAccess() -> Bool
+    func openSettings()
+}
+
+@MainActor
+struct ScreenRecordingPermissionService: ScreenRecordingChecking {
+    var hasAccess: Bool {
         CGPreflightScreenCaptureAccess()
     }
 
-    static func ensureAccess() -> Bool {
+    func ensureAccess() -> Bool {
         if hasAccess {
             return true
         }
@@ -15,7 +22,7 @@ enum ScreenRecordingPermissionService {
         return CGRequestScreenCaptureAccess()
     }
 
-    static func openSettings() {
+    func openSettings() {
         if let screenRecordingURL = URL(
             string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
         ), NSWorkspace.shared.open(screenRecordingURL) {

@@ -19,6 +19,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     private let finderPath: FinderPathProviding
     private let settings: ScreenshotShelfSettingsReading & ToolboxSettingsReading
     private let toastPresenter: ToastPresenting
+    private let screenRecording: ScreenRecordingChecking
 
     init(
         shelfCollector: ShelfCollecting,
@@ -27,7 +28,8 @@ final class ScreenshotShelfViewModel: ObservableObject {
         exporter: ScreenshotExporting,
         finderPath: FinderPathProviding,
         settings: ScreenshotShelfSettingsReading & ToolboxSettingsReading,
-        toastPresenter: ToastPresenting
+        toastPresenter: ToastPresenting,
+        screenRecording: ScreenRecordingChecking
     ) {
         self.shelfCollector = shelfCollector
         self.capturer = capturer
@@ -36,6 +38,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         self.finderPath = finderPath
         self.settings = settings
         self.toastPresenter = toastPresenter
+        self.screenRecording = screenRecording
         autoHideConfiguration = AutoHideConfiguration(settings: settings.screenshotShelfSettings())
         defaultsObserver = NotificationCenter.default.publisher(
             for: UserDefaults.didChangeNotification,
@@ -64,7 +67,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     func captureSelectedArea() {
         guard settings.isToolEnabled(.captureSelectedArea) else { return }
         guard !isCapturing else { return }
-        guard ScreenRecordingPermissionService.ensureAccess() else {
+        guard screenRecording.ensureAccess() else {
             showScreenRecordingPermissionHelp()
             return
         }
@@ -91,7 +94,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     func captureOCRTextFromSelectedArea() {
         guard settings.isToolEnabled(.captureOCR) else { return }
         guard !isCapturing else { return }
-        guard ScreenRecordingPermissionService.ensureAccess() else {
+        guard screenRecording.ensureAccess() else {
             showScreenRecordingPermissionHelp()
             return
         }
@@ -452,7 +455,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
             return
         }
 
-        if error.isLikelyPermissionProblem || !ScreenRecordingPermissionService.hasAccess {
+        if error.isLikelyPermissionProblem || !screenRecording.hasAccess {
             showScreenRecordingPermissionHelp()
         } else {
             NSSound.beep()
@@ -461,7 +464,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
 
     private func showScreenRecordingPermissionHelp() {
         PermissionAlertPresenter.showScreenRecordingHelp {
-            ScreenRecordingPermissionService.openSettings()
+            screenRecording.openSettings()
         }
     }
 

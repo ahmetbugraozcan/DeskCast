@@ -39,6 +39,12 @@ private final class SpyToastPresenter: ToastPresenting {
     func show(_ message: String, systemImage: String) { messages.append(message) }
 }
 
+private struct StubScreenRecording: ScreenRecordingChecking {
+    var hasAccess: Bool = true
+    func ensureAccess() -> Bool { hasAccess }
+    func openSettings() {}
+}
+
 @MainActor
 struct ScreenshotShelfViewModelTests {
 
@@ -50,7 +56,8 @@ struct ScreenshotShelfViewModelTests {
             exporter: NoopExporter(),
             finderPath: NoopFinderPath(),
             settings: SettingsRepository(),
-            toastPresenter: SpyToastPresenter()
+            toastPresenter: SpyToastPresenter(),
+            screenRecording: StubScreenRecording()
         )
     }
 

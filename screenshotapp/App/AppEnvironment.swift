@@ -33,7 +33,8 @@ final class AppEnvironment {
             exporter: ScreenshotExportService(),
             finderPath: FinderPathService(),
             settings: settings,
-            toastPresenter: toastPresenter
+            toastPresenter: toastPresenter,
+            screenRecording: ScreenRecordingPermissionService()
         )
 
         self.dropShelf = dropShelf
