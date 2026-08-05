@@ -21,6 +21,21 @@ enum ToolboxMenuLayout: String, CaseIterable, Identifiable {
     }
 }
 
+enum ToolCategory {
+    case screenshots
+    case files
+
+    /// Localization key (not the resolved string) so the model stays language-agnostic.
+    var titleKey: String {
+        switch self {
+        case .screenshots: "Screenshots"
+        case .files: "Files"
+        }
+    }
+}
+
+/// Stable identifier for a tool. Metadata lives in `ToolboxCatalog`, so adding a
+/// tool means adding one row there instead of editing parallel switches.
 enum ToolboxToolID: String, CaseIterable, Identifiable {
     case captureSelectedArea
     case captureOCR
@@ -30,88 +45,82 @@ enum ToolboxToolID: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
-        switch self {
-        case .captureSelectedArea: AppLocalization.string("Capture Selected Area")
-        case .captureOCR: AppLocalization.string("Capture OCR")
-        case .copyFinderPath: AppLocalization.string("Copy Finder Path")
-        case .imageSearch: AppLocalization.string("Search Images")
-        case .dropShelf: AppLocalization.string("Drop Shelf")
-        }
-    }
+    var descriptor: ToolboxTool { ToolboxCatalog.tool(for: self) }
 
-    var subtitle: String {
-        switch self {
-        case .captureSelectedArea:
-            AppLocalization.string("Capture a selected screen region into the floating shelf.")
-        case .captureOCR:
-            AppLocalization.string("Capture a selected region and copy recognized text.")
-        case .copyFinderPath:
-            AppLocalization.string("Copy the front Finder window path to the clipboard.")
-        case .imageSearch:
-            AppLocalization.string("Search local images by filename and recognized text.")
-        case .dropShelf:
-            AppLocalization.string("Collect dragged files, folders, links, text, and images before sending them together.")
-        }
-    }
+    var title: String { AppLocalization.string(descriptor.titleKey) }
+    var subtitle: String { AppLocalization.string(descriptor.subtitleKey) }
+    var systemImage: String { descriptor.systemImage }
+    var categoryTitle: String { AppLocalization.string(descriptor.category.titleKey) }
+    var defaultEnabled: Bool { descriptor.defaultEnabled }
+    var defaultShowInMenu: Bool { descriptor.defaultShowInMenu }
 
-    var systemImage: String {
-        switch self {
-        case .captureSelectedArea: "camera.viewfinder"
-        case .captureOCR: "text.viewfinder"
-        case .copyFinderPath: "folder"
-        case .imageSearch: "magnifyingglass"
-        case .dropShelf: "tray.and.arrow.down"
-        }
-    }
+    // Keys are derived from the raw value so they cannot drift from the catalog.
+    var enabledKey: String { "tool.\(rawValue).enabled" }
+    var showInMenuKey: String { "tool.\(rawValue).showInMenu" }
+}
 
-    var categoryTitle: String {
-        switch self {
-        case .captureSelectedArea, .captureOCR, .imageSearch:
-            AppLocalization.string("Screenshots")
-        case .copyFinderPath, .dropShelf:
-            AppLocalization.string("Files")
-        }
-    }
+/// One descriptor per tool; the single source of truth for tool metadata/defaults.
+struct ToolboxTool {
+    let id: ToolboxToolID
+    let titleKey: String
+    let subtitleKey: String
+    let systemImage: String
+    let category: ToolCategory
+    let defaultEnabled: Bool
+    let defaultShowInMenu: Bool
+}
 
-    var enabledKey: String {
-        switch self {
-        case .captureSelectedArea: ToolboxSettings.Keys.captureSelectedAreaEnabled
-        case .captureOCR: ToolboxSettings.Keys.captureOCREnabled
-        case .copyFinderPath: ToolboxSettings.Keys.copyFinderPathEnabled
-        case .imageSearch: ToolboxSettings.Keys.imageSearchEnabled
-        case .dropShelf: ToolboxSettings.Keys.dropShelfEnabled
-        }
-    }
+enum ToolboxCatalog {
+    static let all: [ToolboxTool] = [
+        ToolboxTool(
+            id: .captureSelectedArea,
+            titleKey: "Capture Selected Area",
+            subtitleKey: "Capture a selected screen region into the floating shelf.",
+            systemImage: "camera.viewfinder",
+            category: .screenshots,
+            defaultEnabled: true,
+            defaultShowInMenu: true
+        ),
+        ToolboxTool(
+            id: .captureOCR,
+            titleKey: "Capture OCR",
+            subtitleKey: "Capture a selected region and copy recognized text.",
+            systemImage: "text.viewfinder",
+            category: .screenshots,
+            defaultEnabled: true,
+            defaultShowInMenu: true
+        ),
+        ToolboxTool(
+            id: .copyFinderPath,
+            titleKey: "Copy Finder Path",
+            subtitleKey: "Copy the front Finder window path to the clipboard.",
+            systemImage: "folder",
+            category: .files,
+            defaultEnabled: true,
+            defaultShowInMenu: true
+        ),
+        ToolboxTool(
+            id: .imageSearch,
+            titleKey: "Search Images",
+            subtitleKey: "Search local images by filename and recognized text.",
+            systemImage: "magnifyingglass",
+            category: .screenshots,
+            defaultEnabled: true,
+            defaultShowInMenu: true
+        ),
+        ToolboxTool(
+            id: .dropShelf,
+            titleKey: "Drop Shelf",
+            subtitleKey: "Collect dragged files, folders, links, text, and images before sending them together.",
+            systemImage: "tray.and.arrow.down",
+            category: .files,
+            defaultEnabled: true,
+            defaultShowInMenu: true
+        )
+    ]
 
-    var showInMenuKey: String {
-        switch self {
-        case .captureSelectedArea: ToolboxSettings.Keys.captureSelectedAreaShowInMenu
-        case .captureOCR: ToolboxSettings.Keys.captureOCRShowInMenu
-        case .copyFinderPath: ToolboxSettings.Keys.copyFinderPathShowInMenu
-        case .imageSearch: ToolboxSettings.Keys.imageSearchShowInMenu
-        case .dropShelf: ToolboxSettings.Keys.dropShelfShowInMenu
-        }
-    }
-
-    var defaultEnabled: Bool {
-        switch self {
-        case .captureSelectedArea: ToolboxSettings.defaultCaptureSelectedAreaEnabled
-        case .captureOCR: ToolboxSettings.defaultCaptureOCREnabled
-        case .copyFinderPath: ToolboxSettings.defaultCopyFinderPathEnabled
-        case .imageSearch: ToolboxSettings.defaultImageSearchEnabled
-        case .dropShelf: ToolboxSettings.defaultDropShelfEnabled
-        }
-    }
-
-    var defaultShowInMenu: Bool {
-        switch self {
-        case .captureSelectedArea: ToolboxSettings.defaultCaptureSelectedAreaShowInMenu
-        case .captureOCR: ToolboxSettings.defaultCaptureOCRShowInMenu
-        case .copyFinderPath: ToolboxSettings.defaultCopyFinderPathShowInMenu
-        case .imageSearch: ToolboxSettings.defaultImageSearchShowInMenu
-        case .dropShelf: ToolboxSettings.defaultDropShelfShowInMenu
-        }
+    static func tool(for id: ToolboxToolID) -> ToolboxTool {
+        all.first { $0.id == id } ?? all[0]
     }
 }
 
@@ -119,30 +128,30 @@ enum ToolboxSettings {
     enum Keys {
         static let menuLayout = "toolbox.menuLayout"
         static let language = "app.language"
-        static let captureSelectedAreaEnabled = "tool.captureSelectedArea.enabled"
-        static let captureSelectedAreaShowInMenu = "tool.captureSelectedArea.showInMenu"
-        static let captureOCREnabled = "tool.captureOCR.enabled"
-        static let captureOCRShowInMenu = "tool.captureOCR.showInMenu"
-        static let copyFinderPathEnabled = "tool.copyFinderPath.enabled"
-        static let copyFinderPathShowInMenu = "tool.copyFinderPath.showInMenu"
-        static let imageSearchEnabled = "tool.imageSearch.enabled"
-        static let imageSearchShowInMenu = "tool.imageSearch.showInMenu"
-        static let dropShelfEnabled = "tool.dropShelf.enabled"
-        static let dropShelfShowInMenu = "tool.dropShelf.showInMenu"
+        static let captureSelectedAreaEnabled = ToolboxToolID.captureSelectedArea.enabledKey
+        static let captureSelectedAreaShowInMenu = ToolboxToolID.captureSelectedArea.showInMenuKey
+        static let captureOCREnabled = ToolboxToolID.captureOCR.enabledKey
+        static let captureOCRShowInMenu = ToolboxToolID.captureOCR.showInMenuKey
+        static let copyFinderPathEnabled = ToolboxToolID.copyFinderPath.enabledKey
+        static let copyFinderPathShowInMenu = ToolboxToolID.copyFinderPath.showInMenuKey
+        static let imageSearchEnabled = ToolboxToolID.imageSearch.enabledKey
+        static let imageSearchShowInMenu = ToolboxToolID.imageSearch.showInMenuKey
+        static let dropShelfEnabled = ToolboxToolID.dropShelf.enabledKey
+        static let dropShelfShowInMenu = ToolboxToolID.dropShelf.showInMenuKey
     }
 
     static let defaultMenuLayout = ToolboxMenuLayout.expanded
     static let defaultLanguage = AppLanguage.english
-    static let defaultCaptureSelectedAreaEnabled = true
-    static let defaultCaptureSelectedAreaShowInMenu = true
-    static let defaultCaptureOCREnabled = true
-    static let defaultCaptureOCRShowInMenu = true
-    static let defaultCopyFinderPathEnabled = true
-    static let defaultCopyFinderPathShowInMenu = true
-    static let defaultImageSearchEnabled = true
-    static let defaultImageSearchShowInMenu = true
-    static let defaultDropShelfEnabled = true
-    static let defaultDropShelfShowInMenu = true
+    static let defaultCaptureSelectedAreaEnabled = ToolboxToolID.captureSelectedArea.defaultEnabled
+    static let defaultCaptureSelectedAreaShowInMenu = ToolboxToolID.captureSelectedArea.defaultShowInMenu
+    static let defaultCaptureOCREnabled = ToolboxToolID.captureOCR.defaultEnabled
+    static let defaultCaptureOCRShowInMenu = ToolboxToolID.captureOCR.defaultShowInMenu
+    static let defaultCopyFinderPathEnabled = ToolboxToolID.copyFinderPath.defaultEnabled
+    static let defaultCopyFinderPathShowInMenu = ToolboxToolID.copyFinderPath.defaultShowInMenu
+    static let defaultImageSearchEnabled = ToolboxToolID.imageSearch.defaultEnabled
+    static let defaultImageSearchShowInMenu = ToolboxToolID.imageSearch.defaultShowInMenu
+    static let defaultDropShelfEnabled = ToolboxToolID.dropShelf.defaultEnabled
+    static let defaultDropShelfShowInMenu = ToolboxToolID.dropShelf.defaultShowInMenu
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
         defaults.register(defaults: defaultValues)
@@ -156,20 +165,17 @@ enum ToolboxSettings {
     }
 
     private static var defaultValues: [String: Any] {
-        [
+        var values: [String: Any] = [
             Keys.menuLayout: defaultMenuLayout.rawValue,
-            Keys.language: defaultLanguage.rawValue,
-            Keys.captureSelectedAreaEnabled: defaultCaptureSelectedAreaEnabled,
-            Keys.captureSelectedAreaShowInMenu: defaultCaptureSelectedAreaShowInMenu,
-            Keys.captureOCREnabled: defaultCaptureOCREnabled,
-            Keys.captureOCRShowInMenu: defaultCaptureOCRShowInMenu,
-            Keys.copyFinderPathEnabled: defaultCopyFinderPathEnabled,
-            Keys.copyFinderPathShowInMenu: defaultCopyFinderPathShowInMenu,
-            Keys.imageSearchEnabled: defaultImageSearchEnabled,
-            Keys.imageSearchShowInMenu: defaultImageSearchShowInMenu,
-            Keys.dropShelfEnabled: defaultDropShelfEnabled,
-            Keys.dropShelfShowInMenu: defaultDropShelfShowInMenu
+            Keys.language: defaultLanguage.rawValue
         ]
+
+        for tool in ToolboxToolID.allCases {
+            values[tool.enabledKey] = tool.defaultEnabled
+            values[tool.showInMenuKey] = tool.defaultShowInMenu
+        }
+
+        return values
     }
 
     static func isEnabled(_ tool: ToolboxToolID, defaults: UserDefaults = .standard) -> Bool {
