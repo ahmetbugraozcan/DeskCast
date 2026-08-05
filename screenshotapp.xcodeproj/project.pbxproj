@@ -28,7 +28,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		120AAC7F2FA603A2004E3432 /* TinyShotShelf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TinyShotShelf.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		120AAC7F2FA603A2004E3432 /* DeskCast.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskCast.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		120AAC8C2FA603A4004E3432 /* screenshotappTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = screenshotappTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		120AAC962FA603A4004E3432 /* screenshotappUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = screenshotappUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -90,7 +90,7 @@
 		120AAC802FA603A2004E3432 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				120AAC7F2FA603A2004E3432 /* TinyShotShelf.app */,
+				120AAC7F2FA603A2004E3432 /* DeskCast.app */,
 				120AAC8C2FA603A4004E3432 /* screenshotappTests.xctest */,
 				120AAC962FA603A4004E3432 /* screenshotappUITests.xctest */,
 			);
@@ -119,8 +119,8 @@
 			packageProductDependencies = (
 				6203C44E9BC14AC1B9720AF2 /* KeyboardShortcuts */,
 			);
-			productName = TinyShotShelf;
-			productReference = 120AAC7F2FA603A2004E3432 /* TinyShotShelf.app */;
+			productName = DeskCast;
+			productReference = 120AAC7F2FA603A2004E3432 /* DeskCast.app */;
 			productType = "com.apple.product-type.application";
 		};
 		120AAC8B2FA603A4004E3432 /* screenshotappTests */ = {
@@ -414,10 +414,10 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = TinyToolBox;
-				INFOPLIST_KEY_CFBundleName = TinyShotShelf;
+				INFOPLIST_KEY_CFBundleDisplayName = DeskCast;
+				INFOPLIST_KEY_CFBundleName = DeskCast;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TinyShotShelf needs Finder access to copy the current folder path.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "DeskCast needs Finder access to copy the current folder path.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -426,7 +426,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ahmetbugraozcan.screenshotapp;
 				PRODUCT_MODULE_NAME = screenshotapp;
-				PRODUCT_NAME = TinyShotShelf;
+				PRODUCT_NAME = DeskCast;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -452,10 +452,10 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = TinyToolBox;
-				INFOPLIST_KEY_CFBundleName = TinyShotShelf;
+				INFOPLIST_KEY_CFBundleDisplayName = DeskCast;
+				INFOPLIST_KEY_CFBundleName = DeskCast;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TinyShotShelf needs Finder access to copy the current folder path.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "DeskCast needs Finder access to copy the current folder path.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -464,7 +464,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ahmetbugraozcan.screenshotapp;
 				PRODUCT_MODULE_NAME = screenshotapp;
-				PRODUCT_NAME = TinyShotShelf;
+				PRODUCT_NAME = DeskCast;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -492,7 +492,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TinyShotShelf.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TinyShotShelf";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DeskCast.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DeskCast";
 			};
 			name = Debug;
 		};
@@ -513,7 +513,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TinyShotShelf.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TinyShotShelf";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DeskCast.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DeskCast";
 			};
 			name = Release;
 		};

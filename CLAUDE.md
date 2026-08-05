@@ -14,12 +14,10 @@ A macOS menu-bar utility toolbox. It bundles several small productivity tools be
 
 ### Naming (important)
 
-There are three names in flight, do not "fix" them blindly:
-- `AppConstants.appName` = `"TinyToolbox"` (internal constant).
-- Xcode target / scheme = `screenshotapp`; product name is `TinyShotShelf` per AGENTS.md.
-- User-facing display name comes from the localized `app.name` key (`AppConstants.displayName`), not the constant.
-
-The current branch (`tinytoolbox-localization`) is mid-rename to "TinyToolbox" + adding localization. Expect inconsistency; match whatever the surrounding file uses.
+The app is **DeskCast**. A few names differ, don't "fix" them blindly:
+- User-facing name (display name, `CFBundleName`, `PRODUCT_NAME` → `DeskCast.app`) = `DeskCast`; also `AppConstants.appName = "DeskCast"` and the localized `app.name` key.
+- Xcode **target and scheme are still `screenshotapp`** (internal), and the bundle identifier is still `com.ahmetbugraozcan.screenshotapp` — these are deliberately left unchanged.
+- User-facing display name is read from the localized `app.name` key via `AppConstants.displayName`, not the constant.
 
 ## App shape
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 MODE="${1:-run}"
-APP_NAME="TinyShotShelf"
+APP_NAME="DeskCast"
 BUNDLE_ID="com.ahmetbugraozcan.screenshotapp"
 PROJECT_NAME="screenshotapp.xcodeproj"
 SCHEME_NAME="screenshotapp"

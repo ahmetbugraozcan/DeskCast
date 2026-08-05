@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "120AAC7E2FA603A2004E3432"
-               BuildableName = "TinyShotShelf.app"
+               BuildableName = "DeskCast.app"
                BlueprintName = "screenshotapp"
                ReferencedContainer = "container:screenshotapp.xcodeproj">
             </BuildableReference>
@@ -43,7 +43,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "120AAC7E2FA603A2004E3432"
-            BuildableName = "TinyShotShelf.app"
+            BuildableName = "DeskCast.app"
             BlueprintName = "screenshotapp"
             ReferencedContainer = "container:screenshotapp.xcodeproj">
          </BuildableReference>
@@ -60,7 +60,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "120AAC7E2FA603A2004E3432"
-            BuildableName = "TinyShotShelf.app"
+            BuildableName = "DeskCast.app"
             BlueprintName = "screenshotapp"
             ReferencedContainer = "container:screenshotapp.xcodeproj">
          </BuildableReference>

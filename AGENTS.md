@@ -2,7 +2,7 @@
 
 ## Repo Shape
 
-- This is a macOS Xcode project: `screenshotapp.xcodeproj`, scheme `screenshotapp`, product name `TinyShotShelf`.
+- This is a macOS Xcode project: `screenshotapp.xcodeproj`, scheme `screenshotapp`, product name `DeskCast`.
 - App sources live in `screenshotapp/`; unit tests live in `screenshotappTests/`; UI tests live in `screenshotappUITests/`.
 - The app target uses SwiftUI plus AppKit. The entry point defines a `MenuBarExtra`, `Settings`, and an `"Image Search"` window in `screenshotapp/screenshotappApp.swift`.
 - The app is configured as an LSUIElement/accessory app (`LSUIElement = YES` in the project file and `.accessory` activation policy in `AppDelegate`).
