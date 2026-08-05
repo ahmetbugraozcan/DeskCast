@@ -4,6 +4,9 @@ import SwiftUI
 struct DropShelfView: View {
     @ObservedObject var store: DropShelfStore
 
+    @AppStorage(DropShelfSettings.Keys.layoutMode)
+    private var layoutModeRaw = DropShelfSettings.defaultLayoutMode.rawValue
+
     @AppStorage(DropShelfSettings.Keys.itemSize)
     private var itemSizeRaw = DropShelfSettings.defaultItemSize.rawValue
 
@@ -12,6 +15,7 @@ struct DropShelfView: View {
 
     static let outerPadding: CGFloat = 12
     static let headerHeight: CGFloat = 46
+    static let gridSpacing: CGFloat = 12
     static let visibleStackLimit = 5
 
     var body: some View {
@@ -38,6 +42,10 @@ struct DropShelfView: View {
         let customWidth = DropShelfSettings.clampedCustomItemWidth(customItemWidth)
 
         return size.size(customWidth: customWidth)
+    }
+
+    private var layoutMode: DropShelfLayoutMode {
+        DropShelfLayoutMode(rawValue: layoutModeRaw) ?? DropShelfSettings.defaultLayoutMode
     }
 
     private var header: some View {
@@ -86,40 +94,67 @@ struct DropShelfView: View {
             EmptyDropShelfView(isTargeted: store.isDropTargeted)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            ZStack {
-                ForEach(Array(visibleStackItems.enumerated()), id: \.element.id) { index, item in
-                    DropShelfItemCard(
-                        item: item,
-                        itemSize: itemSize,
-                        stackDepth: visibleStackItems.count - index - 1,
-                        previewAction: { store.preview(item) },
-                        renameAction: { store.rename(item, to: $0) },
-                        copyAction: { store.copy(item) },
-                        sendAction: { store.send(item) },
-                        removeAction: { store.remove(item) },
-                        moveBackwardAction: { store.moveItemBackward(item) },
-                        moveForwardAction: { store.moveItemForward(item) },
-                        dragPasteboardWriters: { store.draggingPasteboardWritersForAllItems() },
-                        dragStarted: { store.beginInternalDrag() },
-                        dragEnded: { store.endInternalDrag() }
-                    )
-                    .zIndex(Double(index))
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(alignment: .bottomTrailing) {
-                if hiddenStackCount > 0 {
-                    Text("+\(hiddenStackCount)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.ultraThinMaterial, in: Capsule())
-                        .padding(4)
-                }
+            switch layoutMode {
+            case .stack:
+                stackContent
+            case .grid:
+                gridContent
             }
         }
     }
+
+    private var stackContent: some View {
+        ZStack {
+            ForEach(Array(visibleStackItems.enumerated()), id: \.element.id) { index, item in
+                dropShelfItemCard(
+                    for: item,
+                    stackDepth: visibleStackItems.count - index - 1,
+                    dragPasteboardWriters: { store.draggingPasteboardWritersForAllItems() }
+                )
+                .zIndex(Double(index))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .bottomTrailing) {
+            if hiddenStackCount > 0 {
+                Text("+\(hiddenStackCount)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(4)
+            }
+        }
+    }
+
+    private var gridContent: some View {
+        ScrollView {
+            LazyVGrid(columns: gridColumns, alignment: .leading, spacing: Self.gridSpacing) {
+                ForEach(store.items) { item in
+                    dropShelfItemCard(
+                        for: item,
+                        stackDepth: 0,
+                        dragPasteboardWriters: {
+                            guard let writer = store.draggingPasteboardWriter(for: item) else {
+                                return []
+                            }
+
+                            return [writer]
+                        }
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var gridColumns: [GridItem] {
+        Array(repeating: GridItem(.fixed(itemSize.width), spacing: Self.gridSpacing), count: Self.gridColumnCount)
+    }
+
+    static let gridColumnCount = 2
 
     private var visibleStackItems: [DropShelfItem] {
         Array(store.items.suffix(Self.visibleStackLimit))
@@ -127,6 +162,28 @@ struct DropShelfView: View {
 
     private var hiddenStackCount: Int {
         max(0, store.items.count - Self.visibleStackLimit)
+    }
+
+    private func dropShelfItemCard(
+        for item: DropShelfItem,
+        stackDepth: Int,
+        dragPasteboardWriters: @escaping () -> [NSPasteboardWriting]
+    ) -> some View {
+        DropShelfItemCard(
+            item: item,
+            itemSize: itemSize,
+            stackDepth: stackDepth,
+            previewAction: { store.preview(item) },
+            renameAction: { store.rename(item, to: $0) },
+            copyAction: { store.copy(item) },
+            sendAction: { store.send(item) },
+            removeAction: { store.remove(item) },
+            moveBackwardAction: { store.moveItemBackward(item) },
+            moveForwardAction: { store.moveItemForward(item) },
+            dragPasteboardWriters: dragPasteboardWriters,
+            dragStarted: { store.beginInternalDrag() },
+            dragEnded: { store.endInternalDrag() }
+        )
     }
 }
 

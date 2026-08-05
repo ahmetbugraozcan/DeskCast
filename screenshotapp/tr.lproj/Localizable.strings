@@ -93,6 +93,8 @@
 "Thumbnail" = "Küçük görsel";
 "Size" = "Boyut";
 "Stack" = "Yığın";
+"Display mode" = "Görüntü modu";
+"Grid" = "Izgara";
 "Max stack count: %ld" = "Maksimum yığın sayısı: %ld";
 "Pin screenshots by default" = "Ekran görüntülerini varsayılan olarak sabitle";
 "Auto-hide" = "Otomatik gizleme";

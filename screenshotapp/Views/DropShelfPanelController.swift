@@ -91,10 +91,26 @@ final class DropShelfPanelController {
     private func desiredPanelSize(settings: DropShelfSettingsSnapshot) -> CGSize {
         let itemSize = settings.itemDimensions
 
-        return CGSize(
-            width: max(380, itemSize.width + DropShelfView.outerPadding * 2 + 120),
-            height: max(280, itemSize.height + DropShelfView.outerPadding * 2 + DropShelfView.headerHeight + 84)
-        )
+        switch settings.layoutMode {
+        case .stack:
+            return CGSize(
+                width: max(380, itemSize.width + DropShelfView.outerPadding * 2 + 120),
+                height: max(280, itemSize.height + DropShelfView.outerPadding * 2 + DropShelfView.headerHeight + 84)
+            )
+        case .grid:
+            let columnCount = DropShelfView.gridColumnCount
+            let itemCount = max(store.items.count, 1)
+            let rowCount = min(2, max(1, Int(ceil(Double(itemCount) / Double(columnCount)))))
+            let contentWidth = CGFloat(columnCount) * itemSize.width
+                + CGFloat(columnCount - 1) * DropShelfView.gridSpacing
+            let contentHeight = CGFloat(rowCount) * itemSize.height
+                + CGFloat(max(rowCount - 1, 0)) * DropShelfView.gridSpacing
+
+            return CGSize(
+                width: max(420, contentWidth + DropShelfView.outerPadding * 2),
+                height: max(300, contentHeight + DropShelfView.outerPadding * 2 + DropShelfView.headerHeight + 28)
+            )
+        }
     }
 
     private func preferredOrigin(for panel: NSPanel, size: CGSize) -> CGPoint {

@@ -93,6 +93,8 @@
 "Thumbnail" = "Thumbnail";
 "Size" = "Size";
 "Stack" = "Stack";
+"Display mode" = "Display mode";
+"Grid" = "Grid";
 "Max stack count: %ld" = "Max stack count: %ld";
 "Pin screenshots by default" = "Pin screenshots by default";
 "Auto-hide" = "Auto-hide";

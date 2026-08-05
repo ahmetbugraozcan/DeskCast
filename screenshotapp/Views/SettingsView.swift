@@ -52,6 +52,8 @@ struct SettingsView: View {
 
     @AppStorage(DropShelfSettings.Keys.itemSize)
     private var dropShelfItemSizeRaw = DropShelfSettings.defaultItemSize.rawValue
+    @AppStorage(DropShelfSettings.Keys.layoutMode)
+    private var dropShelfLayoutModeRaw = DropShelfSettings.defaultLayoutMode.rawValue
 
     @AppStorage(DropShelfSettings.Keys.customItemWidth)
     private var dropShelfCustomItemWidth = DropShelfSettings.defaultCustomItemWidth
@@ -338,6 +340,17 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 24) {
                 SettingsControlSection(title: AppLocalization.string("Layout")) {
+                    SettingsPickerRow(title: AppLocalization.string("Display mode")) {
+                        Picker(AppLocalization.string("Display mode"), selection: $dropShelfLayoutModeRaw) {
+                            ForEach(DropShelfLayoutMode.allCases) { mode in
+                                Text(mode.title).tag(mode.rawValue)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+
+                    SettingsSectionDivider()
+
                     SettingsPickerRow(title: AppLocalization.string("Item size")) {
                         Picker(AppLocalization.string("Item size"), selection: $dropShelfItemSizeRaw) {
                             ForEach(DropShelfItemSize.allCases) { size in

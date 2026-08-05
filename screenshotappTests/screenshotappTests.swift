@@ -72,8 +72,10 @@ struct screenshotappTests {
         defaults.set(999, forKey: DropShelfSettings.Keys.maxItemCount)
         defaults.set(1_000, forKey: DropShelfSettings.Keys.customItemWidth)
         defaults.set(0, forKey: DropShelfSettings.Keys.shakeSensitivity)
+        defaults.set("invalid", forKey: DropShelfSettings.Keys.layoutMode)
         let snapshot = DropShelfSettings.snapshot(from: defaults)
 
+        #expect(snapshot.layoutMode == DropShelfSettings.defaultLayoutMode)
         #expect(snapshot.maxItemCount == DropShelfSettings.maxItemCountRange.upperBound)
         #expect(snapshot.customItemWidth == DropShelfSettings.customItemWidthRange.upperBound)
         #expect(snapshot.shakeSensitivity == DropShelfSettings.shakeSensitivityRange.lowerBound)
@@ -89,6 +91,7 @@ struct screenshotappTests {
 
         DropShelfSettings.registerDefaults(in: defaults)
         defaults.set(StackDirection.vertical.rawValue, forKey: DropShelfSettings.Keys.stackDirection)
+        defaults.set(DropShelfLayoutMode.grid.rawValue, forKey: DropShelfSettings.Keys.layoutMode)
         defaults.set(false, forKey: DropShelfSettings.Keys.openOnShake)
         defaults.set(2, forKey: DropShelfSettings.Keys.shakeSensitivity)
 
@@ -96,6 +99,7 @@ struct screenshotappTests {
         let snapshot = DropShelfSettings.snapshot(from: defaults)
 
         #expect(snapshot.stackDirection == DropShelfSettings.defaultStackDirection)
+        #expect(snapshot.layoutMode == DropShelfSettings.defaultLayoutMode)
         #expect(snapshot.openOnShake == DropShelfSettings.defaultOpenOnShake)
         #expect(snapshot.shakeSensitivity == DropShelfSettings.defaultShakeSensitivity)
 

@@ -13,6 +13,7 @@ xcuserdata/
 DerivedData/
 build/
 Build/
+dist/
 *.ipa
 *.dSYM.zip
 *.dSYM

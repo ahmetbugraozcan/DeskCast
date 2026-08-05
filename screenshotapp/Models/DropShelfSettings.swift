@@ -1,6 +1,20 @@
 import CoreGraphics
 import Foundation
 
+enum DropShelfLayoutMode: String, CaseIterable, Identifiable {
+    case stack
+    case grid
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .stack: AppLocalization.string("Stack")
+        case .grid: AppLocalization.string("Grid")
+        }
+    }
+}
+
 enum DropShelfItemSize: String, CaseIterable, Identifiable {
     case small
     case medium
@@ -34,6 +48,7 @@ enum DropShelfItemSize: String, CaseIterable, Identifiable {
 
 struct DropShelfSettingsSnapshot {
     let stackDirection: StackDirection
+    let layoutMode: DropShelfLayoutMode
     let itemSize: DropShelfItemSize
     let customItemWidth: Int
     let maxItemCount: Int
@@ -48,6 +63,7 @@ struct DropShelfSettingsSnapshot {
 enum DropShelfSettings {
     enum Keys {
         static let stackDirection = "dropShelf.stackDirection"
+        static let layoutMode = "dropShelf.layoutMode"
         static let itemSize = "dropShelf.itemSize"
         static let customItemWidth = "dropShelf.customItemWidth"
         static let maxItemCount = "dropShelf.maxItemCount"
@@ -60,6 +76,7 @@ enum DropShelfSettings {
     static let shakeSensitivityRange = 1...10
 
     static let defaultStackDirection = StackDirection.horizontal
+    static let defaultLayoutMode = DropShelfLayoutMode.stack
     static let defaultItemSize = DropShelfItemSize.medium
     static let defaultCustomItemWidth = 220
     static let defaultMaxItemCount = 25
@@ -79,6 +96,7 @@ enum DropShelfSettings {
     private static var defaultValues: [String: Any] {
         [
             Keys.stackDirection: defaultStackDirection.rawValue,
+            Keys.layoutMode: defaultLayoutMode.rawValue,
             Keys.itemSize: defaultItemSize.rawValue,
             Keys.customItemWidth: defaultCustomItemWidth,
             Keys.maxItemCount: defaultMaxItemCount,
@@ -89,10 +107,12 @@ enum DropShelfSettings {
 
     static func snapshot(from defaults: UserDefaults = .standard) -> DropShelfSettingsSnapshot {
         let stackDirectionRaw = defaults.string(forKey: Keys.stackDirection)
+        let layoutModeRaw = defaults.string(forKey: Keys.layoutMode)
         let itemSizeRaw = defaults.string(forKey: Keys.itemSize)
 
         return DropShelfSettingsSnapshot(
             stackDirection: StackDirection(rawValue: stackDirectionRaw ?? "") ?? defaultStackDirection,
+            layoutMode: DropShelfLayoutMode(rawValue: layoutModeRaw ?? "") ?? defaultLayoutMode,
             itemSize: DropShelfItemSize(rawValue: itemSizeRaw ?? "") ?? defaultItemSize,
             customItemWidth: clampedCustomItemWidth(defaults.integer(forKey: Keys.customItemWidth)),
             maxItemCount: clampedMaxItemCount(defaults.integer(forKey: Keys.maxItemCount)),
