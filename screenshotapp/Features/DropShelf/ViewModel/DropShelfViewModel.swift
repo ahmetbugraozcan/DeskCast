@@ -14,13 +14,13 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     private let shakeMonitor = DropShelfShakeMonitor()
     weak var presenter: DropShelfPresenting?
     private let exporter: DropShelfExporting
-    private let settings: SettingsProviding
+    private let settings: DropShelfSettingsReading & ToolboxSettingsReading
     private let toastPresenter: ToastPresenting
     private let folderPicker: FolderPicking
 
     init(
         exporter: DropShelfExporting,
-        settings: SettingsProviding,
+        settings: DropShelfSettingsReading & ToolboxSettingsReading,
         toastPresenter: ToastPresenting,
         folderPicker: FolderPicking
     ) {

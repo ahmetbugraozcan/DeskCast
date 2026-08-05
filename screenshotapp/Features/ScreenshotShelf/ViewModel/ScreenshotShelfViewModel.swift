@@ -17,7 +17,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     private let recognizer: TextRecognizing
     private let exporter: ScreenshotExporting
     private let finderPath: FinderPathProviding
-    private let settings: SettingsProviding
+    private let settings: ScreenshotShelfSettingsReading & ToolboxSettingsReading
     private let toastPresenter: ToastPresenting
 
     init(
@@ -26,7 +26,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         recognizer: TextRecognizing,
         exporter: ScreenshotExporting,
         finderPath: FinderPathProviding,
-        settings: SettingsProviding,
+        settings: ScreenshotShelfSettingsReading & ToolboxSettingsReading,
         toastPresenter: ToastPresenting
     ) {
         self.shelfCollector = shelfCollector
