@@ -26,18 +26,4 @@ struct ImageSearchMatch {
     let matchedFilename: Bool
     let matchedText: Bool
     let textSnippet: String?
-
-    var matchLabels: [String] {
-        var labels: [String] = []
-
-        if matchedFilename {
-            labels.append(AppLocalization.string("Filename"))
-        }
-
-        if matchedText {
-            labels.append(AppLocalization.string("Image text"))
-        }
-
-        return labels
-    }
 }

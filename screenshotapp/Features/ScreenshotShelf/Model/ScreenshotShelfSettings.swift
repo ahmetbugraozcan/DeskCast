@@ -8,15 +8,6 @@ enum PreviewPosition: String, CaseIterable, Identifiable {
     case topRight = "top-right"
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .bottomLeft: AppLocalization.string("Bottom Left")
-        case .bottomRight: AppLocalization.string("Bottom Right")
-        case .topLeft: AppLocalization.string("Top Left")
-        case .topRight: AppLocalization.string("Top Right")
-        }
-    }
 }
 
 enum StackDirection: String, CaseIterable, Identifiable {
@@ -24,13 +15,6 @@ enum StackDirection: String, CaseIterable, Identifiable {
     case vertical
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .horizontal: AppLocalization.string("Horizontal")
-        case .vertical: AppLocalization.string("Vertical")
-        }
-    }
 }
 
 enum ShelfThumbnailSize: String, CaseIterable, Identifiable {
@@ -40,15 +24,6 @@ enum ShelfThumbnailSize: String, CaseIterable, Identifiable {
     case custom
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .small: AppLocalization.string("Small")
-        case .medium: AppLocalization.string("Medium")
-        case .large: AppLocalization.string("Large")
-        case .custom: AppLocalization.string("Custom")
-        }
-    }
 
     var referenceWidth: CGFloat {
         switch self {
@@ -83,17 +58,6 @@ enum ShelfThumbnailAspectRatio: String, CaseIterable, Identifiable {
     case custom
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .ratio16x9: "16:9"
-        case .ratio16x10: "16:10"
-        case .ratio3x2: "3:2"
-        case .ratio4x3: "4:3"
-        case .square: AppLocalization.string("Square")
-        case .custom: AppLocalization.string("Custom")
-        }
-    }
 
     /// width / height
     func value(customWidth: Int, customHeight: Int) -> CGFloat {

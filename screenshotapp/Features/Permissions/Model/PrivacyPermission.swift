@@ -7,25 +7,6 @@ enum PrivacyPermissionID: String, CaseIterable, Identifiable, Hashable, Sendable
 
     nonisolated var id: String { rawValue }
 
-    nonisolated var title: String {
-        switch self {
-        case .screenRecording: AppLocalization.string("Screen Recording")
-        case .finderAutomation: AppLocalization.string("Finder Automation")
-        case .accessibility: AppLocalization.string("Accessibility")
-        }
-    }
-
-    nonisolated var subtitle: String {
-        switch self {
-        case .screenRecording:
-            AppLocalization.string("Required by Capture Selected Area and Capture OCR.")
-        case .finderAutomation:
-            AppLocalization.string("Required to read the front Finder window path.")
-        case .accessibility:
-            AppLocalization.string("Required to open Drop Shelf from the shake gesture.")
-        }
-    }
-
     nonisolated var systemImage: String {
         switch self {
         case .screenRecording: "record.circle"
@@ -48,15 +29,6 @@ enum PrivacyPermissionStatus: Equatable, Sendable {
     case granted
     case notGranted
     case unavailable
-
-    nonisolated var title: String {
-        switch self {
-        case .checking: AppLocalization.string("Checking")
-        case .granted: AppLocalization.string("Granted")
-        case .notGranted: AppLocalization.string("Not Granted")
-        case .unavailable: AppLocalization.string("Unavailable")
-        }
-    }
 
     nonisolated var systemImage: String {
         switch self {

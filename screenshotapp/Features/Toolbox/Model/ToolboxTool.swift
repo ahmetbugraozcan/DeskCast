@@ -5,20 +5,6 @@ enum ToolboxMenuLayout: String, CaseIterable, Identifiable {
     case grouped
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .expanded: AppLocalization.string("Expanded")
-        case .grouped: AppLocalization.string("Grouped")
-        }
-    }
-
-    var description: String {
-        switch self {
-        case .expanded: AppLocalization.string("Show tools directly in the menu.")
-        case .grouped: AppLocalization.string("Show module menus with nested actions.")
-        }
-    }
 }
 
 enum ToolCategory {
@@ -47,10 +33,7 @@ enum ToolboxToolID: String, CaseIterable, Identifiable {
 
     var descriptor: ToolboxTool { ToolboxCatalog.tool(for: self) }
 
-    var title: String { AppLocalization.string(descriptor.titleKey) }
-    var subtitle: String { AppLocalization.string(descriptor.subtitleKey) }
     var systemImage: String { descriptor.systemImage }
-    var categoryTitle: String { AppLocalization.string(descriptor.category.titleKey) }
     var defaultEnabled: Bool { descriptor.defaultEnabled }
     var defaultShowInMenu: Bool { descriptor.defaultShowInMenu }
 

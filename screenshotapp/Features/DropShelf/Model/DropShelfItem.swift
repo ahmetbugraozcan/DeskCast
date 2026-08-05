@@ -10,16 +10,6 @@ enum DropShelfItemKind: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
-        switch self {
-        case .file: AppLocalization.string("File")
-        case .folder: AppLocalization.string("Folder")
-        case .image: AppLocalization.string("Image")
-        case .link: AppLocalization.string("Link")
-        case .text: AppLocalization.string("Text")
-        }
-    }
-
     var systemImage: String {
         switch self {
         case .file: "doc"
@@ -67,21 +57,5 @@ struct DropShelfItem: Identifiable, Equatable {
 
     var isFileBacked: Bool {
         fileURL != nil
-    }
-
-    var subtitle: String {
-        if let fileURL {
-            return fileURL.deletingLastPathComponent().path
-        }
-
-        if let url {
-            return url.host(percentEncoded: false) ?? url.absoluteString
-        }
-
-        if let text {
-            return text.replacingOccurrences(of: "\n", with: " ")
-        }
-
-        return kind.title
     }
 }

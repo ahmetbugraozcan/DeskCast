@@ -6,13 +6,6 @@ enum DropShelfLayoutMode: String, CaseIterable, Identifiable {
     case grid
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .stack: AppLocalization.string("Stack")
-        case .grid: AppLocalization.string("Grid")
-        }
-    }
 }
 
 enum DropShelfItemSize: String, CaseIterable, Identifiable {
@@ -22,15 +15,6 @@ enum DropShelfItemSize: String, CaseIterable, Identifiable {
     case custom
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .small: AppLocalization.string("Small")
-        case .medium: AppLocalization.string("Medium")
-        case .large: AppLocalization.string("Large")
-        case .custom: AppLocalization.string("Custom")
-        }
-    }
 
     func size(customWidth: Int) -> CGSize {
         switch self {
