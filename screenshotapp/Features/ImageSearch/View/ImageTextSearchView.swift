@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct ImageTextSearchView: View {
-    @StateObject private var store = ImageTextSearchStore()
+    @StateObject private var store = ImageTextSearchViewModel()
 
     var body: some View {
         VStack(spacing: 0) {

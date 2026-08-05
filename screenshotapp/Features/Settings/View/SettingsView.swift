@@ -80,7 +80,7 @@ struct SettingsView: View {
     private var dropShelfEnabled = ToolboxSettings.defaultDropShelfEnabled
 
     @State private var selectedSection: SettingsSection? = .screenshots
-    @StateObject private var permissionStore = PrivacyPermissionStore()
+    @StateObject private var permissionStore = PrivacyPermissionViewModel()
 
     var body: some View {
         NavigationSplitView {

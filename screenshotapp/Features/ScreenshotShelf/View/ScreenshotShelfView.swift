@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct ScreenshotShelfView: View {
-    @ObservedObject var store: ScreenshotShelfStore
+    @ObservedObject var store: ScreenshotShelfViewModel
     @State private var activeDropIndex: Int?
     @State private var reorderDrag: ScreenshotReorderDrag?
     @State private var thumbnailScreenFrames: [UUID: CGRect] = [:]

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct FeaturePermissionManagerView: View {
-    @ObservedObject var store: PrivacyPermissionStore
+    @ObservedObject var store: PrivacyPermissionViewModel
     let permissions: [PrivacyPermissionID]
 
     var body: some View {

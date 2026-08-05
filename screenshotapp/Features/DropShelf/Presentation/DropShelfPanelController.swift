@@ -2,13 +2,13 @@ import AppKit
 import SwiftUI
 
 final class DropShelfPanelController {
-    private let store: DropShelfStore
+    private let store: DropShelfViewModel
     private var panel: NSPanel?
     private var lastKnownOrigin: CGPoint?
 
     private let screenMargin: CGFloat = 18
 
-    init(store: DropShelfStore) {
+    init(store: DropShelfViewModel) {
         self.store = store
     }
 
@@ -161,9 +161,9 @@ final class DropShelfPanelController {
 }
 
 private final class DropShelfHostingView<Content: View>: NSHostingView<Content> {
-    private weak var store: DropShelfStore?
+    private weak var store: DropShelfViewModel?
 
-    init(rootView: Content, store: DropShelfStore) {
+    init(rootView: Content, store: DropShelfViewModel) {
         self.store = store
         super.init(rootView: rootView)
         registerForDraggedTypes(DropShelfPasteboardReader.supportedPasteboardTypes)

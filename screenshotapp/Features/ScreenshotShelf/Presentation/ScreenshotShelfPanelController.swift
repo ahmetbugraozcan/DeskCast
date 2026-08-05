@@ -7,13 +7,13 @@ struct ScreenshotShelfScreenAnchor: Equatable {
 }
 
 final class ScreenshotShelfPanelController {
-    private let store: ScreenshotShelfStore
+    private let store: ScreenshotShelfViewModel
     private var panel: NSPanel?
     private var anchoredScreen: ScreenshotShelfScreenAnchor?
 
     private let screenMargin: CGFloat = 18
 
-    init(store: ScreenshotShelfStore) {
+    init(store: ScreenshotShelfViewModel) {
         self.store = store
     }
 

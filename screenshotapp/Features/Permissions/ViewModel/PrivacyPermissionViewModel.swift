@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 @MainActor
-final class PrivacyPermissionStore: ObservableObject {
+final class PrivacyPermissionViewModel: ObservableObject {
     @Published private var statuses: [PrivacyPermissionID: PrivacyPermissionStatus] = [:]
     @Published private var pendingPermissions: Set<PrivacyPermissionID> = []
     @Published private(set) var message: String?

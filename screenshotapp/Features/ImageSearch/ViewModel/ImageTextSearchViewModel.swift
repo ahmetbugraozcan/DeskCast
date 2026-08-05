@@ -4,7 +4,7 @@ import Foundation
 import UniformTypeIdentifiers
 
 @MainActor
-final class ImageTextSearchStore: ObservableObject {
+final class ImageTextSearchViewModel: ObservableObject {
     @Published var query = ""
     @Published private(set) var folderURL: URL?
     @Published private(set) var items: [ImageSearchItem] = []

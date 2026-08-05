@@ -3,7 +3,7 @@ import Combine
 import KeyboardShortcuts
 
 @MainActor
-final class ScreenshotShelfStore: ObservableObject {
+final class ScreenshotShelfViewModel: ObservableObject {
     @Published private(set) var screenshots: [ScreenshotItem] = []
     @Published private(set) var isCapturing = false
 
@@ -156,7 +156,7 @@ final class ScreenshotShelfStore: ObservableObject {
 
     func addToShelf(_ item: ScreenshotItem) {
         let name = ScreenshotExportNaming.timestampedFilename(for: item.createdAt)
-        DropShelfStore.shared.addScreenshot(item.image, name: name)
+        DropShelfViewModel.shared.addScreenshot(item.image, name: name)
     }
 
     func showInFinder(_ item: ScreenshotItem) {

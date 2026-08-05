@@ -1,5 +1,5 @@
 //
-//  screenshotappApp.swift
+//  DeskCastApp.swift
 //  screenshotapp
 //
 //  Created by Ahmet Buğra Özcan on 2.05.2026.
@@ -9,12 +9,12 @@ import AppKit
 import SwiftUI
 
 @main
-struct screenshotappApp: App {
+struct DeskCastApp: App {
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var screenshotStore = ScreenshotShelfStore()
-    @StateObject private var dropShelfStore = DropShelfStore.shared
+    @StateObject private var screenshotStore = ScreenshotShelfViewModel()
+    @StateObject private var dropShelfStore = DropShelfViewModel.shared
     @AppStorage(ToolboxSettings.Keys.menuLayout)
     private var menuLayoutRaw = ToolboxSettings.defaultMenuLayout.rawValue
     @AppStorage(ToolboxSettings.Keys.language)

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct DropShelfView: View {
-    @ObservedObject var store: DropShelfStore
+    @ObservedObject var store: DropShelfViewModel
 
     @AppStorage(DropShelfSettings.Keys.layoutMode)
     private var layoutModeRaw = DropShelfSettings.defaultLayoutMode.rawValue
