@@ -11,18 +11,23 @@ final class AppEnvironment {
     private let dropShelfCoordinator: DropShelfPanelCoordinator
     private let screenshotShelfCoordinator: ScreenshotShelfPanelCoordinator
 
-    init() {
-        ScreenshotShelfSettings.registerDefaults()
-        DropShelfSettings.registerDefaults()
-        ToolboxSettings.registerDefaults()
+    let settings: SettingsProviding
 
-        let dropShelf = DropShelfViewModel(exporter: DropShelfExportService())
+    init(settings: SettingsProviding = SettingsRepository()) {
+        self.settings = settings
+        settings.registerDefaults()
+
+        let dropShelf = DropShelfViewModel(
+            exporter: DropShelfExportService(),
+            settings: settings
+        )
         let screenshotShelf = ScreenshotShelfViewModel(
             shelfCollector: dropShelf,
             capturer: ScreenshotCaptureService(),
             recognizer: OCRTextRecognitionService(),
             exporter: ScreenshotExportService(),
-            finderPath: FinderPathService()
+            finderPath: FinderPathService(),
+            settings: settings
         )
 
         self.dropShelf = dropShelf

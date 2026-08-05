@@ -18,22 +18,23 @@ final class ScreenshotShelfViewModel: ObservableObject {
     private let recognizer: TextRecognizing
     private let exporter: ScreenshotExporting
     private let finderPath: FinderPathProviding
+    private let settings: SettingsProviding
 
     init(
         shelfCollector: ShelfCollecting,
         capturer: ScreenshotCapturing,
         recognizer: TextRecognizing,
         exporter: ScreenshotExporting,
-        finderPath: FinderPathProviding
+        finderPath: FinderPathProviding,
+        settings: SettingsProviding
     ) {
         self.shelfCollector = shelfCollector
         self.capturer = capturer
         self.recognizer = recognizer
         self.exporter = exporter
         self.finderPath = finderPath
-        ScreenshotShelfSettings.registerDefaults()
-        ToolboxSettings.registerDefaults()
-        autoHideConfiguration = AutoHideConfiguration(settings: ScreenshotShelfSettings.snapshot())
+        self.settings = settings
+        autoHideConfiguration = AutoHideConfiguration(settings: settings.screenshotShelfSettings())
         defaultsObserver = NotificationCenter.default.publisher(
             for: UserDefaults.didChangeNotification,
             object: UserDefaults.standard
@@ -59,7 +60,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func captureSelectedArea() {
-        guard ToolboxSettings.isEnabled(.captureSelectedArea) else { return }
+        guard settings.isToolEnabled(.captureSelectedArea) else { return }
         guard !isCapturing else { return }
         guard ScreenRecordingPermissionService.ensureAccess() else {
             showScreenRecordingPermissionHelp()
@@ -67,7 +68,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         }
 
         isCapturing = true
-        let settings = ScreenshotShelfSettings.snapshot()
+        let settings = settings.screenshotShelfSettings()
         let screenAnchor = presenter?.screenAnchorForNewCapture(settings: settings)
         capturer.captureSelectedArea(
             preserveClipboard: !settings.copyCapturedScreenshotToClipboard
@@ -86,7 +87,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func captureOCRTextFromSelectedArea() {
-        guard ToolboxSettings.isEnabled(.captureOCR) else { return }
+        guard settings.isToolEnabled(.captureOCR) else { return }
         guard !isCapturing else { return }
         guard ScreenRecordingPermissionService.ensureAccess() else {
             showScreenRecordingPermissionHelp()
@@ -142,7 +143,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func copyFrontFinderPath() {
-        guard ToolboxSettings.isEnabled(.copyFinderPath) else { return }
+        guard settings.isToolEnabled(.copyFinderPath) else { return }
 
         do {
             let path = try finderPath.frontFinderWindowPath()
@@ -307,7 +308,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         failureMessage: String
     ) -> URL? {
         do {
-            let settings = ScreenshotShelfSettings.snapshot()
+            let settings = settings.screenshotShelfSettings()
             let url = try exporter.save(
                 item.image,
                 to: settings.saveDirectoryURL,
@@ -336,7 +337,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     private func add(_ image: NSImage, screenAnchor: ScreenshotShelfScreenAnchor?) {
-        let settings = ScreenshotShelfSettings.snapshot()
+        let settings = settings.screenshotShelfSettings()
         let item = ScreenshotItem(
             image: image,
             isPinned: settings.pinScreenshotsByDefault
@@ -440,7 +441,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     private func applySettingsChange() {
-        let settings = ScreenshotShelfSettings.snapshot()
+        let settings = settings.screenshotShelfSettings()
         cancelExpirationTimers(for: trimToMaxStackCount(settings.maxStackCount))
         presenter?.refreshIfVisible()
         reconcileExpirationTimers(settings: settings)
@@ -465,7 +466,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     private func startExpirationTimerIfNeeded(for item: ScreenshotItem) {
-        startExpirationTimerIfNeeded(for: item, settings: ScreenshotShelfSettings.snapshot())
+        startExpirationTimerIfNeeded(for: item, settings: settings.screenshotShelfSettings())
     }
 
     private func startExpirationTimerIfNeeded(
@@ -506,7 +507,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
             return
         }
 
-        let settings = ScreenshotShelfSettings.snapshot()
+        let settings = settings.screenshotShelfSettings()
         guard !settings.neverAutoHide, !item.isPinned else {
             return
         }

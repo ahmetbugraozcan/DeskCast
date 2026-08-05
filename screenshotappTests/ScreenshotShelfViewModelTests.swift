@@ -42,7 +42,8 @@ struct ScreenshotShelfViewModelTests {
             capturer: NoopCapturer(),
             recognizer: NoopRecognizer(),
             exporter: NoopExporter(),
-            finderPath: NoopFinderPath()
+            finderPath: NoopFinderPath(),
+            settings: SettingsRepository()
         )
     }
 

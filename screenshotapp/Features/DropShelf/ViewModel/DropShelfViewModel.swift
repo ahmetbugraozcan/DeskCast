@@ -15,11 +15,11 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     private let shakeMonitor = DropShelfShakeMonitor()
     weak var presenter: DropShelfPresenting?
     private let exporter: DropShelfExporting
+    private let settings: SettingsProviding
 
-    init(exporter: DropShelfExporting) {
+    init(exporter: DropShelfExporting, settings: SettingsProviding) {
         self.exporter = exporter
-        DropShelfSettings.registerDefaults()
-        ToolboxSettings.registerDefaults()
+        self.settings = settings
 
         shakeMonitor.onShake = { [weak self] in
             self?.showShelf()
@@ -62,7 +62,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     }
 
     func showShelf() {
-        guard ToolboxSettings.isEnabled(.dropShelf) else { return }
+        guard settings.isToolEnabled(.dropShelf) else { return }
         isShelfVisible = true
         presenter?.refresh()
     }
@@ -84,7 +84,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     }
 
     func addItems(from pasteboard: NSPasteboard) -> Bool {
-        guard ToolboxSettings.isEnabled(.dropShelf) else {
+        guard settings.isToolEnabled(.dropShelf) else {
             return false
         }
 
@@ -99,7 +99,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
             return false
         }
 
-        let settings = DropShelfSettings.snapshot()
+        let settings = settings.dropShelfSettings()
         items.append(contentsOf: newItems)
         trimToMaxItemCount(settings.maxItemCount)
         isShelfVisible = true
@@ -115,7 +115,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
 
     /// Adds a captured screenshot image to the shelf and reveals it.
     func addScreenshot(_ image: NSImage, name: String) {
-        guard ToolboxSettings.isEnabled(.dropShelf) else {
+        guard settings.isToolEnabled(.dropShelf) else {
             NSSound.beep()
             showToast(
                 AppLocalization.string("Enable Drop Shelf first"),
@@ -125,7 +125,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         }
 
         let item = DropShelfItem(kind: .image, displayName: name, image: image)
-        let settings = DropShelfSettings.snapshot()
+        let settings = settings.dropShelfSettings()
         items.append(item)
         trimToMaxItemCount(settings.maxItemCount)
         isShelfVisible = true
@@ -372,7 +372,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     }
 
     private func applySettingsChange() {
-        let settings = DropShelfSettings.snapshot()
+        let settings = settings.dropShelfSettings()
         trimToMaxItemCount(settings.maxItemCount)
         shakeMonitor.update(settings: settings)
         presenter?.refreshIfVisible()
