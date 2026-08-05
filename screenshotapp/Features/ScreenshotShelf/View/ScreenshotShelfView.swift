@@ -250,9 +250,13 @@ struct ScreenshotShelfView: View {
         )
         reorderDrag = drag
 
-        let destinationIndex = destinationIndexAfterRemoval(for: drag)
+        let destinationIndex = reorderCalculator.destinationIndexAfterRemoval(
+            drag: drag,
+            orderedIDs: store.screenshots.map(\.id),
+            frames: thumbnailScreenFrames
+        )
         activeDropIndex = store.canMoveScreenshot(withID: item.id, toDestinationIndex: destinationIndex)
-            ? visualInsertionIndex(destinationIndex: destinationIndex, sourceIndex: sourceIndex)
+            ? reorderCalculator.visualInsertionIndex(destinationIndex: destinationIndex, sourceIndex: sourceIndex)
             : nil
     }
 
@@ -270,7 +274,11 @@ struct ScreenshotShelfView: View {
             screenPoint: update.screenPoint,
             initialFrame: initialFrame(for: item.id)
         )
-        let destinationIndex = destinationIndexAfterRemoval(for: completedDrag)
+        let destinationIndex = reorderCalculator.destinationIndexAfterRemoval(
+            drag: completedDrag,
+            orderedIDs: store.screenshots.map(\.id),
+            frames: thumbnailScreenFrames
+        )
 
         if store.canMoveScreenshot(withID: item.id, toDestinationIndex: destinationIndex) {
             store.moveScreenshot(withID: item.id, toDestinationIndex: destinationIndex)
@@ -297,42 +305,6 @@ struct ScreenshotShelfView: View {
         }
     }
 
-    private func destinationIndexAfterRemoval(for drag: ScreenshotReorderDrag) -> Int {
-        let orderedScreenshots = store.screenshots.filter { $0.id != drag.itemID }
-        guard !orderedScreenshots.isEmpty else {
-            return drag.sourceIndex
-        }
-
-        guard let draggedAxisPosition = draggedReorderBoundary(for: drag) else {
-            return fallbackDestinationIndexAfterRemoval(for: drag)
-        }
-
-        let framedScreenshots = orderedScreenshots.compactMap { item -> (item: ScreenshotItem, frame: CGRect)? in
-            guard let frame = thumbnailScreenFrames[item.id] else {
-                return nil
-            }
-
-            return (item, frame)
-        }
-
-        guard framedScreenshots.count == orderedScreenshots.count else {
-            return fallbackDestinationIndexAfterRemoval(for: drag)
-        }
-
-        switch stackDirection {
-        case .horizontal:
-            for (index, framedScreenshot) in framedScreenshots.enumerated() where draggedAxisPosition < framedScreenshot.frame.midX {
-                return index
-            }
-        case .vertical:
-            for (index, framedScreenshot) in framedScreenshots.enumerated() where draggedAxisPosition > framedScreenshot.frame.midY {
-                return index
-            }
-        }
-
-        return orderedScreenshots.count
-    }
-
     private func initialFrame(for itemID: UUID) -> CGRect? {
         if reorderDrag?.itemID == itemID {
             return reorderDrag?.initialFrame
@@ -341,62 +313,8 @@ struct ScreenshotShelfView: View {
         return thumbnailScreenFrames[itemID]
     }
 
-    private func draggedReorderBoundary(for drag: ScreenshotReorderDrag) -> CGFloat? {
-        if let initialFrame = drag.initialFrame {
-            switch stackDirection {
-            case .horizontal:
-                if drag.translation > 0 {
-                    return initialFrame.maxX + drag.translation
-                } else if drag.translation < 0 {
-                    return initialFrame.minX + drag.translation
-                }
-
-                return initialFrame.midX
-            case .vertical:
-                if drag.translation > 0 {
-                    return initialFrame.minY - drag.translation
-                } else if drag.translation < 0 {
-                    return initialFrame.maxY - drag.translation
-                }
-
-                return initialFrame.midY
-            }
-        }
-
-        guard let screenPoint = drag.screenPoint else {
-            return nil
-        }
-
-        switch stackDirection {
-        case .horizontal:
-            return screenPoint.x
-        case .vertical:
-            return screenPoint.y
-        }
-    }
-
-    private func fallbackDestinationIndexAfterRemoval(for drag: ScreenshotReorderDrag) -> Int {
-        let itemCount = store.screenshots.count
-        guard itemCount > 1 else {
-            return drag.sourceIndex
-        }
-
-        let step = itemStep
-        let threshold = step * 0.18
-        let distance = abs(drag.translation)
-
-        guard distance >= threshold else {
-            return drag.sourceIndex
-        }
-
-        let slotCount = Int(((distance - threshold) / step).rounded(.down)) + 1
-        let slotDelta = drag.translation < 0 ? -slotCount : slotCount
-
-        return min(max(drag.sourceIndex + slotDelta, 0), itemCount - 1)
-    }
-
-    private func visualInsertionIndex(destinationIndex: Int, sourceIndex: Int) -> Int {
-        destinationIndex > sourceIndex ? destinationIndex + 1 : destinationIndex
+    private var reorderCalculator: ShelfReorderCalculator {
+        ShelfReorderCalculator(stackDirection: stackDirection, itemStep: itemStep)
     }
 
     private var itemStep: CGFloat {
@@ -418,14 +336,6 @@ struct ScreenshotShelfView: View {
             return translation.height
         }
     }
-}
-
-private struct ScreenshotReorderDrag: Equatable {
-    let itemID: UUID
-    let sourceIndex: Int
-    let translation: CGFloat
-    let screenPoint: CGPoint?
-    let initialFrame: CGRect?
 }
 
 struct ScreenshotDragUpdate {
