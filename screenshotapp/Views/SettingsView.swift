@@ -133,6 +133,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 24) {
                 LanguageSection(selection: $languageRaw)
                 MenuLayoutSection(selection: $menuLayoutRaw)
+                LaunchAtLoginSection()
             }
         }
     }
@@ -622,6 +623,49 @@ private struct LanguageSection: View {
                     }
                 }
                 .pickerStyle(.menu)
+            }
+        }
+    }
+}
+
+private struct LaunchAtLoginSection: View {
+    @State private var isOn = LaunchAtLoginService.isEnabled
+    @State private var errorMessage: String?
+
+    var body: some View {
+        SettingsControlSection(title: AppLocalization.string("Startup")) {
+            SettingsControlRow(title: AppLocalization.string("Launch at login")) {
+                Toggle("", isOn: toggleBinding)
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+            }
+
+            if let errorMessage {
+                SettingsSectionDivider()
+
+                SettingsControlRow(title: errorMessage) {
+                    EmptyView()
+                }
+            }
+        }
+        .onAppear {
+            isOn = LaunchAtLoginService.isEnabled
+        }
+    }
+
+    private var toggleBinding: Binding<Bool> {
+        Binding {
+            isOn
+        } set: { newValue in
+            do {
+                try LaunchAtLoginService.setEnabled(newValue)
+                isOn = LaunchAtLoginService.isEnabled
+                errorMessage = nil
+            } catch {
+                // Revert the switch and tell the user; the OS can reject the change
+                // (e.g. the item was disabled in System Settings → Login Items).
+                isOn = LaunchAtLoginService.isEnabled
+                errorMessage = AppLocalization.string("Could not update the login item. Check System Settings.")
             }
         }
     }

@@ -122,6 +122,9 @@
 "Drop shelf:" = "Drop shelf:";
 "Language" = "Language";
 "App language" = "App language";
+"Startup" = "Startup";
+"Launch at login" = "Launch at login";
+"Could not update the login item. Check System Settings." = "Could not update the login item. Check System Settings.";
 "Dimensions" = "Dimensions";
 "Width" = "Width";
 "x %ld px" = "x %ld px";

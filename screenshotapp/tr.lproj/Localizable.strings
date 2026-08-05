@@ -122,6 +122,9 @@
 "Drop shelf:" = "Bırakma rafı:";
 "Language" = "Dil";
 "App language" = "Uygulama dili";
+"Startup" = "Başlangıç";
+"Launch at login" = "Açılışta başlat";
+"Could not update the login item. Check System Settings." = "Giriş öğesi güncellenemedi. Sistem Ayarları'nı kontrol edin.";
 "Dimensions" = "Boyutlar";
 "Width" = "Genişlik";
 "x %ld px" = "x %ld px";
