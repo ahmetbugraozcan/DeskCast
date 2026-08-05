@@ -21,18 +21,24 @@ The app is **DeskCast**. A few names differ, don't "fix" them blindly:
 
 ## App shape
 
-- SwiftUI `App` + AppKit. Entry point [screenshotappApp.swift](screenshotapp/screenshotappApp.swift) declares the `MenuBarExtra`, a `Settings` scene, and an `"image-search"` `Window`.
-- `LSUIElement`/`.accessory` app — no Dock icon, lives in the menu bar. `AppDelegate` sets `.accessory` and keeps running with no windows open.
+- SwiftUI `App` + AppKit. Entry point [DeskCastApp.swift](screenshotapp/App/DeskCastApp.swift) declares the `MenuBarExtra`, a `Settings` scene, and an `"image-search"` `Window`.
+- No `LSUIElement`; `AppDelegate` sets `.accessory` in `applicationWillFinishLaunching` — no Dock icon, still Spotlight/Raycast-searchable, keeps running with no windows open.
 - Only SPM dependency: `KeyboardShortcuts` 2.4.0 (do not change `Package.resolved` for non-dependency work).
 
-## Directory layout
+## Directory layout (feature-module MVVM)
 
-- `Models/` — settings enums, defaults, tool IDs (`ToolboxTool.swift`), export naming, value types.
-- `Stores/` — `@MainActor ObservableObject` app state; each store owns its services + panel controller and observes `UserDefaults.didChangeNotification` to react to settings.
-- `Services/` — OS integrations: `screencapture`, pasteboard, Vision OCR, Finder AppleScript, permissions, export panels.
-- `Views/` — SwiftUI UI + AppKit bridge/controller code (`*PanelController`, `ToastPanelController`).
-- `Support/` — shared helpers: `AppConstants`, `AppLocalization`, `KeyboardShortcuts+Names`, permission alerts.
+The Xcode target uses `PBXFileSystemSynchronizedRootGroup`, so moving/adding `.swift` files under `screenshotapp/` needs **no `project.pbxproj` edits**. Keep `Assets.xcassets`, `*.lproj`, and `screenshotapp.entitlements` at the target root.
+
+- `App/` — `@main DeskCastApp`, `AppDelegate`, and `AppEnvironment` (the composition root that builds view models, injects dependencies, and owns the presentation coordinators — no singletons).
+- `Core/` — cross-cutting: `Localization/` (`AppLocalization`, `AppLanguage`), `UI/` (`ToastPanelController`), `Support/` (`AppConstants`, `TemporaryPNGWriter`, extensions), and `ShelfCollecting` (cross-feature protocol).
+- `Features/<Feature>/` — one folder per feature (`ScreenshotShelf`, `DropShelf`, `ImageSearch`, `Permissions`, `Settings`, `Toolbox`), each split into `Model/`, `ViewModel/`, `View/`, `Service/`, `Presentation/`.
 - `en.lproj/` + `tr.lproj/` — `Localizable.strings`.
+
+## MVVM roles
+
+- **`*ViewModel`** — `@MainActor ObservableObject` state + orchestration. They depend on **service protocols** (injected), and drive AppKit panels through `*Presenting` protocols via a `weak var presenter` — they do **not** construct `NSPanel`.
+- **Services** — OS integrations behind protocols (`ScreenshotCapturing`, `TextRecognizing`, `ScreenshotExporting`, `FinderPathProviding`, `DropShelfExporting`); concrete types are instances built in `AppEnvironment`. Permission services (`PrivacyPermissionService`, `ScreenRecordingPermissionService`) stay static OS gateways.
+- **Presentation coordinators** (`*PanelCoordinator`) — own the `NSPanel` lifecycle, retained by `AppEnvironment`.
 
 ## Two settings systems — keep them in sync
 
@@ -40,10 +46,10 @@ Each feature threads a value through **all** of these; when you add or change a 
 
 1. Model enum + `default*` constants + `Keys` (e.g. `ToolboxSettings` in `ToolboxTool.swift`).
 2. `registerDefaults(defaults:)` — every key must appear in `defaultValues`.
-3. `@AppStorage` use sites (menu in `screenshotappApp.swift`, `SettingsView`).
+3. `@AppStorage` use sites (menu in `DeskCastApp.swift`, `SettingsView`).
 4. Menu-visibility logic — a tool shows only when `enabled && showInMenu` (see the `shouldShow*InMenu` computed vars). Disabled tools must never remain visible via `showInMenu`; `resetTools` enforces `enabled && showInMenu`.
 
-There are three settings namespaces: `ToolboxSettings` (which tools/layout/language), `ScreenshotShelfSettings`, and `DropShelfSettings`. All three call `registerDefaults()` at launch (in `screenshotappApp.init()`) and again inside their stores.
+There are three settings namespaces: `ToolboxSettings` (which tools/layout/language), `ScreenshotShelfSettings`, and `DropShelfSettings`. All three call `registerDefaults()` at launch (in `AppEnvironment`) and again inside their view models.
 
 ## Localization
 
@@ -54,7 +60,7 @@ There are three settings namespaces: `ToolboxSettings` (which tools/layout/langu
 ## Concurrency rules
 
 - Stores are `@MainActor`. Background OCR/capture/indexing must hop back to main before touching `@Published` state, the pasteboard, panels, or views.
-- Watch task cancellation and expiration/auto-hide timers: cancel timers when items are removed, pinned, cleared, or trimmed (see `expirationTimers` in `ScreenshotShelfStore`).
+- Watch task cancellation and expiration/auto-hide timers: cancel timers when items are removed, pinned, cleared, or trimmed (see `expirationTimers` in `ScreenshotShelfViewModel`).
 - Preserve pasteboard snapshot/restore in capture paths (`ScreenshotCaptureService`).
 
 ## Permissions

@@ -16,17 +16,17 @@
 
 ## Editing Rules
 
-- Prefer minimal, localized changes inside the existing folders:
-  - `Models/` defines settings enums/defaults, tool IDs, export naming, and image-search value types.
-  - `Stores/` owns observable app state and coordinates services/controllers; current stores are `@MainActor`.
-  - `Services/` wraps OS integrations: `screencapture`, pasteboard, Vision OCR, Finder AppleScript, permissions, and export panels.
-  - `Views/` contains SwiftUI UI plus AppKit bridge/controller code.
-  - `Support/` contains small shared AppKit and helper extensions.
+- The code is organized as feature-module MVVM. Prefer minimal, localized changes inside the existing folders:
+  - `App/` — `@main DeskCastApp`, `AppDelegate`, and `AppEnvironment` (composition root / DI).
+  - `Core/` — cross-cutting `Localization/`, `UI/`, `Support/`, and the `ShelfCollecting` protocol.
+  - `Features/<Feature>/` — one folder per feature, each split into `Model/`, `ViewModel/`, `View/`, `Service/`, `Presentation/`.
+  - View models (`*ViewModel`) are `@MainActor ObservableObject`s that depend on **service protocols** injected via `AppEnvironment` and drive panels through `*Presenting` coordinators.
+  - The target uses `PBXFileSystemSynchronizedRootGroup`: adding/moving `.swift` files needs no `project.pbxproj` edits.
 - When adding or changing a setting/tool, update the full existing chain together: model enum/defaults, `UserDefaults.register(defaults:)`, `@AppStorage` use sites, settings UI, and menu visibility logic.
 - Keep UI/state mutations on the main actor. Background OCR/capture/indexing work should return to main before touching `@Published` state, pasteboard UI, panels, or SwiftUI views.
 - Preserve pasteboard restoration behavior in screenshot capture paths; `ScreenshotCaptureService` intentionally snapshots and restores the pasteboard when requested.
 - Preserve OS permission handling around screen recording and Finder automation. The entitlements include Apple Events and user-selected read/write file access.
-- For shelf layout or reordering changes, check both horizontal and vertical stack paths. `ScreenshotShelfPanelController` sizes/positions the panel using static constants from `ScreenshotShelfView`.
+- For shelf layout or reordering changes, check both horizontal and vertical stack paths. `ScreenshotShelfPanelCoordinator` sizes/positions the panel using static constants from `ScreenshotShelfView`.
 - Do not edit `Package.resolved` or `screenshotapp.xcodeproj/project.pbxproj` unless the change is actually about dependencies, targets, signing, entitlements, or build settings.
 
 ## Review Checklist
