@@ -27,6 +27,9 @@
 "Medium" = "Medium";
 "Large" = "Large";
 "Custom" = "Custom";
+"Aspect ratio" = "Aspect ratio";
+"Square" = "Square";
+"Ratio" = "Ratio";
 "Screen Recording" = "Screen Recording";
 "Finder Automation" = "Finder Automation";
 "Accessibility" = "Accessibility";

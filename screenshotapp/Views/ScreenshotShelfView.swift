@@ -16,6 +16,15 @@ struct ScreenshotShelfView: View {
     @AppStorage(ScreenshotShelfSettings.Keys.customThumbnailWidth)
     private var customThumbnailWidth = ScreenshotShelfSettings.defaultCustomThumbnailWidth
 
+    @AppStorage(ScreenshotShelfSettings.Keys.thumbnailAspectRatio)
+    private var thumbnailAspectRatioRaw = ScreenshotShelfSettings.defaultThumbnailAspectRatio.rawValue
+
+    @AppStorage(ScreenshotShelfSettings.Keys.customThumbnailAspectWidth)
+    private var customThumbnailAspectWidth = ScreenshotShelfSettings.defaultCustomThumbnailAspectWidth
+
+    @AppStorage(ScreenshotShelfSettings.Keys.customThumbnailAspectHeight)
+    private var customThumbnailAspectHeight = ScreenshotShelfSettings.defaultCustomThumbnailAspectHeight
+
     @AppStorage(ScreenshotShelfSettings.Keys.exportFilenamePrefix)
     private var exportFilenamePrefix = ScreenshotShelfSettings.defaultExportFilenamePrefix
 
@@ -52,7 +61,17 @@ struct ScreenshotShelfView: View {
         let size = ShelfThumbnailSize(rawValue: thumbnailSizeRaw) ?? ScreenshotShelfSettings.defaultThumbnailSize
         let customWidth = ScreenshotShelfSettings.clampedCustomThumbnailWidth(customThumbnailWidth)
 
-        return size.size(customWidth: customWidth)
+        return size.size(customWidth: customWidth, aspectRatio: thumbnailAspectRatio)
+    }
+
+    private var thumbnailAspectRatio: CGFloat {
+        let ratio = ShelfThumbnailAspectRatio(rawValue: thumbnailAspectRatioRaw)
+            ?? ScreenshotShelfSettings.defaultThumbnailAspectRatio
+
+        return ratio.value(
+            customWidth: ScreenshotShelfSettings.clampedAspectComponent(customThumbnailAspectWidth),
+            customHeight: ScreenshotShelfSettings.clampedAspectComponent(customThumbnailAspectHeight)
+        )
     }
 
     private var exportOptions: [ScreenshotExportOption] {

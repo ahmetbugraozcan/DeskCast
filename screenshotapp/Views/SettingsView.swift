@@ -33,6 +33,15 @@ struct SettingsView: View {
     @AppStorage(ScreenshotShelfSettings.Keys.customThumbnailWidth)
     private var customThumbnailWidth = ScreenshotShelfSettings.defaultCustomThumbnailWidth
 
+    @AppStorage(ScreenshotShelfSettings.Keys.thumbnailAspectRatio)
+    private var thumbnailAspectRatioRaw = ScreenshotShelfSettings.defaultThumbnailAspectRatio.rawValue
+
+    @AppStorage(ScreenshotShelfSettings.Keys.customThumbnailAspectWidth)
+    private var customThumbnailAspectWidth = ScreenshotShelfSettings.defaultCustomThumbnailAspectWidth
+
+    @AppStorage(ScreenshotShelfSettings.Keys.customThumbnailAspectHeight)
+    private var customThumbnailAspectHeight = ScreenshotShelfSettings.defaultCustomThumbnailAspectHeight
+
     @AppStorage(ScreenshotShelfSettings.Keys.autoSaveCapturedScreenshots)
     private var autoSaveCapturedScreenshots = ScreenshotShelfSettings.defaultAutoSaveCapturedScreenshots
 
@@ -95,7 +104,14 @@ struct SettingsView: View {
         } detail: {
             selectedPane
         }
-        .frame(width: 720, height: 500)
+        .frame(
+            minWidth: 640,
+            idealWidth: 720,
+            maxWidth: .infinity,
+            minHeight: 460,
+            idealHeight: 560,
+            maxHeight: .infinity
+        )
         .onAppear(perform: clampNumericSettings)
         .onChange(of: maxStackCount) { _, newValue in
             maxStackCount = ScreenshotShelfSettings.clampedMaxStackCount(newValue)
@@ -105,6 +121,12 @@ struct SettingsView: View {
         }
         .onChange(of: customThumbnailWidth) { _, newValue in
             customThumbnailWidth = ScreenshotShelfSettings.clampedCustomThumbnailWidth(newValue)
+        }
+        .onChange(of: customThumbnailAspectWidth) { _, newValue in
+            customThumbnailAspectWidth = ScreenshotShelfSettings.clampedAspectComponent(newValue)
+        }
+        .onChange(of: customThumbnailAspectHeight) { _, newValue in
+            customThumbnailAspectHeight = ScreenshotShelfSettings.clampedAspectComponent(newValue)
         }
         .onChange(of: dropShelfCustomItemWidth) { _, newValue in
             dropShelfCustomItemWidth = DropShelfSettings.clampedCustomItemWidth(newValue)
@@ -192,6 +214,26 @@ struct SettingsView: View {
                         CustomThumbnailSizeControl(
                             width: $customThumbnailWidth,
                             height: customThumbnailHeight
+                        )
+                    }
+
+                    SettingsSectionDivider()
+
+                    SettingsPickerRow(title: AppLocalization.string("Aspect ratio")) {
+                        Picker(AppLocalization.string("Aspect ratio"), selection: $thumbnailAspectRatioRaw) {
+                            ForEach(ShelfThumbnailAspectRatio.allCases) { ratio in
+                                Text(ratio.title).tag(ratio.rawValue)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+
+                    if selectedAspectRatio == .custom {
+                        SettingsSectionDivider()
+
+                        CustomAspectRatioControl(
+                            width: $customThumbnailAspectWidth,
+                            height: $customThumbnailAspectHeight
                         )
                     }
                 }
@@ -448,9 +490,20 @@ struct SettingsView: View {
         ShelfThumbnailSize(rawValue: thumbnailSizeRaw) ?? ScreenshotShelfSettings.defaultThumbnailSize
     }
 
+    private var selectedAspectRatio: ShelfThumbnailAspectRatio {
+        ShelfThumbnailAspectRatio(rawValue: thumbnailAspectRatioRaw) ?? ScreenshotShelfSettings.defaultThumbnailAspectRatio
+    }
+
+    private var aspectRatioValue: CGFloat {
+        selectedAspectRatio.value(
+            customWidth: ScreenshotShelfSettings.clampedAspectComponent(customThumbnailAspectWidth),
+            customHeight: ScreenshotShelfSettings.clampedAspectComponent(customThumbnailAspectHeight)
+        )
+    }
+
     private var customThumbnailHeight: Int {
         let width = ScreenshotShelfSettings.clampedCustomThumbnailWidth(customThumbnailWidth)
-        return Int(ShelfThumbnailSize.size(forWidth: CGFloat(width)).height)
+        return Int(ShelfThumbnailSize.size(forWidth: CGFloat(width), aspectRatio: aspectRatioValue).height)
     }
 
     private var selectedDropShelfItemSize: DropShelfItemSize {
@@ -481,6 +534,8 @@ struct SettingsView: View {
         maxStackCount = ScreenshotShelfSettings.clampedMaxStackCount(maxStackCount)
         previewDurationSeconds = ScreenshotShelfSettings.clampedPreviewDuration(previewDurationSeconds)
         customThumbnailWidth = ScreenshotShelfSettings.clampedCustomThumbnailWidth(customThumbnailWidth)
+        customThumbnailAspectWidth = ScreenshotShelfSettings.clampedAspectComponent(customThumbnailAspectWidth)
+        customThumbnailAspectHeight = ScreenshotShelfSettings.clampedAspectComponent(customThumbnailAspectHeight)
         dropShelfCustomItemWidth = DropShelfSettings.clampedCustomItemWidth(dropShelfCustomItemWidth)
         dropShelfMaxItemCount = DropShelfSettings.clampedMaxItemCount(dropShelfMaxItemCount)
         dropShelfShakeSensitivity = DropShelfSettings.clampedShakeSensitivity(dropShelfShakeSensitivity)
@@ -940,6 +995,31 @@ private struct CustomThumbnailSizeControl: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
+            }
+        }
+    }
+}
+
+private struct CustomAspectRatioControl: View {
+    @Binding var width: Int
+    @Binding var height: Int
+
+    var body: some View {
+        SettingsControlRow(title: AppLocalization.string("Ratio")) {
+            HStack(spacing: 8) {
+                TextField("", value: $width, format: .number)
+                    .frame(width: 56)
+                    .multilineTextAlignment(.trailing)
+                    .textFieldStyle(.roundedBorder)
+
+                Text(":")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.secondary)
+
+                TextField("", value: $height, format: .number)
+                    .frame(width: 56)
+                    .multilineTextAlignment(.trailing)
+                    .textFieldStyle(.roundedBorder)
             }
         }
     }

@@ -63,6 +63,7 @@ struct screenshotappApp: App {
             SettingsView()
         }
         .environment(\.locale, selectedLanguage.locale)
+        .windowResizability(.contentSize)
 
         Window(AppLocalization.string("Image Search"), id: "image-search") {
             ImageTextSearchView()

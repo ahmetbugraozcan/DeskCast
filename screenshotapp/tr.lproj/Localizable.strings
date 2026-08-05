@@ -27,6 +27,9 @@
 "Medium" = "Orta";
 "Large" = "Büyük";
 "Custom" = "Özel";
+"Aspect ratio" = "En/Boy oranı";
+"Square" = "Kare";
+"Ratio" = "Oran";
 "Screen Recording" = "Ekran Kaydı";
 "Finder Automation" = "Finder Otomasyonu";
 "Accessibility" = "Erişilebilirlik";

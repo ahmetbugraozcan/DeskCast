@@ -50,17 +50,61 @@ enum ShelfThumbnailSize: String, CaseIterable, Identifiable {
         }
     }
 
-    func size(customWidth: Int) -> CGSize {
+    var referenceWidth: CGFloat {
         switch self {
-        case .small: Self.size(forWidth: 132)
-        case .medium: Self.size(forWidth: 176)
-        case .large: Self.size(forWidth: 240)
-        case .custom: Self.size(forWidth: CGFloat(customWidth))
+        case .small: 132
+        case .medium: 176
+        case .large: 240
+        case .custom: 176
         }
     }
 
-    static func size(forWidth width: CGFloat) -> CGSize {
-        CGSize(width: width, height: (width * 0.7).rounded())
+    func size(customWidth: Int, aspectRatio: CGFloat) -> CGSize {
+        switch self {
+        case .custom: Self.size(forWidth: CGFloat(customWidth), aspectRatio: aspectRatio)
+        default: Self.size(forWidth: referenceWidth, aspectRatio: aspectRatio)
+        }
+    }
+
+    static func size(forWidth width: CGFloat, aspectRatio: CGFloat) -> CGSize {
+        let ratio = max(aspectRatio, 0.2)
+        return CGSize(width: width, height: (width / ratio).rounded())
+    }
+}
+
+/// Width-to-height ratio of a floating screenshot thumbnail so it can be shaped
+/// like the rectangular previews macOS uses instead of a fixed near-square.
+enum ShelfThumbnailAspectRatio: String, CaseIterable, Identifiable {
+    case ratio16x9
+    case ratio16x10
+    case ratio3x2
+    case ratio4x3
+    case square
+    case custom
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .ratio16x9: "16:9"
+        case .ratio16x10: "16:10"
+        case .ratio3x2: "3:2"
+        case .ratio4x3: "4:3"
+        case .square: AppLocalization.string("Square")
+        case .custom: AppLocalization.string("Custom")
+        }
+    }
+
+    /// width / height
+    func value(customWidth: Int, customHeight: Int) -> CGFloat {
+        switch self {
+        case .ratio16x9: 16.0 / 9.0
+        case .ratio16x10: 16.0 / 10.0
+        case .ratio3x2: 3.0 / 2.0
+        case .ratio4x3: 4.0 / 3.0
+        case .square: 1.0
+        case .custom: CGFloat(max(customWidth, 1)) / CGFloat(max(customHeight, 1))
+        }
     }
 }
 
@@ -75,11 +119,21 @@ struct ScreenshotShelfSettingsSnapshot {
     let copyCapturedScreenshotToClipboard: Bool
     let thumbnailSize: ShelfThumbnailSize
     let customThumbnailWidth: Int
+    let thumbnailAspectRatio: ShelfThumbnailAspectRatio
+    let customThumbnailAspectWidth: Int
+    let customThumbnailAspectHeight: Int
     let autoSaveCapturedScreenshots: Bool
     let saveDirectoryPath: String
 
+    var aspectRatioValue: CGFloat {
+        thumbnailAspectRatio.value(
+            customWidth: customThumbnailAspectWidth,
+            customHeight: customThumbnailAspectHeight
+        )
+    }
+
     var thumbnailDimensions: CGSize {
-        thumbnailSize.size(customWidth: customThumbnailWidth)
+        thumbnailSize.size(customWidth: customThumbnailWidth, aspectRatio: aspectRatioValue)
     }
 
     var saveDirectoryURL: URL {
@@ -99,6 +153,9 @@ enum ScreenshotShelfSettings {
         static let copyCapturedScreenshotToClipboard = "copyCapturedScreenshotToClipboard"
         static let thumbnailSize = "thumbnailSize"
         static let customThumbnailWidth = "customThumbnailWidth"
+        static let thumbnailAspectRatio = "thumbnailAspectRatio"
+        static let customThumbnailAspectWidth = "customThumbnailAspectWidth"
+        static let customThumbnailAspectHeight = "customThumbnailAspectHeight"
         static let autoSaveCapturedScreenshots = "autoSaveCapturedScreenshots"
         static let saveDirectoryPath = "saveDirectoryPath"
         static let exportFilenamePrefix = "exportFilenamePrefix"
@@ -108,6 +165,7 @@ enum ScreenshotShelfSettings {
     static let maxStackCountRange = 1...10
     static let previewDurationRange = 1...60
     static let customThumbnailWidthRange = 120...420
+    static let customThumbnailAspectComponentRange = 1...32
 
     static let defaultPreviewPosition = PreviewPosition.bottomRight
     static let defaultStackDirection = StackDirection.horizontal
@@ -119,6 +177,9 @@ enum ScreenshotShelfSettings {
     static let defaultCopyCapturedScreenshotToClipboard = false
     static let defaultThumbnailSize = ShelfThumbnailSize.medium
     static let defaultCustomThumbnailWidth = 220
+    static let defaultThumbnailAspectRatio = ShelfThumbnailAspectRatio.ratio16x10
+    static let defaultCustomThumbnailAspectWidth = 16
+    static let defaultCustomThumbnailAspectHeight = 10
     static let defaultAutoSaveCapturedScreenshots = true
     static let defaultSaveDirectoryPath = FileManager.default.urls(
         for: .desktopDirectory,
@@ -149,6 +210,9 @@ enum ScreenshotShelfSettings {
             Keys.copyCapturedScreenshotToClipboard: defaultCopyCapturedScreenshotToClipboard,
             Keys.thumbnailSize: defaultThumbnailSize.rawValue,
             Keys.customThumbnailWidth: defaultCustomThumbnailWidth,
+            Keys.thumbnailAspectRatio: defaultThumbnailAspectRatio.rawValue,
+            Keys.customThumbnailAspectWidth: defaultCustomThumbnailAspectWidth,
+            Keys.customThumbnailAspectHeight: defaultCustomThumbnailAspectHeight,
             Keys.autoSaveCapturedScreenshots: defaultAutoSaveCapturedScreenshots,
             Keys.saveDirectoryPath: defaultSaveDirectoryPath,
             Keys.exportFilenamePrefix: defaultExportFilenamePrefix,
@@ -160,6 +224,7 @@ enum ScreenshotShelfSettings {
         let previewPositionRaw = defaults.string(forKey: Keys.previewPosition)
         let stackDirectionRaw = defaults.string(forKey: Keys.stackDirection)
         let thumbnailSizeRaw = defaults.string(forKey: Keys.thumbnailSize)
+        let thumbnailAspectRatioRaw = defaults.string(forKey: Keys.thumbnailAspectRatio)
 
         return ScreenshotShelfSettingsSnapshot(
             previewPosition: PreviewPosition(rawValue: previewPositionRaw ?? "") ?? defaultPreviewPosition,
@@ -172,6 +237,9 @@ enum ScreenshotShelfSettings {
             copyCapturedScreenshotToClipboard: defaults.bool(forKey: Keys.copyCapturedScreenshotToClipboard),
             thumbnailSize: ShelfThumbnailSize(rawValue: thumbnailSizeRaw ?? "") ?? defaultThumbnailSize,
             customThumbnailWidth: clampedCustomThumbnailWidth(defaults.integer(forKey: Keys.customThumbnailWidth)),
+            thumbnailAspectRatio: ShelfThumbnailAspectRatio(rawValue: thumbnailAspectRatioRaw ?? "") ?? defaultThumbnailAspectRatio,
+            customThumbnailAspectWidth: clampedAspectComponent(defaults.integer(forKey: Keys.customThumbnailAspectWidth)),
+            customThumbnailAspectHeight: clampedAspectComponent(defaults.integer(forKey: Keys.customThumbnailAspectHeight)),
             autoSaveCapturedScreenshots: defaults.bool(forKey: Keys.autoSaveCapturedScreenshots),
             saveDirectoryPath: saveDirectoryPath(from: defaults)
         )
@@ -187,6 +255,10 @@ enum ScreenshotShelfSettings {
 
     static func clampedCustomThumbnailWidth(_ value: Int) -> Int {
         min(max(value, customThumbnailWidthRange.lowerBound), customThumbnailWidthRange.upperBound)
+    }
+
+    static func clampedAspectComponent(_ value: Int) -> Int {
+        min(max(value, customThumbnailAspectComponentRange.lowerBound), customThumbnailAspectComponentRange.upperBound)
     }
 
     private static func saveDirectoryPath(from defaults: UserDefaults) -> String {
