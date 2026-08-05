@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import screenshotapp
 
-struct screenshotappTests {
+struct DeskCastSettingsTests {
 
     @Test func screenshotSettingsRegisterAutoSaveDefaults() throws {
         let suiteName = "ScreenshotShelfSettingsTests-\(UUID().uuidString)"
@@ -33,7 +33,10 @@ struct screenshotappTests {
 
         #expect(snapshot.maxStackCount == ScreenshotShelfSettings.defaultMaxStackCount)
         #expect(snapshot.autoSaveCapturedScreenshots == ScreenshotShelfSettings.defaultAutoSaveCapturedScreenshots)
-        #expect(defaults.string(forKey: ScreenshotShelfSettings.Keys.exportFilenamePrefix) == ScreenshotShelfSettings.defaultExportFilenamePrefix)
+        #expect(
+            defaults.string(forKey: ScreenshotShelfSettings.Keys.exportFilenamePrefix)
+                == ScreenshotShelfSettings.defaultExportFilenamePrefix
+        )
 
         defaults.removePersistentDomain(forName: suiteName)
     }
@@ -54,7 +57,10 @@ struct screenshotappTests {
         ToolboxSettings.resetTools([.captureSelectedArea], in: defaults)
 
         #expect(defaults.bool(forKey: ToolboxToolID.captureSelectedArea.enabledKey) == ToolboxToolID.captureSelectedArea.defaultEnabled)
-        #expect(defaults.bool(forKey: ToolboxToolID.captureSelectedArea.showInMenuKey) == ToolboxToolID.captureSelectedArea.defaultShowInMenu)
+        #expect(
+            defaults.bool(forKey: ToolboxToolID.captureSelectedArea.showInMenuKey)
+                == ToolboxToolID.captureSelectedArea.defaultShowInMenu
+        )
         #expect(defaults.bool(forKey: ToolboxToolID.copyFinderPath.enabledKey) == false)
         #expect(defaults.bool(forKey: ToolboxToolID.copyFinderPath.showInMenuKey) == false)
         #expect(defaults.bool(forKey: ToolboxToolID.dropShelf.enabledKey) == false)

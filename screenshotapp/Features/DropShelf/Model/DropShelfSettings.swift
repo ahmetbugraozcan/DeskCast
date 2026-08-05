@@ -121,6 +121,14 @@ enum DropShelfSettings {
         )
     }
 
+    static var customItemWidthDoubleRange: ClosedRange<Double> {
+        Double(customItemWidthRange.lowerBound)...Double(customItemWidthRange.upperBound)
+    }
+
+    static var shakeSensitivityDoubleRange: ClosedRange<Double> {
+        Double(shakeSensitivityRange.lowerBound)...Double(shakeSensitivityRange.upperBound)
+    }
+
     static func clampedCustomItemWidth(_ value: Int) -> Int {
         min(max(value, customItemWidthRange.lowerBound), customItemWidthRange.upperBound)
     }

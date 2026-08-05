@@ -443,7 +443,7 @@ struct SettingsView: View {
                             Text("\(DropShelfSettings.shakeSensitivityRange.lowerBound)")
                             Slider(
                                 value: dropShelfShakeSensitivityBinding,
-                                in: Double(DropShelfSettings.shakeSensitivityRange.lowerBound)...Double(DropShelfSettings.shakeSensitivityRange.upperBound),
+                                in: DropShelfSettings.shakeSensitivityDoubleRange,
                                 step: 1
                             )
                             .frame(width: 190)
@@ -847,5 +847,3 @@ private struct ToolSettingsRow: View {
         }
     }
 }
-
-

@@ -568,7 +568,6 @@ private struct ScreenshotThumbnailView: View {
     }
 }
 
-
 private struct ShelfInsertionIndicator: View {
     let stackDirection: StackDirection
 

@@ -144,7 +144,7 @@ final class ImageTextSearchViewModel: ObservableObject {
         }
     }
 
-    private nonisolated static func recognizedText(
+    nonisolated private static func recognizedText(
         at imageURL: URL,
         using recognizer: TextRecognizing
     ) async -> (text: String?, state: ImageSearchIndexState) {
@@ -193,7 +193,7 @@ final class ImageTextSearchViewModel: ObservableObject {
             }
     }
 
-    private nonisolated static func imageURLs(in folderURL: URL) -> [URL] {
+    nonisolated private static func imageURLs(in folderURL: URL) -> [URL] {
         let resourceKeys: Set<URLResourceKey> = [
             .isRegularFileKey,
             .contentTypeKey

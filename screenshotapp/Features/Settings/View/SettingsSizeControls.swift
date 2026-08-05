@@ -41,7 +41,7 @@ struct CustomThumbnailSizeControl: View {
                     Text("\(ScreenshotShelfSettings.customThumbnailWidthRange.lowerBound)")
                     Slider(
                         value: widthSliderValue,
-                        in: Double(ScreenshotShelfSettings.customThumbnailWidthRange.lowerBound)...Double(ScreenshotShelfSettings.customThumbnailWidthRange.upperBound)
+                        in: ScreenshotShelfSettings.customThumbnailWidthDoubleRange
                     )
                     .frame(width: 190)
                     Text("\(ScreenshotShelfSettings.customThumbnailWidthRange.upperBound)")
@@ -120,7 +120,7 @@ struct CustomDropShelfItemSizeControl: View {
                     Text("\(DropShelfSettings.customItemWidthRange.lowerBound)")
                     Slider(
                         value: widthSliderValue,
-                        in: Double(DropShelfSettings.customItemWidthRange.lowerBound)...Double(DropShelfSettings.customItemWidthRange.upperBound)
+                        in: DropShelfSettings.customItemWidthDoubleRange
                     )
                     .frame(width: 190)
                     Text("\(DropShelfSettings.customItemWidthRange.upperBound)")

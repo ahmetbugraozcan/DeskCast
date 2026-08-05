@@ -39,9 +39,9 @@ struct ShelfReorderCalculatorTests {
     @Test func destinationUsesFramesWhenAvailable() {
         let calc = ShelfReorderCalculator(stackDirection: .vertical, itemStep: 100)
         let dragged = UUID()
-        let a = UUID(), b = UUID()
+        let first = UUID(), second = UUID()
         // Vertical: boundary compares against frame.midY; screenPoint drives it.
-        let d = ScreenshotReorderDrag(
+        let dragEvent = ScreenshotReorderDrag(
             itemID: dragged,
             sourceIndex: 0,
             translation: 0,
@@ -49,10 +49,14 @@ struct ShelfReorderCalculatorTests {
             initialFrame: nil
         )
         let frames: [UUID: CGRect] = [
-            a: CGRect(x: 0, y: 100, width: 50, height: 50), // midY 125 < 150 → picks index 0
-            b: CGRect(x: 0, y: 0, width: 50, height: 50)
+            first: CGRect(x: 0, y: 100, width: 50, height: 50), // midY 125 < 150 → picks index 0
+            second: CGRect(x: 0, y: 0, width: 50, height: 50)
         ]
-        let result = calc.destinationIndexAfterRemoval(drag: d, orderedIDs: [dragged, a, b], frames: frames)
+        let result = calc.destinationIndexAfterRemoval(
+            drag: dragEvent,
+            orderedIDs: [dragged, first, second],
+            frames: frames
+        )
         #expect(result == 0)
     }
 }

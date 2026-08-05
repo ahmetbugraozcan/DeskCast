@@ -122,7 +122,7 @@ final class ThumbnailDragInteractionNSView: NSView, NSDraggingSource {
             return
         }
 
-        finishDrag(at: screenPoint, didCompleteExternalDrop: operation != [])
+        finishDrag(at: screenPoint, didCompleteExternalDrop: !operation.isEmpty)
     }
 
     func ignoreModifierKeys(for session: NSDraggingSession) -> Bool {

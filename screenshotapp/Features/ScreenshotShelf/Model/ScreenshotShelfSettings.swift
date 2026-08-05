@@ -253,6 +253,10 @@ enum ScreenshotShelfSettings {
         min(max(value, previewDurationRange.lowerBound), previewDurationRange.upperBound)
     }
 
+    static var customThumbnailWidthDoubleRange: ClosedRange<Double> {
+        Double(customThumbnailWidthRange.lowerBound)...Double(customThumbnailWidthRange.upperBound)
+    }
+
     static func clampedCustomThumbnailWidth(_ value: Int) -> Int {
         min(max(value, customThumbnailWidthRange.lowerBound), customThumbnailWidthRange.upperBound)
     }

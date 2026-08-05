@@ -14,6 +14,12 @@ macOS menu-bar app, and contributions of all sizes are welcome.
    ```bash
    xcodebuild -project screenshotapp.xcodeproj -scheme screenshotapp -destination 'platform=macOS' test
    ```
+4. Lint before opening a PR — CI runs SwiftLint in strict mode, so warnings fail the build:
+   ```bash
+   brew install swiftlint   # once
+   swiftlint lint --strict
+   ```
+   The ruleset lives in [.swiftlint.yml](.swiftlint.yml); `swiftlint --fix` auto-fixes the mechanical ones.
 
 ## Where things live
 
