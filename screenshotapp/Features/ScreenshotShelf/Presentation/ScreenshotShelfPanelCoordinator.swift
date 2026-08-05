@@ -6,7 +6,24 @@ struct ScreenshotShelfScreenAnchor: Equatable {
     let screenNumber: CGDirectDisplayID
 }
 
-final class ScreenshotShelfPanelController {
+/// Presentation boundary: the view model drives the floating shelf panel through
+/// this protocol instead of owning AppKit directly.
+@MainActor
+protocol ScreenshotShelfPresenting: AnyObject {
+    func screenAnchorForNewCapture(settings: ScreenshotShelfSettingsSnapshot) -> ScreenshotShelfScreenAnchor?
+    func refresh(screenAnchor: ScreenshotShelfScreenAnchor?)
+    func refreshIfVisible()
+    func hide()
+}
+
+extension ScreenshotShelfPresenting {
+    func refresh() {
+        refresh(screenAnchor: nil)
+    }
+}
+
+@MainActor
+final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
     private let store: ScreenshotShelfViewModel
     private var panel: NSPanel?
     private var anchoredScreen: ScreenshotShelfScreenAnchor?

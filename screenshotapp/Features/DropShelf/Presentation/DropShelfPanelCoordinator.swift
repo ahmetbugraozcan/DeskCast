@@ -1,7 +1,17 @@
 import AppKit
 import SwiftUI
 
-final class DropShelfPanelController {
+/// Presentation boundary for the drop shelf panel; the view model publishes state
+/// and drives the AppKit panel through this protocol.
+@MainActor
+protocol DropShelfPresenting: AnyObject {
+    func refresh()
+    func refreshIfVisible()
+    func hide()
+}
+
+@MainActor
+final class DropShelfPanelCoordinator: DropShelfPresenting {
     private let store: DropShelfViewModel
     private var panel: NSPanel?
     private var lastKnownOrigin: CGPoint?

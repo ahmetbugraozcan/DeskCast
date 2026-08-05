@@ -12,7 +12,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     private var expirationTimerTokens: [UUID: UUID] = [:]
     private var autoHideConfiguration: AutoHideConfiguration?
     private var toastController: ToastPanelController?
-    private lazy var panelController = ScreenshotShelfPanelController(store: self)
+    weak var presenter: ScreenshotShelfPresenting?
     private let shelfCollector: ShelfCollecting
     private let capturer: ScreenshotCapturing
     private let recognizer: TextRecognizing
@@ -68,7 +68,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
 
         isCapturing = true
         let settings = ScreenshotShelfSettings.snapshot()
-        let screenAnchor = panelController.screenAnchorForNewCapture(settings: settings)
+        let screenAnchor = presenter?.screenAnchorForNewCapture(settings: settings)
         capturer.captureSelectedArea(
             preserveClipboard: !settings.copyCapturedScreenshotToClipboard
         ) { [weak self] result in
@@ -138,7 +138,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
 
         cancelAllExpirationTimers()
         screenshots.removeAll()
-        panelController.refresh()
+        presenter?.refresh()
     }
 
     func copyFrontFinderPath() {
@@ -253,7 +253,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         updatedScreenshots[index].isPinned.toggle()
         let updatedItem = updatedScreenshots[index]
         screenshots = updatedScreenshots
-        panelController.refresh()
+        presenter?.refresh()
 
         if updatedItem.isPinned {
             cancelExpirationTimer(for: updatedItem.id)
@@ -271,7 +271,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         let item = screenshots.remove(at: sourceIndex)
         let clampedDestinationIndex = min(max(destinationIndex, 0), screenshots.count)
         screenshots.insert(item, at: clampedDestinationIndex)
-        panelController.refresh()
+        presenter?.refresh()
     }
 
     func canMoveScreenshot(withID draggedID: UUID, toDestinationIndex destinationIndex: Int) -> Bool {
@@ -345,7 +345,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         screenshots.insert(item, at: 0)
         cancelExpirationTimers(for: trimToMaxStackCount(settings.maxStackCount))
 
-        panelController.refresh(screenAnchor: screenAnchor)
+        presenter?.refresh(screenAnchor: screenAnchor)
         startExpirationTimerIfNeeded(for: item, settings: settings)
         autoSaveIfNeeded(item, settings: settings)
     }
@@ -442,7 +442,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     private func applySettingsChange() {
         let settings = ScreenshotShelfSettings.snapshot()
         cancelExpirationTimers(for: trimToMaxStackCount(settings.maxStackCount))
-        panelController.refreshIfVisible()
+        presenter?.refreshIfVisible()
         reconcileExpirationTimers(settings: settings)
     }
 
@@ -512,7 +512,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         }
 
         screenshots.removeAll { $0.id == itemID }
-        panelController.refresh()
+        presenter?.refresh()
     }
 
     private func removeScreenshot(withID itemID: UUID) {
@@ -525,7 +525,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
             return
         }
 
-        panelController.refresh()
+        presenter?.refresh()
     }
 
     private func reconcileExpirationTimers(settings: ScreenshotShelfSettingsSnapshot) {

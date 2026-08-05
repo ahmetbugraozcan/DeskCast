@@ -13,7 +13,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     private var activeObserver: AnyCancellable?
     private var toastController: ToastPanelController?
     private let shakeMonitor = DropShelfShakeMonitor()
-    private lazy var panelController = DropShelfPanelController(store: self)
+    weak var presenter: DropShelfPresenting?
     private let exporter: DropShelfExporting
 
     init(exporter: DropShelfExporting) {
@@ -64,7 +64,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     func showShelf() {
         guard ToolboxSettings.isEnabled(.dropShelf) else { return }
         isShelfVisible = true
-        panelController.refresh()
+        presenter?.refresh()
     }
 
     func hideShelf() {
@@ -72,7 +72,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         isDropTargeted = false
         isInternalDragInProgress = false
         items.removeAll()
-        panelController.hide()
+        presenter?.hide()
     }
 
     func toggleShelf() {
@@ -104,7 +104,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         trimToMaxItemCount(settings.maxItemCount)
         isShelfVisible = true
         isDropTargeted = false
-        panelController.refresh()
+        presenter?.refresh()
         showToast(
             newItems.count == 1
                 ? AppLocalization.formatted("Added %ld item", newItems.count)
@@ -129,7 +129,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         items.append(item)
         trimToMaxItemCount(settings.maxItemCount)
         isShelfVisible = true
-        panelController.refresh()
+        presenter?.refresh()
         showToast(AppLocalization.formatted("Added %ld item", 1))
     }
 
@@ -154,7 +154,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
 
     func remove(_ item: DropShelfItem) {
         items.removeAll { $0.id == item.id }
-        panelController.refreshIfVisible()
+        presenter?.refreshIfVisible()
     }
 
     func clearAll() {
@@ -163,7 +163,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         }
 
         items.removeAll()
-        panelController.refreshIfVisible()
+        presenter?.refreshIfVisible()
     }
 
     func preview(_ item: DropShelfItem) {
@@ -277,7 +277,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
             renameFileBackedItem(at: index, fileURL: fileURL, proposedName: trimmedName)
         } else {
             items[index].displayName = trimmedName
-            panelController.refreshIfVisible()
+            presenter?.refreshIfVisible()
         }
     }
 
@@ -293,7 +293,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
             ? destinationIndex - 1
             : destinationIndex
         items.insert(item, at: adjustedDestinationIndex)
-        panelController.refreshIfVisible()
+        presenter?.refreshIfVisible()
     }
 
     func moveItemBackward(_ item: DropShelfItem) {
@@ -303,7 +303,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         }
 
         items.swapAt(index, index - 1)
-        panelController.refreshIfVisible()
+        presenter?.refreshIfVisible()
     }
 
     func moveItemForward(_ item: DropShelfItem) {
@@ -313,7 +313,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         }
 
         items.swapAt(index, index + 1)
-        panelController.refreshIfVisible()
+        presenter?.refreshIfVisible()
     }
 
     private func renameFileBackedItem(at index: Int, fileURL: URL, proposedName: String) {
@@ -335,7 +335,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
             try FileManager.default.moveItem(at: fileURL, to: destinationURL)
             items[index].fileURL = destinationURL
             items[index].displayName = destinationURL.lastPathComponent
-            panelController.refreshIfVisible()
+            presenter?.refreshIfVisible()
         } catch {
             NSSound.beep()
             showToast(AppLocalization.string("Could not rename item"), systemImage: "exclamationmark.triangle.fill")
@@ -375,7 +375,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         let settings = DropShelfSettings.snapshot()
         trimToMaxItemCount(settings.maxItemCount)
         shakeMonitor.update(settings: settings)
-        panelController.refreshIfVisible()
+        presenter?.refreshIfVisible()
     }
 
     private func trimToMaxItemCount(_ maxItemCount: Int) {
