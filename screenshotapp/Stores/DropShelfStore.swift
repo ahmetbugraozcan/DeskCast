@@ -4,6 +4,10 @@ import KeyboardShortcuts
 
 @MainActor
 final class DropShelfStore: ObservableObject {
+    /// Shared instance so other modules (e.g. the screenshot shelf's "Add to Shelf"
+    /// action) can push items into the same shelf the app scene observes.
+    static let shared = DropShelfStore()
+
     @Published private(set) var items: [DropShelfItem] = []
     @Published private(set) var isShelfVisible = false
     @Published private(set) var isDropTargeted = false
@@ -109,6 +113,26 @@ final class DropShelfStore: ObservableObject {
                 : AppLocalization.formatted("Added %ld items", newItems.count)
         )
         return true
+    }
+
+    /// Adds a captured screenshot image to the shelf and reveals it.
+    func addScreenshot(_ image: NSImage, name: String) {
+        guard ToolboxSettings.isEnabled(.dropShelf) else {
+            NSSound.beep()
+            showToast(
+                AppLocalization.string("Enable Drop Shelf first"),
+                systemImage: "exclamationmark.triangle.fill"
+            )
+            return
+        }
+
+        let item = DropShelfItem(kind: .image, displayName: name, image: image)
+        let settings = DropShelfSettings.snapshot()
+        items.append(item)
+        trimToMaxItemCount(settings.maxItemCount)
+        isShelfVisible = true
+        panelController.refresh()
+        showToast(AppLocalization.formatted("Added %ld item", 1))
     }
 
     func setDropTargeted(_ isTargeted: Bool) {

@@ -13,6 +13,9 @@ struct DropShelfView: View {
     @AppStorage(DropShelfSettings.Keys.customItemWidth)
     private var customItemWidth = DropShelfSettings.defaultCustomItemWidth
 
+    @AppStorage(ToolboxSettings.Keys.language)
+    private var languageRaw = ToolboxSettings.defaultLanguage.rawValue
+
     static let outerPadding: CGFloat = 12
     static let headerHeight: CGFloat = 46
     static let gridSpacing: CGFloat = 12
@@ -35,6 +38,11 @@ struct DropShelfView: View {
                 .stroke(store.isDropTargeted ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: store.isDropTargeted ? 2 : 1)
         }
         .animation(.easeOut(duration: 0.12), value: store.isDropTargeted)
+        .environment(\.locale, selectedLanguage.locale)
+    }
+
+    private var selectedLanguage: AppLanguage {
+        AppLanguage(rawValue: languageRaw) ?? ToolboxSettings.defaultLanguage
     }
 
     private var itemSize: CGSize {
@@ -52,7 +60,7 @@ struct DropShelfView: View {
         HStack(spacing: 10) {
             ZStack(alignment: .leading) {
                 HStack(spacing: 10) {
-                    Label("Drop Shelf", systemImage: "tray.and.arrow.down")
+                    Label(AppLocalization.string("Drop Shelf"), systemImage: "tray.and.arrow.down")
                         .font(.system(size: 13, weight: .semibold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.86)
@@ -290,7 +298,7 @@ private struct DropShelfItemCard: View {
             .onTapGesture(perform: previewAction)
 
             VStack(alignment: .leading, spacing: 2) {
-                TextField("Name", text: $draftName)
+                TextField(AppLocalization.string("Name"), text: $draftName)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12, weight: .semibold))
                     .lineLimit(1)
@@ -319,19 +327,19 @@ private struct DropShelfItemCard: View {
             Button {
                 previewAction()
             } label: {
-                Label("Preview", systemImage: "eye")
+                Label(AppLocalization.string("Preview"), systemImage: "eye")
             }
 
             Button {
                 copyAction()
             } label: {
-                Label("Copy", systemImage: "doc.on.doc")
+                Label(AppLocalization.string("Copy"), systemImage: "doc.on.doc")
             }
 
             Button {
                 sendAction()
             } label: {
-                Label("Send To...", systemImage: "paperplane")
+                Label(AppLocalization.string("Send To..."), systemImage: "paperplane")
             }
 
             Divider()
@@ -339,13 +347,13 @@ private struct DropShelfItemCard: View {
             Button {
                 moveBackwardAction()
             } label: {
-                Label("Move Backward", systemImage: "arrow.left")
+                Label(AppLocalization.string("Move Backward"), systemImage: "arrow.left")
             }
 
             Button {
                 moveForwardAction()
             } label: {
-                Label("Move Forward", systemImage: "arrow.right")
+                Label(AppLocalization.string("Move Forward"), systemImage: "arrow.right")
             }
 
             Divider()
@@ -353,7 +361,7 @@ private struct DropShelfItemCard: View {
             Button(role: .destructive) {
                 removeAction()
             } label: {
-                Label("Remove", systemImage: "xmark")
+                Label(AppLocalization.string("Remove"), systemImage: "xmark")
             }
         }
         .onChange(of: item.displayName) { _, newValue in

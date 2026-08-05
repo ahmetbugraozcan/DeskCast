@@ -14,7 +14,7 @@ struct screenshotappApp: App {
     @Environment(\.openWindow) private var openWindow
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var screenshotStore = ScreenshotShelfStore()
-    @StateObject private var dropShelfStore = DropShelfStore()
+    @StateObject private var dropShelfStore = DropShelfStore.shared
     @AppStorage(ToolboxSettings.Keys.menuLayout)
     private var menuLayoutRaw = ToolboxSettings.defaultMenuLayout.rawValue
     @AppStorage(ToolboxSettings.Keys.language)
@@ -292,7 +292,10 @@ struct screenshotappApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // Hide the Dock icon as early as possible. The app ships without
+        // LSUIElement so Spotlight/Raycast can index it, and flips to accessory
+        // here to stay menu-bar only with minimal Dock flash at launch.
         NSApp.setActivationPolicy(.accessory)
     }
 

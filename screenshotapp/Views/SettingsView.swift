@@ -67,6 +67,9 @@ struct SettingsView: View {
     @AppStorage(DropShelfSettings.Keys.shakeSensitivity)
     private var dropShelfShakeSensitivity = DropShelfSettings.defaultShakeSensitivity
 
+    @AppStorage(ToolboxSettings.Keys.dropShelfEnabled)
+    private var dropShelfEnabled = ToolboxSettings.defaultDropShelfEnabled
+
     @State private var selectedSection: SettingsSection? = .screenshots
     @StateObject private var permissionStore = PrivacyPermissionStore()
 
@@ -411,6 +414,8 @@ struct SettingsView: View {
                     .disabled(!dropShelfOpenOnShake)
                 }
             }
+            .disabled(!dropShelfEnabled)
+            .opacity(dropShelfEnabled ? 1 : 0.5)
 
             FeatureResetSection {
                 resetDropShelfSettings()
@@ -433,6 +438,7 @@ struct SettingsView: View {
                         AppLocalization.string("Drop shelf:"),
                         name: .openDropShelf
                     )
+                    .disabled(!dropShelfEnabled)
                 }
             }
         }

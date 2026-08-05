@@ -12,6 +12,7 @@ final class DropShelfShakeMonitor {
     private var directionChanges: [TimeInterval] = []
     private var lastTriggerTimestamp: TimeInterval = 0
     private var sensitivity = DropShelfSettings.defaultShakeSensitivity
+    private var dragPasteboardBaselineChangeCount = 0
 
     func update(settings: DropShelfSettingsSnapshot) {
         sensitivity = settings.shakeSensitivity
@@ -39,8 +40,10 @@ final class DropShelfShakeMonitor {
     }
 
     private func startIfNeeded() {
+        let matching: NSEvent.EventTypeMask = [.leftMouseDown, .leftMouseDragged, .leftMouseUp]
+
         if globalMonitor == nil {
-            globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDragged]) { [weak self] event in
+            globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: matching) { [weak self] event in
                 Task { @MainActor in
                     self?.handle(event)
                 }
@@ -48,7 +51,7 @@ final class DropShelfShakeMonitor {
         }
 
         if localMonitor == nil {
-            localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDragged]) { [weak self] event in
+            localMonitor = NSEvent.addLocalMonitorForEvents(matching: matching) { [weak self] event in
                 Task { @MainActor in
                     self?.handle(event)
                 }
@@ -59,6 +62,55 @@ final class DropShelfShakeMonitor {
     }
 
     private func handle(_ event: NSEvent) {
+        switch event.type {
+        case .leftMouseDown:
+            // Snapshot the drag pasteboard state before any drag session starts.
+            dragPasteboardBaselineChangeCount = NSPasteboard(name: .drag).changeCount
+            resetGesture()
+            return
+        case .leftMouseUp:
+            resetGesture()
+            return
+        default:
+            break
+        }
+
+        // Only shake-to-open when the user is actually dragging file/image content,
+        // not for arbitrary click-drags anywhere on the screen.
+        guard isContentDragActive() else {
+            return
+        }
+
+        handleDrag(event)
+    }
+
+    private func isContentDragActive() -> Bool {
+        let dragPasteboard = NSPasteboard(name: .drag)
+
+        // A real drag session bumps the drag pasteboard's change count past the
+        // value captured at mouse-down; a plain mouse drag leaves it unchanged.
+        guard dragPasteboard.changeCount != dragPasteboardBaselineChangeCount else {
+            return false
+        }
+
+        guard let types = dragPasteboard.types else {
+            return false
+        }
+
+        let contentTypes: Set<NSPasteboard.PasteboardType> = [
+            .fileURL,
+            .png,
+            .tiff,
+            NSPasteboard.PasteboardType("public.image"),
+            NSPasteboard.PasteboardType("public.file-url"),
+            NSPasteboard.PasteboardType("NSFilenamesPboardType"),
+            NSPasteboard.PasteboardType("com.apple.pasteboard.promised-file-url")
+        ]
+
+        return types.contains { contentTypes.contains($0) }
+    }
+
+    private func handleDrag(_ event: NSEvent) {
         let point = NSEvent.mouseLocation
         defer {
             lastPoint = point

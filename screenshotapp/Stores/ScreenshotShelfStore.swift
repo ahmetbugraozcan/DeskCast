@@ -154,6 +154,30 @@ final class ScreenshotShelfStore: ObservableObject {
         }
     }
 
+    func addToShelf(_ item: ScreenshotItem) {
+        let name = ScreenshotExportNaming.timestampedFilename(for: item.createdAt)
+        DropShelfStore.shared.addScreenshot(item.image, name: name)
+    }
+
+    func showInFinder(_ item: ScreenshotItem) {
+        if let url = currentFileURL(for: item.id),
+           FileManager.default.fileExists(atPath: url.path) {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+            return
+        }
+
+        // Not saved yet (or the file moved) — persist it, then reveal it.
+        guard let url = saveToConfiguredDirectory(
+            item,
+            suggestedFilename: ScreenshotExportNaming.timestampedFilename(for: item.createdAt),
+            failureMessage: AppLocalization.string("Could not save image")
+        ) else {
+            return
+        }
+
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
     func draggingPasteboardWriter(for item: ScreenshotItem) -> NSPasteboardWriting? {
         do {
             let url = try TemporaryPNGWriter.write(item.image)
@@ -252,6 +276,7 @@ final class ScreenshotShelfStore: ObservableObject {
                 return
             }
 
+            setFileURL(url, forID: item.id)
             showToast(AppLocalization.formatted("Saved %@", url.lastPathComponent))
         } catch {
             NSSound.beep()
@@ -259,11 +284,12 @@ final class ScreenshotShelfStore: ObservableObject {
         }
     }
 
+    @discardableResult
     private func saveToConfiguredDirectory(
         _ item: ScreenshotItem,
         suggestedFilename: String,
         failureMessage: String
-    ) {
+    ) -> URL? {
         do {
             let settings = ScreenshotShelfSettings.snapshot()
             let url = try ScreenshotExportService.save(
@@ -271,11 +297,26 @@ final class ScreenshotShelfStore: ObservableObject {
                 to: settings.saveDirectoryURL,
                 suggestedFilename: suggestedFilename
             )
+            setFileURL(url, forID: item.id)
             showToast(AppLocalization.formatted("Saved %@", url.lastPathComponent))
+            return url
         } catch {
             NSSound.beep()
             showToast(failureMessage, systemImage: "exclamationmark.triangle.fill")
+            return nil
         }
+    }
+
+    private func setFileURL(_ url: URL, forID id: UUID) {
+        guard let index = screenshots.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+
+        screenshots[index].fileURL = url
+    }
+
+    private func currentFileURL(for id: UUID) -> URL? {
+        screenshots.first(where: { $0.id == id })?.fileURL
     }
 
     private func add(_ image: NSImage, screenAnchor: ScreenshotShelfScreenAnchor?) {

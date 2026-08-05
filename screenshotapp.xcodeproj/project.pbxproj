@@ -417,7 +417,6 @@
 				INFOPLIST_KEY_CFBundleDisplayName = TinyToolBox;
 				INFOPLIST_KEY_CFBundleName = TinyShotShelf;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TinyShotShelf needs Finder access to copy the current folder path.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -456,7 +455,6 @@
 				INFOPLIST_KEY_CFBundleDisplayName = TinyToolBox;
 				INFOPLIST_KEY_CFBundleName = TinyShotShelf;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TinyShotShelf needs Finder access to copy the current folder path.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (

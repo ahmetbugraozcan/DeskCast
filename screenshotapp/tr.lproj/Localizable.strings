@@ -137,6 +137,8 @@
 "Send All" = "Tümünü Gönder";
 "Clear" = "Temizle";
 "Close" = "Kapat";
+"Close All" = "Tümünü Kapat";
+"Export Named Copies" = "Adlandırılmış Kopyaları Dışa Aktar";
 "Release to add" = "Eklemek için bırak";
 "Drop items here" = "Öğeleri buraya bırak";
 "Choose a Folder" = "Bir Klasör Seç";
@@ -180,6 +182,9 @@
 "Name" = "Ad";
 "Copy Image" = "Görseli Kopyala";
 "Copy Text" = "Metni Kopyala";
+"Add to Shelf" = "Rafa Ekle";
+"Show in Finder" = "Finder'da Göster";
+"Enable Drop Shelf first" = "Önce Bırakma Rafı'nı etkinleştirin";
 "Edit in Preview" = "Preview'de Düzenle";
 "Quick Save" = "Hızlı Kaydet";
 "Save As..." = "Farklı Kaydet...";

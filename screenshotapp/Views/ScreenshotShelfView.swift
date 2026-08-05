@@ -22,10 +22,21 @@ struct ScreenshotShelfView: View {
     @AppStorage(ScreenshotShelfSettings.Keys.exportFilenameVariants)
     private var exportFilenameVariants = ScreenshotShelfSettings.defaultExportFilenameVariants
 
+    @AppStorage(ScreenshotShelfSettings.Keys.autoSaveCapturedScreenshots)
+    private var autoSaveCapturedScreenshots = ScreenshotShelfSettings.defaultAutoSaveCapturedScreenshots
+
+    @AppStorage(ToolboxSettings.Keys.language)
+    private var languageRaw = ToolboxSettings.defaultLanguage.rawValue
+
     var body: some View {
         ScrollView(scrollAxis, showsIndicators: false) {
             shelfContent
         }
+        .environment(\.locale, selectedLanguage.locale)
+    }
+
+    private var selectedLanguage: AppLanguage {
+        AppLanguage(rawValue: languageRaw) ?? ToolboxSettings.defaultLanguage
     }
 
     static let outerPadding: CGFloat = 12
@@ -107,9 +118,14 @@ struct ScreenshotShelfView: View {
             ScreenshotThumbnailView(
                 item: item,
                 thumbnailSize: thumbnailSize,
+                stackDirection: stackDirection,
+                autoSaveEnabled: autoSaveCapturedScreenshots,
                 closeAction: { store.remove(item) },
+                closeAllAction: { store.clearAll() },
                 copyAction: { store.copy(item) },
                 copyTextAction: { store.copyRecognizedText(item) },
+                addToShelfAction: { store.addToShelf(item) },
+                showInFinderAction: { store.showInFinder(item) },
                 saveAsAction: { store.saveAs(item) },
                 quickSaveAction: { store.quickSave(item) },
                 saveExportAction: { option in store.save(item, exportOption: option) },
@@ -401,9 +417,14 @@ private struct ScreenshotDragUpdate {
 private struct ScreenshotThumbnailView: View {
     let item: ScreenshotItem
     let thumbnailSize: CGSize
+    let stackDirection: StackDirection
+    let autoSaveEnabled: Bool
     let closeAction: () -> Void
+    let closeAllAction: () -> Void
     let copyAction: () -> Void
     let copyTextAction: () -> Void
+    let addToShelfAction: () -> Void
+    let showInFinderAction: () -> Void
     let saveAsAction: () -> Void
     let quickSaveAction: () -> Void
     let saveExportAction: (ScreenshotExportOption) -> Void
@@ -415,6 +436,12 @@ private struct ScreenshotThumbnailView: View {
     let reorderChanged: (ScreenshotDragUpdate) -> Void
     let reorderEnded: (ScreenshotDragUpdate, Bool) -> Void
 
+    @State private var isHovering = false
+
+    private var controlsVisible: Bool {
+        isHovering
+    }
+
     var body: some View {
         ZStack {
             Image(nsImage: item.image)
@@ -425,6 +452,7 @@ private struct ScreenshotThumbnailView: View {
 
             ThumbnailDragInteractionView(
                 image: item.image,
+                stackDirection: stackDirection,
                 openAction: openAction,
                 pasteboardWriter: dragPasteboardWriter,
                 dragChanged: reorderChanged,
@@ -470,7 +498,26 @@ private struct ScreenshotThumbnailView: View {
                 }
             }
             .frame(width: thumbnailSize.width, height: thumbnailSize.height)
-            .padding(5)
+            .padding(9)
+            .opacity(controlsVisible ? 1 : 0)
+            .animation(.easeInOut(duration: 0.15), value: controlsVisible)
+            .allowsHitTesting(controlsVisible)
+
+            // Keep the pinned state discoverable even while the controls are hidden.
+            if item.isPinned, !isHovering {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(6)
+                    .background(.black.opacity(0.35), in: Circle())
+                    .frame(
+                        width: thumbnailSize.width,
+                        height: thumbnailSize.height,
+                        alignment: .topLeading
+                    )
+                    .padding(9)
+                    .allowsHitTesting(false)
+            }
         }
         .contentShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.24), radius: 12, y: 6)
@@ -478,6 +525,9 @@ private struct ScreenshotThumbnailView: View {
             width: ScreenshotShelfView.cardSize(for: thumbnailSize).width,
             height: ScreenshotShelfView.cardSize(for: thumbnailSize).height
         )
+        .onHover { hovering in
+            isHovering = hovering
+        }
         .background(
             ThumbnailScreenFrameReader(id: item.id, onChange: screenFrameChanged)
         )
@@ -485,48 +535,38 @@ private struct ScreenshotThumbnailView: View {
             Button {
                 copyAction()
             } label: {
-                Label("Copy Image", systemImage: "doc.on.doc")
+                Label(AppLocalization.string("Copy Image"), systemImage: "doc.on.doc")
             }
 
             Button {
                 copyTextAction()
             } label: {
-                Label("Copy Text", systemImage: "text.viewfinder")
+                Label(AppLocalization.string("Copy Text"), systemImage: "text.viewfinder")
             }
 
             Button {
                 openAction()
             } label: {
-                Label("Edit in Preview", systemImage: "pencil")
+                Label(AppLocalization.string("Edit in Preview"), systemImage: "pencil")
             }
 
-            Menu {
-                Button {
-                    quickSaveAction()
-                } label: {
-                    Label("Quick Save", systemImage: "square.and.arrow.down")
-                }
+            Divider()
 
-                Divider()
-
-                ForEach(exportOptions) { option in
-                    Button {
-                        saveExportAction(option)
-                    } label: {
-                        Label(option.filename, systemImage: "square.and.arrow.down")
-                    }
-                }
-
-                Divider()
-
-                Button {
-                    saveAsAction()
-                } label: {
-                    Label("Save As...", systemImage: "square.and.arrow.down")
-                }
+            Button {
+                addToShelfAction()
             } label: {
-                Label("Save", systemImage: "square.and.arrow.down")
+                Label(AppLocalization.string("Add to Shelf"), systemImage: "tray.and.arrow.down")
             }
+
+            Button {
+                showInFinderAction()
+            } label: {
+                Label(AppLocalization.string("Show in Finder"), systemImage: "folder")
+            }
+
+            Divider()
+
+            saveMenu
 
             Button {
                 pinAction()
@@ -542,14 +582,66 @@ private struct ScreenshotThumbnailView: View {
             Button(role: .destructive) {
                 closeAction()
             } label: {
-                Label("Close", systemImage: "xmark")
+                Label(AppLocalization.string("Close"), systemImage: "xmark")
+            }
+
+            Button(role: .destructive) {
+                closeAllAction()
+            } label: {
+                Label(AppLocalization.string("Close All"), systemImage: "trash")
             }
         }
+    }
+
+    // Save is kept distinct from the app-store "Export Named Copies" export.
+    // Quick Save is redundant when auto-save already writes each capture to disk.
+    @ViewBuilder
+    private var saveMenu: some View {
+        if autoSaveEnabled {
+            Button {
+                saveAsAction()
+            } label: {
+                Label(AppLocalization.string("Save As..."), systemImage: "square.and.arrow.down")
+            }
+        } else {
+            Menu {
+                Button {
+                    quickSaveAction()
+                } label: {
+                    Label(AppLocalization.string("Quick Save"), systemImage: "bolt")
+                }
+
+                Button {
+                    saveAsAction()
+                } label: {
+                    Label(AppLocalization.string("Save As..."), systemImage: "square.and.arrow.down")
+                }
+            } label: {
+                Label(AppLocalization.string("Save"), systemImage: "square.and.arrow.down")
+            }
+        }
+
+        if !exportOptions.isEmpty {
+            Menu {
+                ForEach(exportOptions) { option in
+                    Button {
+                        saveExportAction(option)
+                    } label: {
+                        Label(option.filename, systemImage: "square.and.arrow.down")
+                    }
+                }
+            } label: {
+                Label(AppLocalization.string("Export Named Copies"), systemImage: "square.and.arrow.up.on.square")
+            }
+        }
+
+        Divider()
     }
 }
 
 private struct ThumbnailDragInteractionView: NSViewRepresentable {
     let image: NSImage
+    let stackDirection: StackDirection
     let openAction: () -> Void
     let pasteboardWriter: () -> NSPasteboardWriting?
     let dragChanged: (ScreenshotDragUpdate) -> Void
@@ -563,6 +655,7 @@ private struct ThumbnailDragInteractionView: NSViewRepresentable {
 
     func updateNSView(_ nsView: ThumbnailDragInteractionNSView, context: Context) {
         nsView.image = image
+        nsView.stackDirection = stackDirection
         nsView.openAction = openAction
         nsView.pasteboardWriter = pasteboardWriter
         nsView.dragChanged = dragChanged
@@ -571,7 +664,12 @@ private struct ThumbnailDragInteractionView: NSViewRepresentable {
 }
 
 private final class ThumbnailDragInteractionNSView: NSView, NSDraggingSource {
+    /// How far the pointer must travel perpendicular to the stack before a drag
+    /// is treated as "pull the screenshot out" instead of a reorder.
+    private static let externalDragCrossAxisThreshold: CGFloat = 26
+
     var image: NSImage?
+    var stackDirection: StackDirection = .vertical
     var openAction: () -> Void = {}
     var pasteboardWriter: () -> NSPasteboardWriting? = { nil }
     var dragChanged: (ScreenshotDragUpdate) -> Void = { _ in }
@@ -613,7 +711,7 @@ private final class ThumbnailDragInteractionNSView: NSView, NSDraggingSource {
         didStartDrag = true
         dragChanged(dragUpdate(translation: translation, event: event))
 
-        if shouldBeginExternalDrag(with: event) {
+        if shouldBeginExternalDrag(with: event, translation: translation) {
             beginExternalDraggingSessionIfNeeded(with: event, currentTranslation: translation)
         }
     }
@@ -669,11 +767,31 @@ private final class ThumbnailDragInteractionNSView: NSView, NSDraggingSource {
         true
     }
 
-    private func shouldBeginExternalDrag(with event: NSEvent) -> Bool {
-        guard event.modifierFlags.contains(.option) else {
-            return false
+    private func shouldBeginExternalDrag(with event: NSEvent, translation: CGSize) -> Bool {
+        // Holding Option always forces a pull-out, regardless of direction.
+        if event.modifierFlags.contains(.option) {
+            return true
         }
 
+        // Native-feeling pull-out: a drag that moves mostly perpendicular to the
+        // stack axis (e.g. sideways on a vertical stack) lifts the item out so it
+        // can be dropped into other apps, while movement along the axis reorders.
+        let alongAxis: CGFloat
+        let crossAxis: CGFloat
+        switch stackDirection {
+        case .vertical:
+            alongAxis = abs(translation.height)
+            crossAxis = abs(translation.width)
+        case .horizontal:
+            alongAxis = abs(translation.width)
+            crossAxis = abs(translation.height)
+        }
+
+        if crossAxis >= Self.externalDragCrossAxisThreshold, crossAxis > alongAxis {
+            return true
+        }
+
+        // Dragging the pointer clear of the shelf also pulls the item out.
         guard let contentView = window?.contentView else {
             return false
         }

@@ -137,6 +137,8 @@
 "Send All" = "Send All";
 "Clear" = "Clear";
 "Close" = "Close";
+"Close All" = "Close All";
+"Export Named Copies" = "Export Named Copies";
 "Release to add" = "Release to add";
 "Drop items here" = "Drop items here";
 "Choose a Folder" = "Choose a Folder";
@@ -180,6 +182,9 @@
 "Name" = "Name";
 "Copy Image" = "Copy Image";
 "Copy Text" = "Copy Text";
+"Add to Shelf" = "Add to Shelf";
+"Show in Finder" = "Show in Finder";
+"Enable Drop Shelf first" = "Enable Drop Shelf first";
 "Edit in Preview" = "Edit in Preview";
 "Quick Save" = "Quick Save";
 "Save As..." = "Save As...";
