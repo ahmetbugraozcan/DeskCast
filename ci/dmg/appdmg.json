@@ -1,0 +1,10 @@
+{
+  "title": "DeskCast",
+  "background": "background.tiff",
+  "window": { "size": { "width": 640, "height": 400 } },
+  "icon-size": 120,
+  "contents": [
+    { "x": 165, "y": 200, "type": "file", "path": "DeskCast.app" },
+    { "x": 475, "y": 200, "type": "link", "path": "/Applications" }
+  ]
+}

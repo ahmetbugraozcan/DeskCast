@@ -114,13 +114,16 @@ jobs:
         run: |
           set -euo pipefail
           APP="$EXPORT_PATH/$APP_NAME.app"
-          STAGE="$RUNNER_TEMP/dmg"
-          rm -rf "$STAGE" && mkdir -p "$STAGE"
-          cp -R "$APP" "$STAGE/"
-          ln -s /Applications "$STAGE/Applications"
           mkdir -p "$GITHUB_WORKSPACE/dist"
           DMG="$GITHUB_WORKSPACE/dist/$APP_NAME.dmg"
-          hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
+          rm -f "$DMG"
+          # Build a designed drag-to-install .dmg (branded background + arrow).
+          # appdmg resolves paths in appdmg.json relative to its own folder, so
+          # stage the notarized app next to the spec.
+          rm -rf "ci/dmg/$APP_NAME.app"
+          cp -R "$APP" "ci/dmg/$APP_NAME.app"
+          npx --yes appdmg ci/dmg/appdmg.json "$DMG"
+          rm -rf "ci/dmg/$APP_NAME.app"
           codesign --force --sign "Developer ID Application" --timestamp "$DMG"
 
       - name: Notarize and staple the .dmg

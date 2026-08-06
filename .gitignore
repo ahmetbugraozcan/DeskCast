@@ -29,3 +29,6 @@ dist/
 
 # App archives
 *.xcarchive
+
+# DMG staging (app copied in at release time)
+ci/dmg/*.app
