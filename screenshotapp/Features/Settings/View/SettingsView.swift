@@ -11,6 +11,8 @@ struct SettingsView: View {
 
     @AppStorage(ScreenshotShelfSettings.Keys.maxStackCount)
     private var maxStackCount = ScreenshotShelfSettings.defaultMaxStackCount
+    @AppStorage(ScreenshotShelfSettings.Keys.scrollBeyondMaxStack)
+    private var scrollBeyondMaxStack = ScreenshotShelfSettings.defaultScrollBeyondMaxStack
 
     @AppStorage(ScreenshotShelfSettings.Keys.previewDurationSeconds)
     private var previewDurationSeconds = ScreenshotShelfSettings.defaultPreviewDurationSeconds
@@ -54,6 +56,31 @@ struct SettingsView: View {
     @AppStorage(ScreenshotShelfSettings.Keys.exportFilenameVariants)
     private var exportFilenameVariants = ScreenshotShelfSettings.defaultExportFilenameVariants
 
+    @AppStorage(ScreenRecordingSettings.Keys.saveDirectoryPath)
+    var videoSaveDirectoryPath = ScreenRecordingSettings.defaultSaveDirectoryPath
+    @AppStorage(ScreenRecordingSettings.Keys.filenamePrefix)
+    private var videoFilenamePrefix = ScreenRecordingSettings.defaultFilenamePrefix
+    @AppStorage(ScreenRecordingSettings.Keys.defaultMode)
+    private var videoDefaultModeRaw = ScreenRecordingSettings.defaultMode.rawValue
+    @AppStorage(ScreenRecordingSettings.Keys.capturesSystemAudio)
+    private var videoCapturesSystemAudio = ScreenRecordingSettings.defaultCapturesSystemAudio
+    @AppStorage(ScreenRecordingSettings.Keys.capturesMicrophone)
+    private var videoCapturesMicrophone = ScreenRecordingSettings.defaultCapturesMicrophone
+    @AppStorage(ScreenRecordingSettings.Keys.microphoneDeviceID)
+    private var videoMicrophoneDeviceID = ScreenRecordingSettings.defaultMicrophoneDeviceID
+    @AppStorage(ScreenRecordingSettings.Keys.showsCursor)
+    private var videoShowsCursor = ScreenRecordingSettings.defaultShowsCursor
+    @AppStorage(ScreenRecordingSettings.Keys.showsMouseClicks)
+    private var videoShowsMouseClicks = ScreenRecordingSettings.defaultShowsMouseClicks
+    @AppStorage(ScreenRecordingSettings.Keys.frameRate)
+    private var videoFrameRate = ScreenRecordingSettings.defaultFrameRate.rawValue
+    @AppStorage(ScreenRecordingSettings.Keys.quality)
+    private var videoQualityRaw = ScreenRecordingSettings.defaultQuality.rawValue
+    @AppStorage(ScreenRecordingSettings.Keys.codec)
+    private var videoCodecRaw = ScreenRecordingSettings.defaultCodec.rawValue
+    @AppStorage(ScreenRecordingSettings.Keys.countdownSeconds)
+    private var videoCountdownSeconds = ScreenRecordingSettings.defaultCountdownSeconds
+
     @AppStorage(ToolboxSettings.Keys.menuLayout)
     private var menuLayoutRaw = ToolboxSettings.defaultMenuLayout.rawValue
     @AppStorage(ToolboxSettings.Keys.language)
@@ -78,8 +105,11 @@ struct SettingsView: View {
 
     @AppStorage(ToolboxSettings.Keys.dropShelfEnabled)
     private var dropShelfEnabled = ToolboxSettings.defaultDropShelfEnabled
+    @AppStorage(ToolboxSettings.Keys.captureVideoEnabled)
+    private var captureVideoEnabled = ToolboxSettings.defaultCaptureVideoEnabled
 
     @State private var selectedSection: SettingsSection? = .screenshots
+    @State private var availableVideoMicrophones: [ScreenRecordingMicrophone] = []
     @StateObject private var permissionStore = PrivacyPermissionViewModel()
 
     var body: some View {
@@ -112,7 +142,10 @@ struct SettingsView: View {
             idealHeight: 560,
             maxHeight: .infinity
         )
-        .onAppear(perform: clampNumericSettings)
+        .onAppear {
+            clampNumericSettings()
+            availableVideoMicrophones = ScreenRecordingSourceService().availableMicrophones()
+        }
         .onChange(of: maxStackCount) { _, newValue in
             maxStackCount = ScreenshotShelfSettings.clampedMaxStackCount(newValue)
         }
@@ -146,6 +179,8 @@ struct SettingsView: View {
             menuBarPane
         case .screenshots:
             screenshotsPane
+        case .videoRecording:
+            videoRecordingPane
         case .dropShelf:
             dropShelfPane
         case .finderPath:
@@ -253,7 +288,14 @@ struct SettingsView: View {
                     SettingsSectionDivider()
 
                     SettingsToggleRow(
-                        title: AppLocalization.string("Pin screenshots by default"),
+                        title: AppLocalization.string("Keep older items (scroll)"),
+                        isOn: $scrollBeyondMaxStack
+                    )
+
+                    SettingsSectionDivider()
+
+                    SettingsToggleRow(
+                        title: AppLocalization.string("Pin captures by default"),
                         isOn: $pinScreenshotsByDefault
                     )
                 }
@@ -473,6 +515,15 @@ struct SettingsView: View {
                         AppLocalization.string("Selected area:"),
                         name: .captureSelectedArea
                     )
+
+                }
+
+                Section(AppLocalization.string("Video Recording")) {
+                    KeyboardShortcuts.Recorder(
+                        AppLocalization.string("Video capture:"),
+                        name: .captureVideo
+                    )
+                    .disabled(!captureVideoEnabled)
                 }
 
                 Section("Files") {
@@ -574,9 +625,165 @@ struct SettingsView: View {
     }
 }
 
+private extension SettingsView {
+    var videoRecordingPane: some View {
+        SettingsPage(title: AppLocalization.string("Video Recording"), systemImage: "record.circle") {
+            ToolCategorySection(
+                title: AppLocalization.string("Tool"),
+                tools: [.captureVideo]
+            )
+
+            FeaturePermissionManagerView(
+                store: permissionStore,
+                permissions: [.screenRecording, .microphone]
+            )
+
+            VStack(alignment: .leading, spacing: 24) {
+                SettingsControlSection(title: AppLocalization.string("Recording")) {
+                    SettingsPickerRow(title: AppLocalization.string("Default mode")) {
+                        Picker(AppLocalization.string("Default mode"), selection: $videoDefaultModeRaw) {
+                            Text(AppLocalization.string("Full Screen"))
+                                .tag(ScreenRecordingMode.entireScreen.rawValue)
+                            Text(AppLocalization.string("Selected Area"))
+                                .tag(ScreenRecordingMode.selectedArea.rawValue)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 260)
+                    }
+
+                    SettingsSectionDivider()
+
+                    SettingsPickerRow(title: AppLocalization.string("Quality")) {
+                        Picker(AppLocalization.string("Quality"), selection: $videoQualityRaw) {
+                            ForEach(ScreenRecordingQuality.allCases) { quality in
+                                Text(ScreenRecordingControlView.qualityTitle(quality)).tag(quality.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 260)
+                    }
+
+                    SettingsSectionDivider()
+
+                    SettingsPickerRow(title: AppLocalization.string("Codec")) {
+                        Picker(AppLocalization.string("Codec"), selection: $videoCodecRaw) {
+                            ForEach(ScreenRecordingCodec.allCases) { codec in
+                                Text(ScreenRecordingControlView.codecTitle(codec)).tag(codec.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 180)
+                    }
+
+                    SettingsSectionDivider()
+
+                    SettingsPickerRow(title: AppLocalization.string("Frame rate")) {
+                        Picker(AppLocalization.string("Frame rate"), selection: $videoFrameRate) {
+                            ForEach(ScreenRecordingFrameRate.allCases) { frameRate in
+                                Text("\(frameRate.rawValue)").tag(frameRate.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 220)
+                    }
+
+                    SettingsSectionDivider()
+
+                    SettingsPickerRow(title: AppLocalization.string("Countdown")) {
+                        Picker(AppLocalization.string("Countdown"), selection: $videoCountdownSeconds) {
+                            ForEach(ScreenRecordingSettings.countdownOptions, id: \.self) { seconds in
+                                Text(ScreenRecordingControlView.countdownTitle(seconds)).tag(seconds)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 180)
+                    }
+
+                    SettingsSectionDivider()
+
+                    SettingsToggleRow(
+                        title: AppLocalization.string("Show cursor"),
+                        isOn: $videoShowsCursor
+                    )
+
+                    SettingsSectionDivider()
+
+                    SettingsToggleRow(
+                        title: AppLocalization.string("Show mouse clicks"),
+                        isOn: $videoShowsMouseClicks
+                    )
+                }
+
+                SettingsControlSection(title: AppLocalization.string("Audio")) {
+                    SettingsToggleRow(
+                        title: AppLocalization.string("Record system audio"),
+                        isOn: $videoCapturesSystemAudio
+                    )
+
+                    SettingsSectionDivider()
+
+                    SettingsToggleRow(
+                        title: AppLocalization.string("Record microphone"),
+                        isOn: $videoCapturesMicrophone
+                    )
+
+                    if videoCapturesMicrophone {
+                        SettingsSectionDivider()
+
+                        SettingsPickerRow(title: AppLocalization.string("Microphone")) {
+                            Picker(AppLocalization.string("Microphone"), selection: $videoMicrophoneDeviceID) {
+                                Text(AppLocalization.string("System Default")).tag("")
+                                ForEach(availableVideoMicrophones) { microphone in
+                                    Text(microphone.name).tag(microphone.id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(maxWidth: 280)
+                        }
+                    }
+                }
+
+                SettingsControlSection(title: AppLocalization.string("Files")) {
+                    SettingsControlRow(title: AppLocalization.string("Save to")) {
+                        HStack(spacing: 8) {
+                            Text(videoSaveDirectoryPath)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .frame(maxWidth: 260, alignment: .trailing)
+
+                            Button(AppLocalization.string("Choose...")) {
+                                chooseVideoSaveDirectory()
+                            }
+                        }
+                    }
+
+                    SettingsSectionDivider()
+
+                    SettingsControlRow(title: AppLocalization.string("Filename prefix")) {
+                        TextField(
+                            AppLocalization.string("Filename prefix"),
+                            text: $videoFilenamePrefix
+                        )
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 240)
+                    }
+                }
+            }
+            .disabled(!captureVideoEnabled)
+            .opacity(captureVideoEnabled ? 1 : 0.5)
+
+            FeatureResetSection {
+                resetVideoRecordingSettings()
+            }
+        }
+    }
+}
+
 private enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
     case menuBar
     case screenshots
+    case videoRecording
     case dropShelf
     case finderPath
     case shortcuts
@@ -584,12 +791,13 @@ private enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
     var id: Self { self }
 
     static let appSections: [Self] = [.menuBar, .shortcuts]
-    static let featureSections: [Self] = [.screenshots, .dropShelf, .finderPath]
+    static let featureSections: [Self] = [.screenshots, .videoRecording, .dropShelf, .finderPath]
 
     var title: String {
         switch self {
         case .menuBar: AppLocalization.string("Menu Bar")
         case .screenshots: AppLocalization.string("Screenshots")
+        case .videoRecording: AppLocalization.string("Video Recording")
         case .dropShelf: AppLocalization.string("Drop Shelf")
         case .finderPath: AppLocalization.string("Finder Path")
         case .shortcuts: AppLocalization.string("Shortcuts")
@@ -600,6 +808,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .menuBar: "menubar.rectangle"
         case .screenshots: "camera.viewfinder"
+        case .videoRecording: "record.circle"
         case .dropShelf: "tray.and.arrow.down"
         case .finderPath: "folder"
         case .shortcuts: "keyboard"

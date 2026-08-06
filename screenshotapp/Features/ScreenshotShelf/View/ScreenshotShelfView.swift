@@ -379,6 +379,31 @@ private struct ScreenshotThumbnailView: View {
                 .frame(width: thumbnailSize.width, height: thumbnailSize.height)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
 
+            if item.isVideo {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 52, height: 52)
+                    .background(.black.opacity(0.48), in: Circle())
+                    .allowsHitTesting(false)
+
+                if let duration = item.durationSeconds {
+                    Text(Self.durationText(duration))
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.62), in: Capsule())
+                        .frame(
+                            width: thumbnailSize.width,
+                            height: thumbnailSize.height,
+                            alignment: .bottomTrailing
+                        )
+                        .padding(9)
+                        .allowsHitTesting(false)
+                }
+            }
+
             ThumbnailDragInteractionView(
                 image: item.image,
                 stackDirection: stackDirection,
@@ -389,7 +414,7 @@ private struct ScreenshotThumbnailView: View {
             )
             .frame(width: thumbnailSize.width, height: thumbnailSize.height)
             .clipShape(RoundedRectangle(cornerRadius: 14))
-            .help(Text(AppLocalization.string("Open in Preview")))
+            .help(Text(AppLocalization.string(item.isVideo ? "Play Video" : "Open in Preview")))
 
             VStack {
                 HStack {
@@ -412,8 +437,8 @@ private struct ScreenshotThumbnailView: View {
 
                 HStack {
                     ThumbnailControlButton(
-                        systemName: "pencil",
-                        help: AppLocalization.string("Edit in Preview"),
+                        systemName: item.isVideo ? "play.fill" : "pencil",
+                        help: AppLocalization.string(item.isVideo ? "Play Video" : "Edit in Preview"),
                         action: openAction
                     )
 
@@ -464,19 +489,27 @@ private struct ScreenshotThumbnailView: View {
             Button {
                 copyAction()
             } label: {
-                Label(AppLocalization.string("Copy Image"), systemImage: "doc.on.doc")
+                Label(
+                    AppLocalization.string(item.isVideo ? "Copy Video" : "Copy Image"),
+                    systemImage: "doc.on.doc"
+                )
             }
 
-            Button {
-                copyTextAction()
-            } label: {
-                Label(AppLocalization.string("Copy Text"), systemImage: "text.viewfinder")
+            if !item.isVideo {
+                Button {
+                    copyTextAction()
+                } label: {
+                    Label(AppLocalization.string("Copy Text"), systemImage: "text.viewfinder")
+                }
             }
 
             Button {
                 openAction()
             } label: {
-                Label(AppLocalization.string("Edit in Preview"), systemImage: "pencil")
+                Label(
+                    AppLocalization.string(item.isVideo ? "Play Video" : "Edit in Preview"),
+                    systemImage: item.isVideo ? "play.fill" : "pencil"
+                )
             }
 
             Divider()
@@ -495,7 +528,9 @@ private struct ScreenshotThumbnailView: View {
 
             Divider()
 
-            saveMenu
+            if !item.isVideo {
+                saveMenu
+            }
 
             Button {
                 pinAction()
@@ -520,6 +555,11 @@ private struct ScreenshotThumbnailView: View {
                 Label(AppLocalization.string("Close All"), systemImage: "trash")
             }
         }
+    }
+
+    private static func durationText(_ duration: TimeInterval) -> String {
+        let totalSeconds = max(Int(duration.rounded()), 0)
+        return String(format: "%d:%02d", totalSeconds / 60, totalSeconds % 60)
     }
 
     // Save is kept distinct from the app-store "Export Named Copies" export.

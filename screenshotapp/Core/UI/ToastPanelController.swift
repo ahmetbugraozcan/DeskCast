@@ -6,13 +6,13 @@ final class ToastPanelController {
     private var panel: NSPanel?
     private var hideWorkItem: DispatchWorkItem?
 
-    func show(message: String, systemImage: String = "checkmark.circle.fill") {
+    func show(message: String, systemImage: String, style: ToastStyle) {
         hideWorkItem?.cancel()
 
         let panel = panel ?? makePanel()
         self.panel = panel
         panel.contentView = NSHostingView(
-            rootView: ToastView(message: message, systemImage: systemImage)
+            rootView: ToastView(message: message, systemImage: systemImage, style: style)
         )
 
         let size = ToastView.size
@@ -71,12 +71,13 @@ private struct ToastView: View {
 
     let message: String
     let systemImage: String
+    let style: ToastStyle
 
     var body: some View {
         HStack(spacing: 9) {
             Image(systemName: systemImage)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.green)
+                .foregroundStyle(style.tintColor)
 
             Text(message)
                 .font(.system(size: 13, weight: .semibold))
@@ -88,8 +89,21 @@ private struct ToastView: View {
         .background(.regularMaterial, in: Capsule())
         .overlay {
             Capsule()
-                .stroke(.white.opacity(0.22), lineWidth: 1)
+                .stroke(style.tintColor.opacity(0.35), lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.24), radius: 12, y: 4)
+    }
+}
+
+private extension ToastStyle {
+    var tintColor: Color {
+        switch self {
+        case .success:
+            .green
+        case .warning:
+            .orange
+        case .error:
+            .red
+        }
     }
 }

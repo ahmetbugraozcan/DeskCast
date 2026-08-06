@@ -91,7 +91,10 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
     private func updateFrame(for panel: NSPanel) {
         let settings = ScreenshotShelfSettings.snapshot()
         let thumbnailSize = settings.thumbnailDimensions
-        let count = CGFloat(store.screenshots.count)
+        // Cap the panel to `maxStackCount` cards; any extra items scroll inside the
+        // shelf's ScrollView instead of growing the window (or being discarded).
+        let visibleCount = min(store.screenshots.count, settings.maxStackCount)
+        let count = CGFloat(visibleCount)
         let screen = screenForShelf(settings: settings, panel: panel)
         let visibleFrame = screen.visibleFrame
         let maxWidth = visibleFrame.width - screenMargin * 2

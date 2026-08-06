@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "deskcast-landing",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/ahmetbugraozcan/Desktop/deskcast-landing", "run", "dev"],
+      "autoPort": true
+    }
+  ]
+}

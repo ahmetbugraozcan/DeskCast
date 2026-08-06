@@ -16,6 +16,10 @@ protocol DropShelfSettingsReading {
     func dropShelfSettings() -> DropShelfSettingsSnapshot
 }
 
+protocol ScreenRecordingSettingsReading {
+    func screenRecordingSettings() -> ScreenRecordingSettingsSnapshot
+}
+
 protocol ToolboxSettingsReading {
     func isToolEnabled(_ tool: ToolboxToolID) -> Bool
 }
@@ -24,6 +28,7 @@ protocol ToolboxSettingsReading {
 protocol SettingsProviding: SettingsRegistering,
     ScreenshotShelfSettingsReading,
     DropShelfSettingsReading,
+    ScreenRecordingSettingsReading,
     ToolboxSettingsReading {}
 
 struct SettingsRepository: SettingsProviding {
@@ -36,6 +41,7 @@ struct SettingsRepository: SettingsProviding {
     func registerDefaults() {
         ScreenshotShelfSettings.registerDefaults(in: defaults)
         DropShelfSettings.registerDefaults(in: defaults)
+        ScreenRecordingSettings.registerDefaults(in: defaults)
         ToolboxSettings.registerDefaults(in: defaults)
     }
 
@@ -45,6 +51,10 @@ struct SettingsRepository: SettingsProviding {
 
     func dropShelfSettings() -> DropShelfSettingsSnapshot {
         DropShelfSettings.snapshot(from: defaults)
+    }
+
+    func screenRecordingSettings() -> ScreenRecordingSettingsSnapshot {
+        ScreenRecordingSettings.snapshot(from: defaults)
     }
 
     func isToolEnabled(_ tool: ToolboxToolID) -> Bool {

@@ -10,6 +10,8 @@ private final class FakeShelfCollector: ShelfCollecting {
     func addScreenshot(_ image: NSImage, name: String) {
         added.append((image, name))
     }
+
+    func addFile(_ url: URL) {}
 }
 
 private struct NoopCapturer: ScreenshotCapturing {
@@ -31,6 +33,13 @@ private struct NoopExporter: ScreenshotExporting {
 
 private struct NoopFinderPath: FinderPathProviding {
     func frontFinderWindowPath() throws -> String { "/" }
+}
+
+private struct NoopVideoMetadata: VideoMetadataLoading {
+    func loadMetadata(
+        for url: URL,
+        completion: @escaping (Result<VideoMetadata, Error>) -> Void
+    ) {}
 }
 
 @MainActor
@@ -55,6 +64,7 @@ struct ScreenshotShelfViewModelTests {
             recognizer: NoopRecognizer(),
             exporter: NoopExporter(),
             finderPath: NoopFinderPath(),
+            videoMetadata: NoopVideoMetadata(),
             settings: SettingsRepository(),
             toastPresenter: SpyToastPresenter(),
             screenRecording: StubScreenRecording()

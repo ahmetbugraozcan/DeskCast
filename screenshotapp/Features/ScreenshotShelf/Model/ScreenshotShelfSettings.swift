@@ -76,6 +76,7 @@ struct ScreenshotShelfSettingsSnapshot {
     let previewPosition: PreviewPosition
     let stackDirection: StackDirection
     let maxStackCount: Int
+    let scrollBeyondMaxStack: Bool
     let previewDurationSeconds: Int
     let neverAutoHide: Bool
     let pinScreenshotsByDefault: Bool
@@ -110,6 +111,7 @@ enum ScreenshotShelfSettings {
         static let previewPosition = "previewPosition"
         static let stackDirection = "stackDirection"
         static let maxStackCount = "maxStackCount"
+        static let scrollBeyondMaxStack = "scrollBeyondMaxStack"
         static let previewDurationSeconds = "previewDurationSeconds"
         static let neverAutoHide = "neverAutoHide"
         static let pinScreenshotsByDefault = "pinScreenshotsByDefault"
@@ -134,6 +136,7 @@ enum ScreenshotShelfSettings {
     static let defaultPreviewPosition = PreviewPosition.bottomRight
     static let defaultStackDirection = StackDirection.horizontal
     static let defaultMaxStackCount = 5
+    static let defaultScrollBeyondMaxStack = true
     static let defaultPreviewDurationSeconds = 8
     static let defaultNeverAutoHide = true
     static let defaultPinScreenshotsByDefault = false
@@ -167,6 +170,7 @@ enum ScreenshotShelfSettings {
             Keys.previewPosition: defaultPreviewPosition.rawValue,
             Keys.stackDirection: defaultStackDirection.rawValue,
             Keys.maxStackCount: defaultMaxStackCount,
+            Keys.scrollBeyondMaxStack: defaultScrollBeyondMaxStack,
             Keys.previewDurationSeconds: defaultPreviewDurationSeconds,
             Keys.neverAutoHide: defaultNeverAutoHide,
             Keys.pinScreenshotsByDefault: defaultPinScreenshotsByDefault,
@@ -194,6 +198,7 @@ enum ScreenshotShelfSettings {
             previewPosition: PreviewPosition(rawValue: previewPositionRaw ?? "") ?? defaultPreviewPosition,
             stackDirection: StackDirection(rawValue: stackDirectionRaw ?? "") ?? defaultStackDirection,
             maxStackCount: clampedMaxStackCount(defaults.integer(forKey: Keys.maxStackCount)),
+            scrollBeyondMaxStack: defaults.bool(forKey: Keys.scrollBeyondMaxStack),
             previewDurationSeconds: clampedPreviewDuration(defaults.integer(forKey: Keys.previewDurationSeconds)),
             neverAutoHide: defaults.bool(forKey: Keys.neverAutoHide),
             pinScreenshotsByDefault: defaults.bool(forKey: Keys.pinScreenshotsByDefault),

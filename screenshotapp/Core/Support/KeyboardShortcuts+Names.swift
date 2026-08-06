@@ -7,6 +7,8 @@ extension KeyboardShortcuts.Name {
         default: .init(.two, modifiers: [.command, .shift])
     )
 
+    nonisolated static let captureVideo = Self("captureVideo")
+
     nonisolated static let openDropShelf = Self(
         "openDropShelf",
         default: .init(.d, modifiers: [.command, .shift])

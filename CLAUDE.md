@@ -6,7 +6,8 @@ Guidance for Claude Code when working in this repo. See [AGENTS.md](AGENTS.md) f
 
 A macOS menu-bar utility toolbox. It bundles several small productivity tools behind a single `MenuBarExtra`:
 
-- **Capture Selected Area** — `screencapture`-based region capture into a floating shelf.
+- **Capture Selected Area** — `screencapture`-based region capture into a floating media shelf.
+- **Capture Video** — full-display or resizable selected-area recording through ScreenCaptureKit and DeskCast's own recorder panel, with system-audio/microphone options. Completed videos join screenshots in the same shelf.
 - **Capture OCR** — capture a region and copy recognized text (Vision).
 - **Copy Finder Path** — copy the front Finder window's path via AppleScript.
 - **Search Images** — index and search local images by filename + recognized text.
@@ -31,13 +32,13 @@ The Xcode target uses `PBXFileSystemSynchronizedRootGroup`, so moving/adding `.s
 
 - `App/` — `@main DeskCastApp`, `AppDelegate`, and `AppEnvironment` (the composition root that builds view models, injects dependencies, and owns the presentation coordinators — no singletons).
 - `Core/` — cross-cutting: `Localization/` (`AppLocalization`, `AppLanguage`), `UI/` (`ToastPanelController`), `Support/` (`AppConstants`, `TemporaryPNGWriter`, extensions), and `ShelfCollecting` (cross-feature protocol).
-- `Features/<Feature>/` — one folder per feature (`ScreenshotShelf`, `DropShelf`, `ImageSearch`, `Permissions`, `Settings`, `Toolbox`), each split into `Model/`, `ViewModel/`, `View/`, `Service/`, `Presentation/`.
+- `Features/<Feature>/` — one folder per feature (`ScreenshotShelf`, `ScreenRecording`, `DropShelf`, `ImageSearch`, `Permissions`, `Settings`, `Toolbox`), each split into the relevant `Model/`, `ViewModel/`, `View/`, `Service/`, and `Presentation/` layers.
 - `en.lproj/` + `tr.lproj/` — `Localizable.strings`.
 
 ## MVVM roles
 
 - **`*ViewModel`** — `@MainActor ObservableObject` state + orchestration. They depend on **service protocols** (injected), and drive AppKit panels through `*Presenting` protocols via a `weak var presenter` — they do **not** construct `NSPanel`.
-- **Services** — OS integrations behind protocols (`ScreenshotCapturing`, `TextRecognizing`, `ScreenshotExporting`, `FinderPathProviding`, `DropShelfExporting`); concrete types are instances built in `AppEnvironment`. Permission services (`PrivacyPermissionService`, `ScreenRecordingPermissionService`) stay static OS gateways.
+- **Services** — OS integrations behind protocols (`ScreenshotCapturing`, `ScreenRecordingServicing`, `ScreenRecordingSourceProviding`, `TextRecognizing`, `ScreenshotExporting`, `FinderPathProviding`, `DropShelfExporting`); concrete types are instances built in `AppEnvironment`. Permission services (`PrivacyPermissionService`, `ScreenRecordingPermissionService`) stay static OS gateways.
 - **Presentation coordinators** (`*PanelCoordinator`) — own the `NSPanel` lifecycle, retained by `AppEnvironment`.
 
 ## Two settings systems — keep them in sync
@@ -49,7 +50,7 @@ Each feature threads a value through **all** of these; when you add or change a 
 3. `@AppStorage` use sites (menu in `DeskCastApp.swift`, `SettingsView`).
 4. Menu-visibility logic — a tool shows only when `enabled && showInMenu` (see the `shouldShow*InMenu` computed vars). Disabled tools must never remain visible via `showInMenu`; `resetTools` enforces `enabled && showInMenu`.
 
-There are three settings namespaces: `ToolboxSettings` (which tools/layout/language), `ScreenshotShelfSettings`, and `DropShelfSettings`. All three call `registerDefaults()` at launch (in `AppEnvironment`) and again inside their view models.
+There are four settings namespaces: `ToolboxSettings` (which tools/layout/language), `ScreenshotShelfSettings`, `ScreenRecordingSettings`, and `DropShelfSettings`. Defaults are registered at launch in `AppEnvironment` and again inside the relevant view models.
 
 ## Localization
 
@@ -65,7 +66,15 @@ There are three settings namespaces: `ToolboxSettings` (which tools/layout/langu
 
 ## Permissions
 
-Entitlements grant Apple Events (`com.apple.security.automation.apple-events`) and user-selected read-write files only. Features depend on **Screen Recording** (capture/OCR) and **Automation → Finder** (copy path). Preserve the permission-denied → alert/toast flows (`PrivacyPermissionService`, `ScreenRecordingPermissionService`, `PermissionAlertPresenter`).
+Entitlements grant Apple Events (`com.apple.security.automation.apple-events`) and user-selected read-write files only. Features depend on **Screen Recording** (capture/OCR/video), **Microphone** (optional recording audio), and **Automation → Finder** (copy path). Preserve the permission-denied → alert/toast flows (`PrivacyPermissionService`, `ScreenRecordingPermissionService`, `PermissionAlertPresenter`).
+
+## Video recording architecture
+
+- `ScreenRecordingViewModel` owns recorder state and persisted options; it never constructs windows.
+- `ScreenRecordingPanelCoordinator` owns DeskCast's custom floating control panel and full-display selection overlay. The overlay returns a display-local, top-left-based source rect to ScreenCaptureKit.
+- `ScreenCaptureRecordingService` owns `SCStream` + `SCRecordingOutput`; keep DeskCast excluded from its own capture and keep output `.mov`.
+- `ScreenshotShelfViewModel` is the common media shelf. Video items use Quick Look thumbnails, open in the default player, and are copied/dragged as file URLs. Do not introduce a second video-only shelf.
+- The macOS recording privacy indicator is system-owned and cannot be hidden; do not confuse it with DeskCast's custom recorder UI.
 
 ## Build & test
 

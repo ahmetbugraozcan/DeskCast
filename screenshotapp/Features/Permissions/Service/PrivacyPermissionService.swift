@@ -1,5 +1,6 @@
 import ApplicationServices
 import AppKit
+import AVFoundation
 import CoreGraphics
 import CoreServices
 import Foundation
@@ -9,6 +10,12 @@ enum PrivacyPermissionService {
         switch permission {
         case .screenRecording:
             return CGPreflightScreenCaptureAccess() ? .granted : .notGranted
+        case .microphone:
+            switch AVCaptureDevice.authorizationStatus(for: .audio) {
+            case .authorized: return .granted
+            case .denied, .restricted, .notDetermined: return .notGranted
+            @unknown default: return .unavailable
+            }
         case .finderAutomation:
             return finderAutomationStatus(askUserIfNeeded: false)
         case .accessibility:
@@ -21,6 +28,8 @@ enum PrivacyPermissionService {
         switch permission {
         case .screenRecording:
             return ScreenRecordingPermissionService().ensureAccess() ? .granted : .notGranted
+        case .microphone:
+            return await AVCaptureDevice.requestAccess(for: .audio) ? .granted : .notGranted
         case .finderAutomation:
             return await Task.detached {
                 finderAutomationStatus(askUserIfNeeded: true)
@@ -39,6 +48,12 @@ enum PrivacyPermissionService {
         switch permission {
         case .screenRecording:
             ScreenRecordingPermissionService().openSettings()
+        case .microphone:
+            if let microphoneURL = URL(
+                string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+            ) {
+                NSWorkspace.shared.open(microphoneURL)
+            }
         case .finderAutomation:
             if let automationURL = URL(
                 string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"

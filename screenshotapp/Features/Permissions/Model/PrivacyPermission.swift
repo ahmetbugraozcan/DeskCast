@@ -2,6 +2,7 @@ import Foundation
 
 enum PrivacyPermissionID: String, CaseIterable, Identifiable, Hashable, Sendable {
     case screenRecording
+    case microphone
     case finderAutomation
     case accessibility
 
@@ -10,6 +11,7 @@ enum PrivacyPermissionID: String, CaseIterable, Identifiable, Hashable, Sendable
     nonisolated var systemImage: String {
         switch self {
         case .screenRecording: "record.circle"
+        case .microphone: "mic"
         case .finderAutomation: "folder.badge.gearshape"
         case .accessibility: "accessibility"
         }
@@ -18,6 +20,7 @@ enum PrivacyPermissionID: String, CaseIterable, Identifiable, Hashable, Sendable
     nonisolated var tccServiceName: String {
         switch self {
         case .screenRecording: "ScreenCapture"
+        case .microphone: "Microphone"
         case .finderAutomation: "AppleEvents"
         case .accessibility: "Accessibility"
         }

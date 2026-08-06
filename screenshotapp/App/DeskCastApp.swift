@@ -13,7 +13,8 @@ struct DeskCastApp: App {
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    private let environment: AppEnvironment
+    @StateObject private var environment: AppEnvironment
+    @StateObject private var screenRecorderStore: ScreenRecordingViewModel
     @StateObject private var screenshotStore: ScreenshotShelfViewModel
     @StateObject private var dropShelfStore: DropShelfViewModel
     @AppStorage(ToolboxSettings.Keys.menuLayout)
@@ -24,6 +25,10 @@ struct DeskCastApp: App {
     private var captureSelectedAreaEnabled = ToolboxSettings.defaultCaptureSelectedAreaEnabled
     @AppStorage(ToolboxSettings.Keys.captureSelectedAreaShowInMenu)
     private var captureSelectedAreaShowInMenu = ToolboxSettings.defaultCaptureSelectedAreaShowInMenu
+    @AppStorage(ToolboxSettings.Keys.captureVideoEnabled)
+    private var captureVideoEnabled = ToolboxSettings.defaultCaptureVideoEnabled
+    @AppStorage(ToolboxSettings.Keys.captureVideoShowInMenu)
+    private var captureVideoShowInMenu = ToolboxSettings.defaultCaptureVideoShowInMenu
     @AppStorage(ToolboxSettings.Keys.captureOCREnabled)
     private var captureOCREnabled = ToolboxSettings.defaultCaptureOCREnabled
     @AppStorage(ToolboxSettings.Keys.captureOCRShowInMenu)
@@ -45,7 +50,8 @@ struct DeskCastApp: App {
         // Composition root wires the view models and their dependencies (and
         // registers UserDefaults defaults) in one place.
         let environment = AppEnvironment()
-        self.environment = environment
+        _environment = StateObject(wrappedValue: environment)
+        _screenRecorderStore = StateObject(wrappedValue: environment.screenRecorder)
         _screenshotStore = StateObject(wrappedValue: environment.screenshotShelf)
         _dropShelfStore = StateObject(wrappedValue: environment.dropShelf)
     }
@@ -139,6 +145,18 @@ struct DeskCastApp: App {
                 )
             }
             .disabled(screenshotStore.isCapturing)
+        }
+
+        if shouldShowCaptureVideoInMenu {
+            Button {
+                screenRecorderStore.captureSelectedAreaVideo()
+            } label: {
+                Label(
+                    ToolboxToolID.captureVideo.title,
+                    systemImage: ToolboxToolID.captureVideo.systemImage
+                )
+            }
+            .disabled(screenRecorderStore.isRecording)
         }
 
         if shouldShowCaptureOCRInMenu {
@@ -267,12 +285,17 @@ struct DeskCastApp: App {
 
     private var hasVisibleScreenshotTools: Bool {
         shouldShowCaptureSelectedAreaInMenu
+            || shouldShowCaptureVideoInMenu
             || shouldShowCaptureOCRInMenu
             || shouldShowImageSearchInMenu
     }
 
     private var shouldShowCaptureSelectedAreaInMenu: Bool {
         captureSelectedAreaEnabled && captureSelectedAreaShowInMenu
+    }
+
+    private var shouldShowCaptureVideoInMenu: Bool {
+        captureVideoEnabled && captureVideoShowInMenu
     }
 
     private var shouldShowCaptureOCRInMenu: Bool {

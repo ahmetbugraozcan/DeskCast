@@ -3,7 +3,7 @@ import Combine
 import KeyboardShortcuts
 
 @MainActor
-final class ScreenshotShelfViewModel: ObservableObject {
+final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
     @Published private(set) var screenshots: [ScreenshotItem] = []
     @Published private(set) var isCapturing = false
 
@@ -17,6 +17,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
     private let recognizer: TextRecognizing
     private let exporter: ScreenshotExporting
     private let finderPath: FinderPathProviding
+    private let videoMetadata: VideoMetadataLoading
     private let settings: ScreenshotShelfSettingsReading & ToolboxSettingsReading
     private let toastPresenter: ToastPresenting
     private let screenRecording: ScreenRecordingChecking
@@ -27,6 +28,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         recognizer: TextRecognizing,
         exporter: ScreenshotExporting,
         finderPath: FinderPathProviding,
+        videoMetadata: VideoMetadataLoading,
         settings: ScreenshotShelfSettingsReading & ToolboxSettingsReading,
         toastPresenter: ToastPresenting,
         screenRecording: ScreenRecordingChecking
@@ -36,6 +38,7 @@ final class ScreenshotShelfViewModel: ObservableObject {
         self.recognizer = recognizer
         self.exporter = exporter
         self.finderPath = finderPath
+        self.videoMetadata = videoMetadata
         self.settings = settings
         self.toastPresenter = toastPresenter
         self.screenRecording = screenRecording
@@ -120,7 +123,12 @@ final class ScreenshotShelfViewModel: ObservableObject {
     func copy(_ item: ScreenshotItem) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.writeObjects([item.image])
+
+        if item.isVideo, let fileURL = item.fileURL {
+            pasteboard.writeObjects([fileURL as NSURL])
+        } else {
+            pasteboard.writeObjects([item.image])
+        }
     }
 
     func copyAll() {
@@ -131,7 +139,15 @@ final class ScreenshotShelfViewModel: ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
-        guard pasteboard.writeObjects(screenshots.map(\.image)) else {
+        let writers: [NSPasteboardWriting] = screenshots.compactMap { item in
+            if item.isVideo, let fileURL = item.fileURL {
+                return fileURL as NSURL
+            }
+
+            return item.image
+        }
+
+        guard pasteboard.writeObjects(writers) else {
             NSSound.beep()
             return
         }
@@ -166,6 +182,8 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func copyRecognizedText(_ item: ScreenshotItem) {
+        guard !item.isVideo else { return }
+
         recognizer.recognizeText(in: item.image) { result in
             switch result {
             case .success(let text):
@@ -177,8 +195,12 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func addToShelf(_ item: ScreenshotItem) {
-        let name = ScreenshotExportNaming.timestampedFilename(for: item.createdAt)
-        shelfCollector.addScreenshot(item.image, name: name)
+        if item.isVideo, let fileURL = item.fileURL {
+            shelfCollector.addFile(fileURL)
+        } else {
+            let name = ScreenshotExportNaming.timestampedFilename(for: item.createdAt)
+            shelfCollector.addScreenshot(item.image, name: name)
+        }
     }
 
     func showInFinder(_ item: ScreenshotItem) {
@@ -201,6 +223,10 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func draggingPasteboardWriter(for item: ScreenshotItem) -> NSPasteboardWriting? {
+        if item.isVideo, let fileURL = item.fileURL {
+            return fileURL as NSURL
+        }
+
         do {
             let url = try TemporaryPNGWriter.write(item.image)
             return url as NSURL
@@ -211,6 +237,8 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func saveAs(_ item: ScreenshotItem) {
+        guard !item.isVideo else { return }
+
         saveWithPanel(
             item,
             suggestedFilename: ScreenshotExportNaming.timestampedFilename(for: item.createdAt)
@@ -218,6 +246,8 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func quickSave(_ item: ScreenshotItem) {
+        guard !item.isVideo else { return }
+
         saveToConfiguredDirectory(
             item,
             suggestedFilename: ScreenshotExportNaming.timestampedFilename(for: item.createdAt),
@@ -226,6 +256,8 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func save(_ item: ScreenshotItem, exportOption: ScreenshotExportOption) {
+        guard !item.isVideo else { return }
+
         saveToConfiguredDirectory(
             item,
             suggestedFilename: exportOption.filename,
@@ -234,6 +266,11 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     func openInPreview(_ item: ScreenshotItem) {
+        if item.isVideo, let fileURL = item.fileURL {
+            NSWorkspace.shared.open(fileURL)
+            return
+        }
+
         do {
             let url = try TemporaryPNGWriter.write(item.image)
             let configuration = NSWorkspace.OpenConfiguration()
@@ -265,6 +302,37 @@ final class ScreenshotShelfViewModel: ObservableObject {
             cancelExpirationTimer(for: updatedItem.id)
         } else if wasPinned {
             startExpirationTimerIfNeeded(for: updatedItem)
+        }
+    }
+
+    func addVideo(at url: URL) {
+        let settings = settings.screenshotShelfSettings()
+        let screenAnchor = presenter?.screenAnchorForNewCapture(settings: settings)
+
+        videoMetadata.loadMetadata(for: url) { [weak self] result in
+            guard let self else { return }
+
+            let metadata: VideoMetadata
+            switch result {
+            case .success(let loadedMetadata):
+                metadata = loadedMetadata
+            case .failure:
+                metadata = VideoMetadata(
+                    thumbnail: NSWorkspace.shared.icon(forFile: url.path),
+                    durationSeconds: nil
+                )
+            }
+
+            let item = ScreenshotItem(
+                videoThumbnail: metadata.thumbnail,
+                durationSeconds: metadata.durationSeconds,
+                fileURL: url,
+                isPinned: settings.pinScreenshotsByDefault
+            )
+            screenshots.insert(item, at: 0)
+            cancelExpirationTimers(for: trimToMaxStackCount(settings.maxStackCount))
+            presenter?.refresh(screenAnchor: screenAnchor)
+            startExpirationTimerIfNeeded(for: item, settings: settings)
         }
     }
 
@@ -432,6 +500,13 @@ final class ScreenshotShelfViewModel: ObservableObject {
     }
 
     private func trimToMaxStackCount(_ maxStackCount: Int) -> [UUID] {
+        // When overflow scrolling is enabled the shelf keeps every item and lets
+        // the floating panel scroll; only the visible window is capped (in the
+        // panel coordinator), so nothing is removed here.
+        guard !settings.screenshotShelfSettings().scrollBeyondMaxStack else {
+            return []
+        }
+
         guard screenshots.count > maxStackCount else {
             return []
         }

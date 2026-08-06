@@ -14,5 +14,6 @@ struct ToolboxCatalogTests {
         #expect(ToolboxToolID.dropShelf.enabledKey == "tool.dropShelf.enabled")
         #expect(ToolboxToolID.dropShelf.showInMenuKey == "tool.dropShelf.showInMenu")
         #expect(ToolboxSettings.Keys.captureSelectedAreaEnabled == "tool.captureSelectedArea.enabled")
+        #expect(ToolboxSettings.Keys.captureVideoEnabled == "tool.captureVideo.enabled")
     }
 }

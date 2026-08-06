@@ -141,6 +141,29 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         showToast(AppLocalization.formatted("Added %ld item", 1))
     }
 
+    func addFile(_ url: URL) {
+        guard settings.isToolEnabled(.dropShelf) else {
+            NSSound.beep()
+            showToast(
+                AppLocalization.string("Enable Drop Shelf first"),
+                systemImage: "exclamationmark.triangle.fill"
+            )
+            return
+        }
+
+        let item = DropShelfItem(
+            kind: .file,
+            displayName: url.lastPathComponent,
+            fileURL: url
+        )
+        let settings = settings.dropShelfSettings()
+        items.append(item)
+        trimToMaxItemCount(settings.maxItemCount)
+        isShelfVisible = true
+        presenter?.refresh()
+        showToast(AppLocalization.formatted("Added %ld item", 1))
+    }
+
     func setDropTargeted(_ isTargeted: Bool) {
         guard !isInternalDragInProgress else {
             isDropTargeted = false

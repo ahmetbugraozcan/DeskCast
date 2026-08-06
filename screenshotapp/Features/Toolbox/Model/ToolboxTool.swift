@@ -24,6 +24,7 @@ enum ToolCategory {
 /// tool means adding one row there instead of editing parallel switches.
 enum ToolboxToolID: String, CaseIterable, Identifiable {
     case captureSelectedArea
+    case captureVideo
     case captureOCR
     case copyFinderPath
     case imageSearch
@@ -60,6 +61,15 @@ enum ToolboxCatalog {
             titleKey: "Capture Selected Area",
             subtitleKey: "Capture a selected screen region into the floating shelf.",
             systemImage: "camera.viewfinder",
+            category: .screenshots,
+            defaultEnabled: true,
+            defaultShowInMenu: true
+        ),
+        ToolboxTool(
+            id: .captureVideo,
+            titleKey: "Capture Video",
+            subtitleKey: "Record a full display or a resizable selected area with audio options.",
+            systemImage: "record.circle",
             category: .screenshots,
             defaultEnabled: true,
             defaultShowInMenu: true
@@ -113,6 +123,8 @@ enum ToolboxSettings {
         static let language = "app.language"
         static let captureSelectedAreaEnabled = ToolboxToolID.captureSelectedArea.enabledKey
         static let captureSelectedAreaShowInMenu = ToolboxToolID.captureSelectedArea.showInMenuKey
+        static let captureVideoEnabled = ToolboxToolID.captureVideo.enabledKey
+        static let captureVideoShowInMenu = ToolboxToolID.captureVideo.showInMenuKey
         static let captureOCREnabled = ToolboxToolID.captureOCR.enabledKey
         static let captureOCRShowInMenu = ToolboxToolID.captureOCR.showInMenuKey
         static let copyFinderPathEnabled = ToolboxToolID.copyFinderPath.enabledKey
@@ -127,6 +139,8 @@ enum ToolboxSettings {
     static let defaultLanguage = AppLanguage.english
     static let defaultCaptureSelectedAreaEnabled = ToolboxToolID.captureSelectedArea.defaultEnabled
     static let defaultCaptureSelectedAreaShowInMenu = ToolboxToolID.captureSelectedArea.defaultShowInMenu
+    static let defaultCaptureVideoEnabled = ToolboxToolID.captureVideo.defaultEnabled
+    static let defaultCaptureVideoShowInMenu = ToolboxToolID.captureVideo.defaultShowInMenu
     static let defaultCaptureOCREnabled = ToolboxToolID.captureOCR.defaultEnabled
     static let defaultCaptureOCRShowInMenu = ToolboxToolID.captureOCR.defaultShowInMenu
     static let defaultCopyFinderPathEnabled = ToolboxToolID.copyFinderPath.defaultEnabled

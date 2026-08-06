@@ -59,16 +59,25 @@ struct DropShelfView: View {
     private var header: some View {
         HStack(spacing: 10) {
             ZStack(alignment: .leading) {
-                HStack(spacing: 10) {
-                    Label(AppLocalization.string("Drop Shelf"), systemImage: "tray.and.arrow.down")
+                HStack(spacing: 8) {
+                    Image(systemName: "tray.and.arrow.down")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+
+                    Text(AppLocalization.string("Drop Shelf"))
                         .font(.system(size: 13, weight: .semibold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.86)
 
-                    Text("\(store.items.count)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+                    if !store.items.isEmpty {
+                        Text("\(store.items.count)")
+                            .font(.caption2.weight(.bold))
+                            .monospacedDigit()
+                            .foregroundStyle(Color.accentColor)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1)
+                            .background(Color.accentColor.opacity(0.15), in: Capsule())
+                    }
 
                     Spacer(minLength: 0)
                 }
@@ -199,17 +208,35 @@ private struct EmptyDropShelfView: View {
     let isTargeted: Bool
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: isTargeted ? "tray.and.arrow.down.fill" : "tray")
-                .font(.system(size: 30, weight: .semibold))
+        VStack(spacing: 9) {
+            Image(systemName: isTargeted ? "tray.and.arrow.down.fill" : "tray.and.arrow.down")
+                .font(.system(size: 28, weight: .medium))
                 .foregroundStyle(isTargeted ? Color.accentColor : Color.secondary)
+                .symbolEffect(.bounce, value: isTargeted)
 
             Text(isTargeted ? AppLocalization.string("Release to add") : AppLocalization.string("Drop items here"))
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(isTargeted ? Color.accentColor : .secondary)
+
+            Text(AppLocalization.string("Files, folders, links, text, and images"))
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])
+                )
+                .foregroundStyle(
+                    isTargeted ? Color.accentColor.opacity(0.6) : Color.secondary.opacity(0.28)
+                )
+        )
+        .padding(4)
         .contentShape(Rectangle())
+        .animation(.easeOut(duration: 0.15), value: isTargeted)
     }
 }
 
@@ -229,6 +256,7 @@ private struct DropShelfItemCard: View {
     let dragEnded: () -> Void
 
     @State private var draftName: String
+    @State private var isHovering = false
 
     init(
         item: DropShelfItem,
@@ -264,13 +292,7 @@ private struct DropShelfItemCard: View {
     var body: some View {
         VStack(spacing: 8) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.quaternary.opacity(0.55))
-
-                previewImage
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .padding(12)
+                thumbnail
 
                 DropShelfDragInteractionView(
                     dragImage: dragImage,
@@ -289,40 +311,51 @@ private struct DropShelfItemCard: View {
                         help: AppLocalization.string("Remove"),
                         action: removeAction
                     )
+                    .opacity(isHovering ? 1 : 0)
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
                 .padding(6)
             }
             .frame(height: max(62, itemSize.height - 52))
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .contentShape(RoundedRectangle(cornerRadius: 10))
             .onTapGesture(perform: previewAction)
 
-            VStack(alignment: .leading, spacing: 2) {
-                TextField(AppLocalization.string("Name"), text: $draftName)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12, weight: .semibold))
-                    .lineLimit(1)
-                    .onSubmit {
-                        renameAction(draftName)
-                    }
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(kindTint)
+                    .frame(width: 7, height: 7)
 
-                Text(item.subtitle)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                VStack(alignment: .leading, spacing: 2) {
+                    TextField(AppLocalization.string("Name"), text: $draftName)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                        .onSubmit {
+                            renameAction(draftName)
+                        }
+
+                    Text(item.subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
         }
         .padding(8)
         .frame(width: itemSize.width, height: itemSize.height)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .overlay {
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.primary.opacity(0.10), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(.white.opacity(isHovering ? 0.22 : 0.1), lineWidth: 1)
         }
-        .rotationEffect(.degrees(rotationDegrees))
-        .offset(stackOffset)
-        .shadow(color: .black.opacity(0.20), radius: 12, y: 8)
+        .rotationEffect(.degrees(isHovering ? 0 : rotationDegrees))
+        .offset(isHovering ? .zero : stackOffset)
+        .scaleEffect(isHovering ? 1.03 : 1)
+        .shadow(color: .black.opacity(isHovering ? 0.32 : 0.2), radius: isHovering ? 18 : 12, y: isHovering ? 12 : 8)
+        .zIndex(isHovering ? 10 : 0)
+        .animation(.spring(response: 0.34, dampingFraction: 0.86), value: isHovering)
+        .onHover { isHovering = $0 }
         .contextMenu {
             Button {
                 previewAction()
@@ -366,6 +399,53 @@ private struct DropShelfItemCard: View {
         }
         .onChange(of: item.displayName) { _, newValue in
             draftName = newValue
+        }
+    }
+
+    private var thumbnail: some View {
+        ZStack {
+            if isImageBacked {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(.quaternary.opacity(0.5))
+
+                previewImage
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            } else {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(kindTint.opacity(0.16))
+
+                Image(systemName: item.kind.systemImage)
+                    .font(.system(size: 26, weight: .medium))
+                    .foregroundStyle(kindTint)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var isImageBacked: Bool {
+        if item.image != nil {
+            return true
+        }
+
+        if let fileURL = item.fileURL,
+           !fileURL.hasDirectoryPath,
+           let image = NSImage(contentsOf: fileURL),
+           image.isValid {
+            return true
+        }
+
+        return false
+    }
+
+    private var kindTint: Color {
+        switch item.kind {
+        case .file: .gray
+        case .folder: .blue
+        case .image: .green
+        case .link: .purple
+        case .text: .orange
         }
     }
 
@@ -427,15 +507,21 @@ private struct DropShelfIconButton: View {
     let help: String
     let action: () -> Void
 
+    @State private var isHovering = false
+
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 12, weight: .semibold))
-                .frame(width: 24, height: 24)
+                .frame(width: 26, height: 26)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 6))
+        .background(
+            Color.primary.opacity(isHovering ? 0.14 : 0.06),
+            in: RoundedRectangle(cornerRadius: 7)
+        )
+        .onHover { isHovering = $0 }
         .help(help)
     }
 }
