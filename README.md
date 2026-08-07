@@ -119,8 +119,7 @@ screenshotapp/
 - **Presentation coordinators** own the AppKit `NSPanel` lifecycle; view models drive
   them through `*Presenting` protocols instead of touching AppKit directly.
 
-See [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md) for deeper notes, and
-[ci/README.md](ci/README.md) for the release / notarization pipeline.
+See [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md) for deeper notes.
 
 ## Contributing
 

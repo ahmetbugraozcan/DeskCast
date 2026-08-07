@@ -9,6 +9,7 @@ struct FinderPathService: FinderPathProviding {
         case scriptCreationFailed
         case scriptFailed(String)
         case noOpenFinderWindow
+        case noFolderPath
         case automationDenied
 
         var errorDescription: String? {
@@ -19,23 +20,33 @@ struct FinderPathService: FinderPathProviding {
                 message
             case .noOpenFinderWindow:
                 AppLocalization.string("No Finder window is open.")
+            case .noFolderPath:
+                AppLocalization.string("This Finder window has no folder path (e.g. Recents or Search).")
             case .automationDenied:
                 AppLocalization.string("Finder access is not allowed.")
             }
         }
     }
 
+    private enum Sentinel {
+        static let noWindow = "::NO_WINDOW::"
+        static let noPath = "::NO_PATH::"
+    }
+
     func frontFinderWindowPath() throws -> String {
+        // Return sentinels for the "no window" / "no filesystem path" cases (the
+        // latter covers smart folders like Recents, Search and Tags) so they can
+        // be surfaced as clear messages instead of a raw AppleScript failure.
         let scriptSource = """
         tell application "Finder"
             if not (exists front Finder window) then
-                error "No Finder window is open."
+                return "\(Sentinel.noWindow)"
             end if
 
             try
                 return POSIX path of (target of front Finder window as alias)
             on error
-                return POSIX path of (insertion location as alias)
+                return "\(Sentinel.noPath)"
             end try
         end tell
         """
@@ -52,10 +63,6 @@ struct FinderPathService: FinderPathProviding {
                 ?? FinderPathError.scriptCreationFailed.localizedDescription
             let errorNumber = errorInfo[NSAppleScript.errorNumber] as? Int
 
-            if message.localizedCaseInsensitiveContains("No Finder window") {
-                throw FinderPathError.noOpenFinderWindow
-            }
-
             if errorNumber == -1743
                 || message.localizedCaseInsensitiveContains("not authorized")
                 || message.localizedCaseInsensitiveContains("not allowed") {
@@ -65,11 +72,15 @@ struct FinderPathService: FinderPathProviding {
             throw FinderPathError.scriptFailed(message)
         }
 
-        guard let path = output.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !path.isEmpty else {
-            throw FinderPathError.noOpenFinderWindow
-        }
+        let path = output.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
-        return path
+        switch path {
+        case Sentinel.noWindow, "":
+            throw FinderPathError.noOpenFinderWindow
+        case Sentinel.noPath:
+            throw FinderPathError.noFolderPath
+        default:
+            return path
+        }
     }
 }

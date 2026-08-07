@@ -175,6 +175,12 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
         } catch FinderPathService.FinderPathError.automationDenied {
             NSSound.beep()
             showToast(AppLocalization.string("Allow Finder access"), systemImage: "exclamationmark.triangle.fill")
+        } catch FinderPathService.FinderPathError.noFolderPath {
+            NSSound.beep()
+            showToast(
+                AppLocalization.string("This Finder window has no folder path (e.g. Recents or Search)."),
+                systemImage: "questionmark.folder"
+            )
         } catch {
             NSSound.beep()
             showToast(AppLocalization.string("Could not copy path"), systemImage: "exclamationmark.triangle.fill")

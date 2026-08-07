@@ -65,6 +65,7 @@
 "No Finder window open" = "Açık Finder penceresi yok";
 "Allow Finder access" = "Finder erişimine izin ver";
 "Could not copy path" = "Yol kopyalanamadı";
+"This Finder window has no folder path (e.g. Recents or Search)." = "Bu Finder penceresinin bir klasör yolu yok (ör. Son Kullanılanlar veya Arama).";
 "Could not record video" = "Video kaydedilemedi";
 "Could not quick save image" = "Görsel hızlı kaydedilemedi";
 "Could not save image" = "Görsel kaydedilemedi";

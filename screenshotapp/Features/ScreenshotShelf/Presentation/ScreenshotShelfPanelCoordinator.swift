@@ -181,7 +181,10 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
 
     private func resolvedScreenForNewCapture(settings: ScreenshotShelfSettingsSnapshot) -> NSScreen {
         if settings.showPreviewsOnFocusedDisplay {
-            return focusedApplicationScreen() ?? NSScreen.main ?? screenForMouseLocation()
+            // Fall back to the display under the cursor (not the primary): captures
+            // triggered from the menu bar make DeskCast frontmost, so there is no
+            // other focused app window to anchor to.
+            return focusedApplicationScreen() ?? screenForMouseLocation()
         }
 
         return screenForMouseLocation()
@@ -205,6 +208,12 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
 
     private func focusedApplicationScreen() -> NSScreen? {
         guard let frontmostApplication = NSWorkspace.shared.frontmostApplication else {
+            return nil
+        }
+
+        // Ignore ourselves: when triggered from the menu bar DeskCast is frontmost,
+        // and anchoring to its own window would land the shelf on the wrong display.
+        guard frontmostApplication.bundleIdentifier != Bundle.main.bundleIdentifier else {
             return nil
         }
 

@@ -65,6 +65,7 @@
 "No Finder window open" = "No Finder window open";
 "Allow Finder access" = "Allow Finder access";
 "Could not copy path" = "Could not copy path";
+"This Finder window has no folder path (e.g. Recents or Search)." = "This Finder window has no folder path (e.g. Recents or Search).";
 "Could not record video" = "Could not record video";
 "Could not quick save image" = "Could not quick save image";
 "Could not save image" = "Could not save image";
