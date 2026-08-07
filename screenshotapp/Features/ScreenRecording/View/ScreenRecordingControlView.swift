@@ -4,7 +4,9 @@ struct ScreenRecordingControlView: View {
     /// The visible rounded card. The hosting window is larger by `shadowMargin`
     /// on every side so the SwiftUI shadow has room (the window itself draws none).
     static let contentSize = CGSize(width: 800, height: 60)
-    static let shadowMargin: CGFloat = 16
+    /// Must exceed the shadow's reach (radius + y-offset) or the panel window
+    /// clips the soft shadow into a hard rectangle.
+    static let shadowMargin: CGFloat = 40
     static let panelSize = CGSize(
         width: contentSize.width + shadowMargin * 2,
         height: contentSize.height + shadowMargin * 2
@@ -32,7 +34,7 @@ struct ScreenRecordingControlView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(.white.opacity(0.12), lineWidth: 1)
         }
-        .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
+        .shadow(color: .black.opacity(0.28), radius: 20, y: 8)
         .frame(width: Self.panelSize.width, height: Self.panelSize.height)
     }
 
