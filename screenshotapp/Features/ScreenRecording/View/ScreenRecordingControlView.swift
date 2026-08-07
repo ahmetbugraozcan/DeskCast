@@ -3,7 +3,7 @@ import SwiftUI
 struct ScreenRecordingControlView: View {
     /// The visible rounded card. The hosting window is larger by `shadowMargin`
     /// on every side so the SwiftUI shadow has room (the window itself draws none).
-    static let contentSize = CGSize(width: 720, height: 60)
+    static let contentSize = CGSize(width: 800, height: 60)
     static let shadowMargin: CGFloat = 16
     static let panelSize = CGSize(
         width: contentSize.width + shadowMargin * 2,
@@ -167,6 +167,9 @@ struct ScreenRecordingControlView: View {
         .padding(3)
         .frame(height: Self.controlHeight)
         .background(.black.opacity(0.18), in: RoundedRectangle(cornerRadius: Self.radius + 2))
+        // Keep the mode labels at their natural width so the variable-length
+        // display name (below) is what gives way when the row gets tight.
+        .fixedSize()
     }
 
     private func modeButton(_ mode: ScreenRecordingMode, systemImage: String, title: String) -> some View {
@@ -183,6 +186,7 @@ struct ScreenRecordingControlView: View {
                     .font(.system(size: 12, weight: .semibold))
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
             }
             .frame(maxHeight: .infinity)
             .padding(.horizontal, 11)
@@ -219,11 +223,14 @@ struct ScreenRecordingControlView: View {
             }
         } label: {
             Label(selectedDisplayName, systemImage: "display")
+                .lineLimit(1)
         }
         .menuStyle(.button)
         .buttonStyle(RecorderControlStyle(isActive: false))
         .menuIndicator(.hidden)
-        .fixedSize()
+        // No .fixedSize(): the display name is the row's flexible element, so an
+        // unusually long name truncates here instead of squeezing the mode labels.
+        .layoutPriority(-1)
         .accessibilityLabel(Text(AppLocalization.string("Display")))
     }
 
