@@ -501,7 +501,7 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
         }
     }
 
-    private func showToast(_ message: String, systemImage: String = "checkmark.circle.fill") {
+    func showToast(_ message: String, systemImage: String = "checkmark.circle.fill") {
         toastPresenter.show(message, systemImage: systemImage)
     }
 
@@ -600,7 +600,7 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
         presenter?.refresh()
     }
 
-    private func removeScreenshot(withID itemID: UUID) {
+    func removeScreenshot(withID itemID: UUID) {
         cancelExpirationTimer(for: itemID)
 
         let oldCount = screenshots.count

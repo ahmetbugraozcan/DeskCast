@@ -112,7 +112,9 @@
 "Never auto-hide" = "Never auto-hide";
 "Capture" = "Capture";
 "Video capture:" = "Video capture:";
-"Show previews on focused display" = "Show previews on focused display";
+"Show previews on" = "Show previews on";
+"Automatic (display with pointer)" = "Automatic (display with pointer)";
+"Primary display" = "Primary display";
 "Copy new screenshots to clipboard" = "Copy new screenshots to clipboard";
 "Export" = "Export";
 "Auto-save captured screenshots" = "Auto-save captured screenshots";
@@ -149,6 +151,9 @@
 "Clear" = "Clear";
 "Close" = "Close";
 "Close All" = "Close All";
+"Move to Trash" = "Move to Trash";
+"Moved to Trash" = "Moved to Trash";
+"Could not move to Trash" = "Could not move to Trash";
 "Export Named Copies" = "Export Named Copies";
 "Release to add" = "Release to add";
 "Drop items here" = "Drop items here";

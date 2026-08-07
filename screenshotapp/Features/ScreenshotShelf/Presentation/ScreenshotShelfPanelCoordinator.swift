@@ -180,14 +180,14 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
     }
 
     private func resolvedScreenForNewCapture(settings: ScreenshotShelfSettingsSnapshot) -> NSScreen {
-        if settings.showPreviewsOnFocusedDisplay {
-            // Fall back to the display under the cursor (not the primary): captures
-            // triggered from the menu bar make DeskCast frontmost, so there is no
-            // other focused app window to anchor to.
-            return focusedApplicationScreen() ?? screenForMouseLocation()
+        // "pointer" (and any stale/disconnected explicit choice) → the display the
+        // user is currently on; "primary" or a specific display → that display.
+        if settings.previewDisplayMode == ScreenshotShelfDisplayCatalog.pointerID {
+            return screenForMouseLocation()
         }
 
-        return screenForMouseLocation()
+        return ScreenshotShelfDisplayCatalog.screen(for: settings.previewDisplayMode)
+            ?? screenForMouseLocation()
     }
 
     private func screen(for anchor: ScreenshotShelfScreenAnchor?) -> NSScreen? {
@@ -206,105 +206,6 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
         } ?? NSScreen.main ?? NSScreen.screens[0]
     }
 
-    private func focusedApplicationScreen() -> NSScreen? {
-        guard let frontmostApplication = NSWorkspace.shared.frontmostApplication else {
-            return nil
-        }
-
-        // Ignore ourselves: when triggered from the menu bar DeskCast is frontmost,
-        // and anchoring to its own window would land the shelf on the wrong display.
-        guard frontmostApplication.bundleIdentifier != Bundle.main.bundleIdentifier else {
-            return nil
-        }
-
-        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
-        guard let windows = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
-            return nil
-        }
-
-        for window in windows {
-            guard isCandidateFocusedWindow(window, processID: frontmostApplication.processIdentifier),
-                  let bounds = windowBounds(from: window),
-                  bounds.width > 40,
-                  bounds.height > 40,
-                  let screen = screen(containingWindowBounds: bounds) else {
-                continue
-            }
-
-            return screen
-        }
-
-        return nil
-    }
-
-    private func isCandidateFocusedWindow(
-        _ window: [String: Any],
-        processID: pid_t
-    ) -> Bool {
-        let ownerPID = (window[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value
-        let layer = (window[kCGWindowLayer as String] as? NSNumber)?.intValue
-        let isOnScreen = (window[kCGWindowIsOnscreen as String] as? NSNumber)?.boolValue ?? true
-        let alpha = (window[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 1
-
-        return ownerPID == processID
-            && layer == 0
-            && isOnScreen
-            && alpha > 0
-    }
-
-    private func windowBounds(from window: [String: Any]) -> CGRect? {
-        guard let boundsDictionary = window[kCGWindowBounds as String] as? NSDictionary else {
-            return nil
-        }
-
-        return CGRect(dictionaryRepresentation: boundsDictionary)
-    }
-
-    private func screen(containingWindowBounds bounds: CGRect) -> NSScreen? {
-        let candidateBounds = [
-            bounds,
-            flippedWindowBounds(bounds)
-        ]
-
-        return candidateBounds
-            .flatMap { windowBounds in
-                NSScreen.screens.compactMap { screen -> (screen: NSScreen, area: CGFloat)? in
-                    let area = windowBounds.intersection(screen.frame).area
-                    guard area > 0 else { return nil }
-
-                    return (screen, area)
-                }
-            }
-            .max { lhs, rhs in lhs.area < rhs.area }?
-            .screen
-    }
-
-    private func flippedWindowBounds(_ bounds: CGRect) -> CGRect {
-        let displayFrame = NSScreen.screens.reduce(CGRect.null) { result, screen in
-            result.union(screen.frame)
-        }
-
-        guard !displayFrame.isNull else {
-            return bounds
-        }
-
-        return CGRect(
-            x: bounds.minX,
-            y: displayFrame.maxY - bounds.maxY,
-            width: bounds.width,
-            height: bounds.height
-        )
-    }
-}
-
-private extension CGRect {
-    var area: CGFloat {
-        guard !isNull, !isEmpty else {
-            return 0
-        }
-
-        return width * height
-    }
 }
 
 private extension NSScreen {

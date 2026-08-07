@@ -418,8 +418,8 @@
 				INFOPLIST_KEY_CFBundleName = DeskCast;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "DeskCast needs Finder access to copy the current folder path.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "DeskCast uses the selected microphone when you enable microphone audio for a screen recording.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "DeskCast uses the selected microphone when you enable microphone audio for a screen recording.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -457,8 +457,8 @@
 				INFOPLIST_KEY_CFBundleName = DeskCast;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "DeskCast needs Finder access to copy the current folder path.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "DeskCast uses the selected microphone when you enable microphone audio for a screen recording.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "DeskCast uses the selected microphone when you enable microphone audio for a screen recording.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

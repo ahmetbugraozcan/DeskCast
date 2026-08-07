@@ -112,7 +112,9 @@
 "Never auto-hide" = "Asla otomatik gizleme";
 "Capture" = "Yakalama";
 "Video capture:" = "Video yakalama:";
-"Show previews on focused display" = "Önizlemeleri odaktaki ekranda göster";
+"Show previews on" = "Önizlemeleri şurada göster";
+"Automatic (display with pointer)" = "Otomatik (imlecin olduğu ekran)";
+"Primary display" = "Ana ekran";
 "Copy new screenshots to clipboard" = "Yeni ekran görüntülerini panoya kopyala";
 "Export" = "Dışa Aktarma";
 "Auto-save captured screenshots" = "Yakalanan ekran görüntülerini otomatik kaydet";
@@ -149,6 +151,9 @@
 "Clear" = "Temizle";
 "Close" = "Kapat";
 "Close All" = "Tümünü Kapat";
+"Move to Trash" = "Çöp'e Taşı";
+"Moved to Trash" = "Çöp'e taşındı";
+"Could not move to Trash" = "Çöp'e taşınamadı";
 "Export Named Copies" = "Adlandırılmış Kopyaları Dışa Aktar";
 "Release to add" = "Eklemek için bırak";
 "Drop items here" = "Öğeleri buraya bırak";

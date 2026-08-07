@@ -23,8 +23,8 @@ struct SettingsView: View {
     @AppStorage(ScreenshotShelfSettings.Keys.pinScreenshotsByDefault)
     private var pinScreenshotsByDefault = ScreenshotShelfSettings.defaultPinScreenshotsByDefault
 
-    @AppStorage(ScreenshotShelfSettings.Keys.showPreviewsOnFocusedDisplay)
-    private var showPreviewsOnFocusedDisplay = ScreenshotShelfSettings.defaultShowPreviewsOnFocusedDisplay
+    @AppStorage(ScreenshotShelfSettings.Keys.previewDisplayMode)
+    private var previewDisplayMode = ScreenshotShelfSettings.defaultPreviewDisplayMode
 
     @AppStorage(ScreenshotShelfSettings.Keys.copyCapturedScreenshotToClipboard)
     private var copyCapturedScreenshotToClipboard = ScreenshotShelfSettings.defaultCopyCapturedScreenshotToClipboard
@@ -322,10 +322,15 @@ struct SettingsView: View {
                 }
 
                 SettingsControlSection(title: AppLocalization.string("Capture")) {
-                    SettingsToggleRow(
-                        title: AppLocalization.string("Show previews on focused display"),
-                        isOn: $showPreviewsOnFocusedDisplay
-                    )
+                    SettingsPickerRow(title: AppLocalization.string("Show previews on")) {
+                        Picker(AppLocalization.string("Show previews on"), selection: $previewDisplayMode) {
+                            ForEach(ScreenshotShelfDisplayCatalog.options()) { option in
+                                Text(option.name).tag(option.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: 280)
+                    }
 
                     SettingsSectionDivider()
 

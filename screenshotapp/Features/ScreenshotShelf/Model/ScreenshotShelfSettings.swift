@@ -80,7 +80,9 @@ struct ScreenshotShelfSettingsSnapshot {
     let previewDurationSeconds: Int
     let neverAutoHide: Bool
     let pinScreenshotsByDefault: Bool
-    let showPreviewsOnFocusedDisplay: Bool
+    /// "pointer" (display under the cursor), "primary", or a specific display's
+    /// CGDisplay UUID string.
+    let previewDisplayMode: String
     let copyCapturedScreenshotToClipboard: Bool
     let thumbnailSize: ShelfThumbnailSize
     let customThumbnailWidth: Int
@@ -115,7 +117,7 @@ enum ScreenshotShelfSettings {
         static let previewDurationSeconds = "previewDurationSeconds"
         static let neverAutoHide = "neverAutoHide"
         static let pinScreenshotsByDefault = "pinScreenshotsByDefault"
-        static let showPreviewsOnFocusedDisplay = "showPreviewsOnFocusedDisplay"
+        static let previewDisplayMode = "previewDisplayMode"
         static let copyCapturedScreenshotToClipboard = "copyCapturedScreenshotToClipboard"
         static let thumbnailSize = "thumbnailSize"
         static let customThumbnailWidth = "customThumbnailWidth"
@@ -140,7 +142,7 @@ enum ScreenshotShelfSettings {
     static let defaultPreviewDurationSeconds = 8
     static let defaultNeverAutoHide = true
     static let defaultPinScreenshotsByDefault = false
-    static let defaultShowPreviewsOnFocusedDisplay = true
+    static let defaultPreviewDisplayMode = ScreenshotShelfDisplayCatalog.pointerID
     static let defaultCopyCapturedScreenshotToClipboard = false
     static let defaultThumbnailSize = ShelfThumbnailSize.medium
     static let defaultCustomThumbnailWidth = 220
@@ -174,7 +176,7 @@ enum ScreenshotShelfSettings {
             Keys.previewDurationSeconds: defaultPreviewDurationSeconds,
             Keys.neverAutoHide: defaultNeverAutoHide,
             Keys.pinScreenshotsByDefault: defaultPinScreenshotsByDefault,
-            Keys.showPreviewsOnFocusedDisplay: defaultShowPreviewsOnFocusedDisplay,
+            Keys.previewDisplayMode: defaultPreviewDisplayMode,
             Keys.copyCapturedScreenshotToClipboard: defaultCopyCapturedScreenshotToClipboard,
             Keys.thumbnailSize: defaultThumbnailSize.rawValue,
             Keys.customThumbnailWidth: defaultCustomThumbnailWidth,
@@ -202,7 +204,7 @@ enum ScreenshotShelfSettings {
             previewDurationSeconds: clampedPreviewDuration(defaults.integer(forKey: Keys.previewDurationSeconds)),
             neverAutoHide: defaults.bool(forKey: Keys.neverAutoHide),
             pinScreenshotsByDefault: defaults.bool(forKey: Keys.pinScreenshotsByDefault),
-            showPreviewsOnFocusedDisplay: defaults.bool(forKey: Keys.showPreviewsOnFocusedDisplay),
+            previewDisplayMode: defaults.string(forKey: Keys.previewDisplayMode) ?? defaultPreviewDisplayMode,
             copyCapturedScreenshotToClipboard: defaults.bool(forKey: Keys.copyCapturedScreenshotToClipboard),
             thumbnailSize: ShelfThumbnailSize(rawValue: thumbnailSizeRaw ?? "") ?? defaultThumbnailSize,
             customThumbnailWidth: clampedCustomThumbnailWidth(defaults.integer(forKey: Keys.customThumbnailWidth)),

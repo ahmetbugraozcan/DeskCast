@@ -145,6 +145,7 @@ struct ScreenshotShelfView: View {
                 copyTextAction: { store.copyRecognizedText(item) },
                 addToShelfAction: { store.addToShelf(item) },
                 showInFinderAction: { store.showInFinder(item) },
+                deleteAction: { store.moveToTrash(item) },
                 saveAsAction: { store.saveAs(item) },
                 quickSaveAction: { store.quickSave(item) },
                 saveExportAction: { option in store.save(item, exportOption: option) },
@@ -354,6 +355,7 @@ private struct ScreenshotThumbnailView: View {
     let copyTextAction: () -> Void
     let addToShelfAction: () -> Void
     let showInFinderAction: () -> Void
+    let deleteAction: () -> Void
     let saveAsAction: () -> Void
     let quickSaveAction: () -> Void
     let saveExportAction: (ScreenshotExportOption) -> Void
@@ -547,6 +549,14 @@ private struct ScreenshotThumbnailView: View {
                 closeAction()
             } label: {
                 Label(AppLocalization.string("Close"), systemImage: "xmark")
+            }
+
+            if item.fileURL != nil {
+                Button(role: .destructive) {
+                    deleteAction()
+                } label: {
+                    Label(AppLocalization.string("Move to Trash"), systemImage: "trash.fill")
+                }
             }
 
             Button(role: .destructive) {
