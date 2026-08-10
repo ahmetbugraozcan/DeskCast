@@ -205,6 +205,11 @@
 "Add to Shelf" = "Rafa Ekle";
 "Add All to Shelf" = "Tümünü Rafa Ekle";
 "Added %ld to Shelf" = "%ld öğe Rafa eklendi";
+"Select" = "Seç";
+"Clear Selection" = "Seçimi Temizle";
+"%ld selected" = "%ld seçili";
+"Copied %ld items" = "%ld öğe kopyalandı";
+"Could not copy items" = "Öğeler kopyalanamadı";
 "Show in Finder" = "Finder'da Göster";
 "Enable Drop Shelf first" = "Önce Bırakma Rafı'nı etkinleştirin";
 "Edit in Preview" = "Preview'de Düzenle";

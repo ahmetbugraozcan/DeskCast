@@ -59,7 +59,16 @@ struct DropShelfView: View {
         DropShelfLayoutMode(rawValue: layoutModeRaw) ?? DropShelfSettings.defaultLayoutMode
     }
 
+    @ViewBuilder
     private var header: some View {
+        if store.selectedItemIDs.isEmpty {
+            defaultHeader
+        } else {
+            selectionHeader
+        }
+    }
+
+    private var defaultHeader: some View {
         HStack(spacing: 10) {
             ZStack(alignment: .leading) {
                 HStack(spacing: 8) {
@@ -108,6 +117,37 @@ struct DropShelfView: View {
         .padding(.horizontal, 12)
     }
 
+    private var selectionHeader: some View {
+        HStack(spacing: 10) {
+            DropShelfIconButton(
+                systemName: "xmark.circle.fill",
+                help: AppLocalization.string("Clear Selection")
+            ) {
+                store.clearSelection()
+            }
+
+            Text(AppLocalization.formatted("%ld selected", store.selectedItemIDs.count))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .monospacedDigit()
+
+            Spacer(minLength: 0)
+
+            DropShelfIconButton(systemName: "doc.on.doc", help: AppLocalization.string("Copy")) {
+                store.copySelection()
+            }
+
+            DropShelfIconButton(systemName: "paperplane", help: AppLocalization.string("Send To...")) {
+                store.sendSelection()
+            }
+
+            DropShelfIconButton(systemName: "trash", help: AppLocalization.string("Remove")) {
+                store.removeSelection()
+            }
+        }
+        .padding(.horizontal, 12)
+    }
+
     @ViewBuilder
     private var content: some View {
         if store.items.isEmpty {
@@ -131,6 +171,7 @@ struct DropShelfView: View {
                 dropShelfItemCard(
                     for: item,
                     stackDepth: visibleStackItems.count - index - 1,
+                    selectable: false,
                     dragPasteboardWriters: { store.draggingPasteboardWritersForAllItems() }
                 )
                 .zIndex(Double(index))
@@ -157,13 +198,8 @@ struct DropShelfView: View {
                     dropShelfItemCard(
                         for: item,
                         stackDepth: 0,
-                        dragPasteboardWriters: {
-                            guard let writer = store.draggingPasteboardWriter(for: item) else {
-                                return []
-                            }
-
-                            return [writer]
-                        }
+                        selectable: true,
+                        dragPasteboardWriters: { store.draggingPasteboardWriters(forDraggedItem: item) }
                     )
                 }
             }
@@ -189,17 +225,13 @@ struct DropShelfView: View {
                 ForEach(store.items) { item in
                     DropShelfListRow(
                         item: item,
+                        isSelected: store.isSelected(item),
+                        toggleSelection: { store.toggleSelection(item) },
                         previewAction: { store.preview(item) },
                         copyAction: { store.copy(item) },
                         sendAction: { store.send(item) },
                         removeAction: { store.remove(item) },
-                        dragPasteboardWriters: {
-                            guard let writer = store.draggingPasteboardWriter(for: item) else {
-                                return []
-                            }
-
-                            return [writer]
-                        },
+                        dragPasteboardWriters: { store.draggingPasteboardWriters(forDraggedItem: item) },
                         dragStarted: { store.beginInternalDrag() },
                         dragEnded: { store.endInternalDrag() }
                     )
@@ -220,12 +252,16 @@ struct DropShelfView: View {
     private func dropShelfItemCard(
         for item: DropShelfItem,
         stackDepth: Int,
+        selectable: Bool,
         dragPasteboardWriters: @escaping () -> [NSPasteboardWriting]
     ) -> some View {
         DropShelfItemCard(
             item: item,
             itemSize: itemSize,
             stackDepth: stackDepth,
+            selectable: selectable,
+            isSelected: store.isSelected(item),
+            toggleSelection: { store.toggleSelection(item) },
             previewAction: { store.preview(item) },
             renameAction: { store.rename(item, to: $0) },
             copyAction: { store.copy(item) },
@@ -280,6 +316,9 @@ private struct DropShelfItemCard: View {
     let item: DropShelfItem
     let itemSize: CGSize
     let stackDepth: Int
+    let selectable: Bool
+    let isSelected: Bool
+    let toggleSelection: () -> Void
     let previewAction: () -> Void
     let renameAction: (String) -> Void
     let copyAction: () -> Void
@@ -298,6 +337,9 @@ private struct DropShelfItemCard: View {
         item: DropShelfItem,
         itemSize: CGSize,
         stackDepth: Int,
+        selectable: Bool,
+        isSelected: Bool,
+        toggleSelection: @escaping () -> Void,
         previewAction: @escaping () -> Void,
         renameAction: @escaping (String) -> Void,
         copyAction: @escaping () -> Void,
@@ -312,6 +354,9 @@ private struct DropShelfItemCard: View {
         self.item = item
         self.itemSize = itemSize
         self.stackDepth = stackDepth
+        self.selectable = selectable
+        self.isSelected = isSelected
+        self.toggleSelection = toggleSelection
         self.previewAction = previewAction
         self.renameAction = renameAction
         self.copyAction = copyAction
@@ -339,7 +384,13 @@ private struct DropShelfItemCard: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                HStack {
+                // Top row: selection toggle (left) and remove (right).
+                HStack(alignment: .top) {
+                    if selectable {
+                        selectionCheckbox
+                            .opacity(isHovering || isSelected ? 1 : 0)
+                    }
+
                     Spacer()
 
                     DropShelfIconButton(
@@ -349,41 +400,56 @@ private struct DropShelfItemCard: View {
                     )
                     .opacity(isHovering ? 1 : 0)
                 }
-                .frame(maxHeight: .infinity, alignment: .top)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(6)
+
+                // Bottom row: kind badge (left) and quick actions on hover (right).
+                HStack(alignment: .bottom) {
+                    kindBadge
+
+                    Spacer()
+
+                    if isHovering {
+                        hoverActions
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .padding(6)
             }
             .frame(height: max(62, itemSize.height - 52))
             .contentShape(RoundedRectangle(cornerRadius: 10))
             .onTapGesture(perform: previewAction)
 
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(item.kindTint)
-                    .frame(width: 7, height: 7)
+            VStack(alignment: .leading, spacing: 2) {
+                TextField(AppLocalization.string("Name"), text: $draftName)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .onSubmit {
+                        renameAction(draftName)
+                    }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    TextField(AppLocalization.string("Name"), text: $draftName)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12, weight: .semibold))
-                        .lineLimit(1)
-                        .onSubmit {
-                            renameAction(draftName)
-                        }
-
-                    Text(item.subtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
+                Text(item.subtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(8)
         .frame(width: itemSize.width, height: itemSize.height)
+        .background(
+            isSelected ? Color.accentColor.opacity(0.14) : Color.clear,
+            in: RoundedRectangle(cornerRadius: 12)
+        )
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
-                .stroke(.white.opacity(isHovering ? 0.22 : 0.1), lineWidth: 1)
+                .stroke(
+                    isSelected ? Color.accentColor : .white.opacity(isHovering ? 0.22 : 0.1),
+                    lineWidth: isSelected ? 2 : 1
+                )
         }
         .offset(isHovering ? .zero : stackOffset)
         .scaleEffect(isHovering ? 1.03 : stackScale)
@@ -462,6 +528,35 @@ private struct DropShelfItemCard: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var selectionCheckbox: some View {
+        DropShelfSelectionToggle(isSelected: isSelected, action: toggleSelection)
+    }
+
+    private var kindBadge: some View {
+        Image(systemName: item.kind.systemImage)
+            .font(.system(size: 9, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: 18, height: 18)
+            .background(item.kindTint.opacity(0.92), in: RoundedRectangle(cornerRadius: 5))
+            .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+    }
+
+    private var hoverActions: some View {
+        HStack(spacing: 4) {
+            DropShelfIconButton(
+                systemName: "doc.on.doc",
+                help: AppLocalization.string("Copy"),
+                action: copyAction
+            )
+
+            DropShelfIconButton(
+                systemName: "paperplane",
+                help: AppLocalization.string("Send To..."),
+                action: sendAction
+            )
+        }
     }
 
     // A clean downward-right cascade: deeper cards sit lower, slightly smaller,
@@ -555,6 +650,8 @@ private extension DropShelfItem {
 
 private struct DropShelfListRow: View {
     let item: DropShelfItem
+    let isSelected: Bool
+    let toggleSelection: () -> Void
     let previewAction: () -> Void
     let copyAction: () -> Void
     let sendAction: () -> Void
@@ -585,10 +682,10 @@ private struct DropShelfListRow: View {
                         .truncationMode(.middle)
                 }
 
-                Spacer(minLength: 34)
+                Spacer(minLength: 96)
             }
 
-            // Drag/click layer sits above the content but below the remove button.
+            // Drag/click layer sits above the content but below the buttons below.
             DropShelfDragInteractionView(
                 dragImage: item.dragImage,
                 previewAction: previewAction,
@@ -597,8 +694,29 @@ private struct DropShelfListRow: View {
                 dragEnded: dragEnded
             )
 
-            HStack {
+            // Selection toggle over the thumbnail, above the drag layer so it stays clickable.
+            if isHovering || isSelected {
+                DropShelfSelectionToggle(isSelected: isSelected, action: toggleSelection)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    .offset(x: 2)
+            }
+
+            HStack(spacing: 4) {
                 Spacer()
+
+                if isHovering {
+                    DropShelfIconButton(
+                        systemName: "doc.on.doc",
+                        help: AppLocalization.string("Copy"),
+                        action: copyAction
+                    )
+
+                    DropShelfIconButton(
+                        systemName: "paperplane",
+                        help: AppLocalization.string("Send To..."),
+                        action: sendAction
+                    )
+                }
 
                 DropShelfIconButton(
                     systemName: "xmark",
@@ -612,12 +730,17 @@ private struct DropShelfListRow: View {
         .padding(.vertical, 7)
         .frame(maxWidth: .infinity)
         .background(
-            Color.primary.opacity(isHovering ? 0.08 : 0.03),
+            isSelected
+                ? Color.accentColor.opacity(0.16)
+                : Color.primary.opacity(isHovering ? 0.08 : 0.03),
             in: RoundedRectangle(cornerRadius: 10)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 10)
-                .stroke(.white.opacity(isHovering ? 0.16 : 0.06), lineWidth: 1)
+                .stroke(
+                    isSelected ? Color.accentColor : .white.opacity(isHovering ? 0.16 : 0.06),
+                    lineWidth: isSelected ? 1.5 : 1
+                )
         }
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .onHover { isHovering = $0 }
@@ -656,6 +779,23 @@ private struct DropShelfListRow: View {
                     .foregroundStyle(item.kindTint)
             }
         }
+    }
+}
+
+private struct DropShelfSelectionToggle: View {
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(isSelected ? .white : .white.opacity(0.9))
+                .background(Circle().fill(isSelected ? Color.accentColor : .black.opacity(0.4)).padding(1.5))
+                .shadow(color: .black.opacity(0.35), radius: 2)
+        }
+        .buttonStyle(.plain)
+        .help(AppLocalization.string("Select"))
     }
 }
 

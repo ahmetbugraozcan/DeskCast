@@ -5,6 +5,7 @@ import KeyboardShortcuts
 @MainActor
 final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     @Published private(set) var items: [DropShelfItem] = []
+    @Published private(set) var selectedItemIDs: Set<UUID> = []
     @Published private(set) var isShelfVisible = false
     @Published private(set) var isDropTargeted = false
     @Published private(set) var isInternalDragInProgress = false
@@ -80,6 +81,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         isDropTargeted = false
         isInternalDragInProgress = false
         items.removeAll()
+        selectedItemIDs.removeAll()
         presenter?.hide()
     }
 
@@ -185,6 +187,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
 
     func remove(_ item: DropShelfItem) {
         items.removeAll { $0.id == item.id }
+        selectedItemIDs.remove(item.id)
         presenter?.refreshIfVisible()
     }
 
@@ -194,6 +197,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         }
 
         items.removeAll()
+        selectedItemIDs.removeAll()
         presenter?.refreshIfVisible()
     }
 
@@ -404,9 +408,91 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         }
 
         items.removeLast(items.count - maxItemCount)
+        selectedItemIDs.formIntersection(items.map(\.id))
     }
 
     private func showToast(_ message: String, systemImage: String = "checkmark.circle.fill") {
         toastPresenter.show(message, systemImage: systemImage)
+    }
+}
+
+// MARK: - Multi-selection (grid & list)
+
+extension DropShelfViewModel {
+    var selectedItems: [DropShelfItem] {
+        items.filter { selectedItemIDs.contains($0.id) }
+    }
+
+    func isSelected(_ item: DropShelfItem) -> Bool {
+        selectedItemIDs.contains(item.id)
+    }
+
+    func toggleSelection(_ item: DropShelfItem) {
+        if selectedItemIDs.contains(item.id) {
+            selectedItemIDs.remove(item.id)
+        } else {
+            selectedItemIDs.insert(item.id)
+        }
+    }
+
+    func selectAll() {
+        selectedItemIDs = Set(items.map(\.id))
+    }
+
+    func clearSelection() {
+        selectedItemIDs.removeAll()
+    }
+
+    /// Items that a drag starting on `item` should carry: the whole selection when
+    /// `item` is part of a multi-selection, otherwise just `item` (Finder-style).
+    func draggingPasteboardWriters(forDraggedItem item: DropShelfItem) -> [NSPasteboardWriting] {
+        guard selectedItemIDs.contains(item.id), selectedItemIDs.count > 1 else {
+            return draggingPasteboardWriter(for: item).map { [$0] } ?? []
+        }
+
+        do {
+            return try exporter.draggingURLs(for: selectedItems).map { $0 as NSURL }
+        } catch {
+            NSSound.beep()
+            showToast(AppLocalization.string("Could not drag items"), systemImage: "exclamationmark.triangle.fill")
+            return []
+        }
+    }
+
+    func copySelection() {
+        let targets = selectedItems
+        guard !targets.isEmpty else { return }
+
+        do {
+            let urls = try exporter.draggingURLs(for: targets).map { $0 as NSURL }
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.writeObjects(urls)
+            showToast(AppLocalization.formatted("Copied %ld items", targets.count))
+        } catch {
+            NSSound.beep()
+            showToast(AppLocalization.string("Could not copy items"), systemImage: "exclamationmark.triangle.fill")
+        }
+    }
+
+    func sendSelection() {
+        let targets = selectedItems
+        guard !targets.isEmpty, let directoryURL = chooseDestinationDirectory() else { return }
+
+        do {
+            let exportedURLs = try exporter.export(targets, to: directoryURL)
+            showToast(AppLocalization.formatted("Sent %ld items", exportedURLs.count))
+        } catch {
+            NSSound.beep()
+            showToast(AppLocalization.string("Could not send items"), systemImage: "exclamationmark.triangle.fill")
+        }
+    }
+
+    func removeSelection() {
+        guard !selectedItemIDs.isEmpty else { return }
+
+        items.removeAll { selectedItemIDs.contains($0.id) }
+        selectedItemIDs.removeAll()
+        presenter?.refreshIfVisible()
     }
 }

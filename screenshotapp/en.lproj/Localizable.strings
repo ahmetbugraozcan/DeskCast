@@ -205,6 +205,11 @@
 "Add to Shelf" = "Add to Shelf";
 "Add All to Shelf" = "Add All to Shelf";
 "Added %ld to Shelf" = "Added %ld to Shelf";
+"Select" = "Select";
+"Clear Selection" = "Clear Selection";
+"%ld selected" = "%ld selected";
+"Copied %ld items" = "Copied %ld items";
+"Could not copy items" = "Could not copy items";
 "Show in Finder" = "Show in Finder";
 "Enable Drop Shelf first" = "Enable Drop Shelf first";
 "Edit in Preview" = "Edit in Preview";
