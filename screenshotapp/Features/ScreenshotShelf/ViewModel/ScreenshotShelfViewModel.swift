@@ -200,15 +200,6 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
         }
     }
 
-    func addToShelf(_ item: ScreenshotItem) {
-        if item.isVideo, let fileURL = item.fileURL {
-            shelfCollector.addFile(fileURL)
-        } else {
-            let name = ScreenshotExportNaming.timestampedFilename(for: item.createdAt)
-            shelfCollector.addScreenshot(item.image, name: name)
-        }
-    }
-
     func showInFinder(_ item: ScreenshotItem) {
         if let url = currentFileURL(for: item.id),
            FileManager.default.fileExists(atPath: url.path) {
@@ -662,5 +653,31 @@ private struct AutoHideConfiguration: Equatable {
     init(settings: ScreenshotShelfSettingsSnapshot) {
         previewDurationSeconds = settings.previewDurationSeconds
         neverAutoHide = settings.neverAutoHide
+    }
+}
+
+// MARK: - Drop Shelf hand-off
+
+extension ScreenshotShelfViewModel {
+    func addToShelf(_ item: ScreenshotItem) {
+        if item.isVideo, let fileURL = item.fileURL {
+            shelfCollector.addFile(fileURL)
+        } else {
+            let name = ScreenshotExportNaming.timestampedFilename(for: item.createdAt)
+            shelfCollector.addScreenshot(item.image, name: name)
+        }
+    }
+
+    func addAllToShelf() {
+        guard !screenshots.isEmpty else { return }
+
+        for item in screenshots {
+            addToShelf(item)
+        }
+
+        showToast(
+            AppLocalization.formatted("Added %ld to Shelf", screenshots.count),
+            systemImage: "tray.and.arrow.down.fill"
+        )
     }
 }

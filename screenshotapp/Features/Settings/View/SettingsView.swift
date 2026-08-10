@@ -94,6 +94,9 @@ struct SettingsView: View {
     @AppStorage(DropShelfSettings.Keys.customItemWidth)
     private var dropShelfCustomItemWidth = DropShelfSettings.defaultCustomItemWidth
 
+    @AppStorage(DropShelfSettings.Keys.gridColumnCount)
+    private var dropShelfGridColumnCount = DropShelfSettings.defaultGridColumnCount
+
     @AppStorage(DropShelfSettings.Keys.maxItemCount)
     private var dropShelfMaxItemCount = DropShelfSettings.defaultMaxItemCount
 
@@ -163,6 +166,9 @@ struct SettingsView: View {
         }
         .onChange(of: dropShelfCustomItemWidth) { _, newValue in
             dropShelfCustomItemWidth = DropShelfSettings.clampedCustomItemWidth(newValue)
+        }
+        .onChange(of: dropShelfGridColumnCount) { _, newValue in
+            dropShelfGridColumnCount = DropShelfSettings.clampedGridColumnCount(newValue)
         }
         .onChange(of: dropShelfMaxItemCount) { _, newValue in
             dropShelfMaxItemCount = DropShelfSettings.clampedMaxItemCount(newValue)
@@ -431,36 +437,12 @@ struct SettingsView: View {
             )
 
             VStack(alignment: .leading, spacing: 24) {
-                SettingsControlSection(title: AppLocalization.string("Layout")) {
-                    SettingsPickerRow(title: AppLocalization.string("Display mode")) {
-                        Picker(AppLocalization.string("Display mode"), selection: $dropShelfLayoutModeRaw) {
-                            ForEach(DropShelfLayoutMode.allCases) { mode in
-                                Text(mode.title).tag(mode.rawValue)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
-
-                    SettingsSectionDivider()
-
-                    SettingsPickerRow(title: AppLocalization.string("Item size")) {
-                        Picker(AppLocalization.string("Item size"), selection: $dropShelfItemSizeRaw) {
-                            ForEach(DropShelfItemSize.allCases) { size in
-                                Text(size.title).tag(size.rawValue)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
-
-                    if selectedDropShelfItemSize == .custom {
-                        SettingsSectionDivider()
-
-                        CustomDropShelfItemSizeControl(
-                            width: $dropShelfCustomItemWidth,
-                            height: dropShelfCustomItemHeight
-                        )
-                    }
-                }
+                DropShelfLayoutSettingsSection(
+                    layoutModeRaw: $dropShelfLayoutModeRaw,
+                    itemSizeRaw: $dropShelfItemSizeRaw,
+                    gridColumnCount: $dropShelfGridColumnCount,
+                    customItemWidth: $dropShelfCustomItemWidth
+                )
 
                 SettingsControlSection(title: AppLocalization.string("Capacity")) {
                     SettingsControlRow(
@@ -560,15 +542,6 @@ struct SettingsView: View {
     private var customThumbnailHeight: Int {
         let width = ScreenshotShelfSettings.clampedCustomThumbnailWidth(customThumbnailWidth)
         return Int(ShelfThumbnailSize.size(forWidth: CGFloat(width), aspectRatio: aspectRatioValue).height)
-    }
-
-    private var selectedDropShelfItemSize: DropShelfItemSize {
-        DropShelfItemSize(rawValue: dropShelfItemSizeRaw) ?? DropShelfSettings.defaultItemSize
-    }
-
-    private var dropShelfCustomItemHeight: Int {
-        let width = DropShelfSettings.clampedCustomItemWidth(dropShelfCustomItemWidth)
-        return Int(DropShelfItemSize.size(forWidth: CGFloat(width)).height)
     }
 
     private var dropShelfShakeSensitivityBinding: Binding<Double> {

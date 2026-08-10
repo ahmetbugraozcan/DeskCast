@@ -103,6 +103,8 @@
 "Stack" = "Yığın";
 "Display mode" = "Görüntü modu";
 "Grid" = "Izgara";
+"List" = "Liste";
+"Grid columns: %ld" = "Izgara sütunu: %ld";
 "Max stack count: %ld" = "Maksimum yığın sayısı: %ld";
 "Keep older items (scroll)" = "Eski öğeleri koru (kaydır)";
 "Pin screenshots by default" = "Ekran görüntülerini varsayılan olarak sabitle";
@@ -201,6 +203,8 @@
 "Copy Image" = "Görseli Kopyala";
 "Copy Text" = "Metni Kopyala";
 "Add to Shelf" = "Rafa Ekle";
+"Add All to Shelf" = "Tümünü Rafa Ekle";
+"Added %ld to Shelf" = "%ld öğe Rafa eklendi";
 "Show in Finder" = "Finder'da Göster";
 "Enable Drop Shelf first" = "Önce Bırakma Rafı'nı etkinleştirin";
 "Edit in Preview" = "Preview'de Düzenle";

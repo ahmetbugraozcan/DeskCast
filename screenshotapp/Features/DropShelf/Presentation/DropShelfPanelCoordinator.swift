@@ -108,9 +108,9 @@ final class DropShelfPanelCoordinator: DropShelfPresenting {
                 height: max(280, itemSize.height + DropShelfView.outerPadding * 2 + DropShelfView.headerHeight + 84)
             )
         case .grid:
-            let columnCount = DropShelfView.gridColumnCount
+            let columnCount = settings.gridColumnCount
             let itemCount = max(store.items.count, 1)
-            let rowCount = min(2, max(1, Int(ceil(Double(itemCount) / Double(columnCount)))))
+            let rowCount = min(3, max(1, Int(ceil(Double(itemCount) / Double(columnCount)))))
             let contentWidth = CGFloat(columnCount) * itemSize.width
                 + CGFloat(columnCount - 1) * DropShelfView.gridSpacing
             let contentHeight = CGFloat(rowCount) * itemSize.height
@@ -119,6 +119,15 @@ final class DropShelfPanelCoordinator: DropShelfPresenting {
             return CGSize(
                 width: max(420, contentWidth + DropShelfView.outerPadding * 2),
                 height: max(300, contentHeight + DropShelfView.outerPadding * 2 + DropShelfView.headerHeight + 28)
+            )
+        case .list:
+            let visibleRows = min(6, max(2, store.items.count))
+            let rowHeight: CGFloat = 54 + 8
+            let contentHeight = CGFloat(visibleRows) * rowHeight
+
+            return CGSize(
+                width: 380,
+                height: max(240, contentHeight + DropShelfView.outerPadding * 2 + DropShelfView.headerHeight)
             )
         }
     }

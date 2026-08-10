@@ -4,6 +4,7 @@ import Foundation
 enum DropShelfLayoutMode: String, CaseIterable, Identifiable {
     case stack
     case grid
+    case list
 
     var id: String { rawValue }
 }
@@ -35,6 +36,7 @@ struct DropShelfSettingsSnapshot {
     let layoutMode: DropShelfLayoutMode
     let itemSize: DropShelfItemSize
     let customItemWidth: Int
+    let gridColumnCount: Int
     let maxItemCount: Int
     let openOnShake: Bool
     let shakeSensitivity: Int
@@ -50,12 +52,14 @@ enum DropShelfSettings {
         static let layoutMode = "dropShelf.layoutMode"
         static let itemSize = "dropShelf.itemSize"
         static let customItemWidth = "dropShelf.customItemWidth"
+        static let gridColumnCount = "dropShelf.gridColumnCount"
         static let maxItemCount = "dropShelf.maxItemCount"
         static let openOnShake = "dropShelf.openOnShake"
         static let shakeSensitivity = "dropShelf.shakeSensitivity"
     }
 
     static let customItemWidthRange = 128...360
+    static let gridColumnCountRange = 2...5
     static let maxItemCountRange = 1...50
     static let shakeSensitivityRange = 1...10
 
@@ -63,6 +67,7 @@ enum DropShelfSettings {
     static let defaultLayoutMode = DropShelfLayoutMode.stack
     static let defaultItemSize = DropShelfItemSize.medium
     static let defaultCustomItemWidth = 220
+    static let defaultGridColumnCount = 3
     static let defaultMaxItemCount = 25
     static let defaultOpenOnShake = true
     static let defaultShakeSensitivity = 6
@@ -83,6 +88,7 @@ enum DropShelfSettings {
             Keys.layoutMode: defaultLayoutMode.rawValue,
             Keys.itemSize: defaultItemSize.rawValue,
             Keys.customItemWidth: defaultCustomItemWidth,
+            Keys.gridColumnCount: defaultGridColumnCount,
             Keys.maxItemCount: defaultMaxItemCount,
             Keys.openOnShake: defaultOpenOnShake,
             Keys.shakeSensitivity: defaultShakeSensitivity
@@ -99,6 +105,7 @@ enum DropShelfSettings {
             layoutMode: DropShelfLayoutMode(rawValue: layoutModeRaw ?? "") ?? defaultLayoutMode,
             itemSize: DropShelfItemSize(rawValue: itemSizeRaw ?? "") ?? defaultItemSize,
             customItemWidth: clampedCustomItemWidth(defaults.integer(forKey: Keys.customItemWidth)),
+            gridColumnCount: clampedGridColumnCount(defaults.integer(forKey: Keys.gridColumnCount)),
             maxItemCount: clampedMaxItemCount(defaults.integer(forKey: Keys.maxItemCount)),
             openOnShake: defaults.bool(forKey: Keys.openOnShake),
             shakeSensitivity: clampedShakeSensitivity(defaults.integer(forKey: Keys.shakeSensitivity))
@@ -115,6 +122,10 @@ enum DropShelfSettings {
 
     static func clampedCustomItemWidth(_ value: Int) -> Int {
         min(max(value, customItemWidthRange.lowerBound), customItemWidthRange.upperBound)
+    }
+
+    static func clampedGridColumnCount(_ value: Int) -> Int {
+        min(max(value, gridColumnCountRange.lowerBound), gridColumnCountRange.upperBound)
     }
 
     static func clampedMaxItemCount(_ value: Int) -> Int {

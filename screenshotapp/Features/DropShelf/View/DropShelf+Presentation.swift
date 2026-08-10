@@ -7,6 +7,7 @@ extension DropShelfLayoutMode {
         switch self {
         case .stack: AppLocalization.string("Stack")
         case .grid: AppLocalization.string("Grid")
+        case .list: AppLocalization.string("List")
         }
     }
 }

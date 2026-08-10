@@ -144,6 +144,7 @@ struct ScreenshotShelfView: View {
                 copyAction: { store.copy(item) },
                 copyTextAction: { store.copyRecognizedText(item) },
                 addToShelfAction: { store.addToShelf(item) },
+                addAllToShelfAction: { store.addAllToShelf() },
                 showInFinderAction: { store.showInFinder(item) },
                 deleteAction: { store.moveToTrash(item) },
                 saveAsAction: { store.saveAs(item) },
@@ -354,6 +355,7 @@ private struct ScreenshotThumbnailView: View {
     let copyAction: () -> Void
     let copyTextAction: () -> Void
     let addToShelfAction: () -> Void
+    let addAllToShelfAction: () -> Void
     let showInFinderAction: () -> Void
     let deleteAction: () -> Void
     let saveAsAction: () -> Void
@@ -520,6 +522,12 @@ private struct ScreenshotThumbnailView: View {
                 addToShelfAction()
             } label: {
                 Label(AppLocalization.string("Add to Shelf"), systemImage: "tray.and.arrow.down")
+            }
+
+            Button {
+                addAllToShelfAction()
+            } label: {
+                Label(AppLocalization.string("Add All to Shelf"), systemImage: "square.stack.3d.down.forward")
             }
 
             Button {

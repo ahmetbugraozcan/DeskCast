@@ -103,6 +103,8 @@
 "Stack" = "Stack";
 "Display mode" = "Display mode";
 "Grid" = "Grid";
+"List" = "List";
+"Grid columns: %ld" = "Grid columns: %ld";
 "Max stack count: %ld" = "Max stack count: %ld";
 "Keep older items (scroll)" = "Keep older items (scroll)";
 "Pin screenshots by default" = "Pin screenshots by default";
@@ -201,6 +203,8 @@
 "Copy Image" = "Copy Image";
 "Copy Text" = "Copy Text";
 "Add to Shelf" = "Add to Shelf";
+"Add All to Shelf" = "Add All to Shelf";
+"Added %ld to Shelf" = "Added %ld to Shelf";
 "Show in Finder" = "Show in Finder";
 "Enable Drop Shelf first" = "Enable Drop Shelf first";
 "Edit in Preview" = "Edit in Preview";

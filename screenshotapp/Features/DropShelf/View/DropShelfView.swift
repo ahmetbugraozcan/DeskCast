@@ -13,6 +13,9 @@ struct DropShelfView: View {
     @AppStorage(DropShelfSettings.Keys.customItemWidth)
     private var customItemWidth = DropShelfSettings.defaultCustomItemWidth
 
+    @AppStorage(DropShelfSettings.Keys.gridColumnCount)
+    private var gridColumnCount = DropShelfSettings.defaultGridColumnCount
+
     @AppStorage(ToolboxSettings.Keys.language)
     private var languageRaw = ToolboxSettings.defaultLanguage.rawValue
 
@@ -116,6 +119,8 @@ struct DropShelfView: View {
                 stackContent
             case .grid:
                 gridContent
+            case .list:
+                listContent
             }
         }
     }
@@ -168,10 +173,41 @@ struct DropShelfView: View {
     }
 
     private var gridColumns: [GridItem] {
-        Array(repeating: GridItem(.fixed(itemSize.width), spacing: Self.gridSpacing), count: Self.gridColumnCount)
+        Array(
+            repeating: GridItem(.fixed(itemSize.width), spacing: Self.gridSpacing),
+            count: resolvedGridColumnCount
+        )
     }
 
-    static let gridColumnCount = 2
+    private var resolvedGridColumnCount: Int {
+        DropShelfSettings.clampedGridColumnCount(gridColumnCount)
+    }
+
+    private var listContent: some View {
+        ScrollView {
+            LazyVStack(spacing: 8) {
+                ForEach(store.items) { item in
+                    DropShelfListRow(
+                        item: item,
+                        previewAction: { store.preview(item) },
+                        copyAction: { store.copy(item) },
+                        sendAction: { store.send(item) },
+                        removeAction: { store.remove(item) },
+                        dragPasteboardWriters: {
+                            guard let writer = store.draggingPasteboardWriter(for: item) else {
+                                return []
+                            }
+
+                            return [writer]
+                        },
+                        dragStarted: { store.beginInternalDrag() },
+                        dragEnded: { store.endInternalDrag() }
+                    )
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 
     private var visibleStackItems: [DropShelfItem] {
         Array(store.items.suffix(Self.visibleStackLimit))
@@ -295,7 +331,7 @@ private struct DropShelfItemCard: View {
                 thumbnail
 
                 DropShelfDragInteractionView(
-                    dragImage: dragImage,
+                    dragImage: item.dragImage,
                     previewAction: previewAction,
                     pasteboardWriters: dragPasteboardWriters,
                     dragStarted: dragStarted,
@@ -322,7 +358,7 @@ private struct DropShelfItemCard: View {
 
             HStack(spacing: 6) {
                 Circle()
-                    .fill(kindTint)
+                    .fill(item.kindTint)
                     .frame(width: 7, height: 7)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -349,10 +385,14 @@ private struct DropShelfItemCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(.white.opacity(isHovering ? 0.22 : 0.1), lineWidth: 1)
         }
-        .rotationEffect(.degrees(isHovering ? 0 : rotationDegrees))
         .offset(isHovering ? .zero : stackOffset)
-        .scaleEffect(isHovering ? 1.03 : 1)
-        .shadow(color: .black.opacity(isHovering ? 0.32 : 0.2), radius: isHovering ? 18 : 12, y: isHovering ? 12 : 8)
+        .scaleEffect(isHovering ? 1.03 : stackScale)
+        .opacity(isHovering ? 1 : stackOpacity)
+        .shadow(
+            color: .black.opacity(isHovering ? 0.3 : stackShadowOpacity),
+            radius: isHovering ? 18 : 9,
+            y: isHovering ? 12 : 5
+        )
         .zIndex(isHovering ? 10 : 0)
         .animation(.spring(response: 0.34, dampingFraction: 0.86), value: isHovering)
         .onHover { isHovering = $0 }
@@ -404,32 +444,68 @@ private struct DropShelfItemCard: View {
 
     private var thumbnail: some View {
         ZStack {
-            if isImageBacked {
+            if item.isImageBacked {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(.quaternary.opacity(0.5))
 
-                previewImage
+                item.previewImage
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             } else {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(kindTint.opacity(0.16))
+                    .fill(item.kindTint.opacity(0.16))
 
                 Image(systemName: item.kind.systemImage)
                     .font(.system(size: 26, weight: .medium))
-                    .foregroundStyle(kindTint)
+                    .foregroundStyle(item.kindTint)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var isImageBacked: Bool {
-        if item.image != nil {
+    // A clean downward-right cascade: deeper cards sit lower, slightly smaller,
+    // dimmer, and with a softer shadow so the stack reads as depth without the
+    // muddy overlap of rotated cards.
+    private var stackOffset: CGSize {
+        CGSize(
+            width: CGFloat(stackDepth) * 7,
+            height: CGFloat(stackDepth) * 11
+        )
+    }
+
+    private var stackScale: CGFloat {
+        max(0.9, 1 - CGFloat(stackDepth) * 0.04)
+    }
+
+    private var stackOpacity: Double {
+        max(0.5, 1 - Double(stackDepth) * 0.16)
+    }
+
+    private var stackShadowOpacity: Double {
+        max(0.05, 0.16 - Double(stackDepth) * 0.03)
+    }
+}
+
+// Shared visuals for both the card and list-row presentations, so a file, image,
+// folder, link, or text renders the same everywhere.
+private extension DropShelfItem {
+    var kindTint: Color {
+        switch kind {
+        case .file: .gray
+        case .folder: .blue
+        case .image: .green
+        case .link: .purple
+        case .text: .orange
+        }
+    }
+
+    var isImageBacked: Bool {
+        if image != nil {
             return true
         }
 
-        if let fileURL = item.fileURL,
+        if let fileURL,
            !fileURL.hasDirectoryPath,
            let image = NSImage(contentsOf: fileURL),
            image.isValid {
@@ -439,37 +515,12 @@ private struct DropShelfItemCard: View {
         return false
     }
 
-    private var kindTint: Color {
-        switch item.kind {
-        case .file: .gray
-        case .folder: .blue
-        case .image: .green
-        case .link: .purple
-        case .text: .orange
-        }
-    }
-
-    private var stackOffset: CGSize {
-        CGSize(
-            width: CGFloat(stackDepth) * -8,
-            height: CGFloat(stackDepth) * 7
-        )
-    }
-
-    private var rotationDegrees: Double {
-        guard stackDepth > 0 else {
-            return 0
-        }
-
-        return stackDepth.isMultiple(of: 2) ? -2.5 : 2.0
-    }
-
-    private var previewImage: Image {
-        if let image = item.image {
+    var previewImage: Image {
+        if let image {
             return Image(nsImage: image)
         }
 
-        if let fileURL = item.fileURL {
+        if let fileURL {
             if !fileURL.hasDirectoryPath,
                let image = NSImage(contentsOf: fileURL),
                image.isValid {
@@ -479,15 +530,15 @@ private struct DropShelfItemCard: View {
             return Image(nsImage: NSWorkspace.shared.icon(forFile: fileURL.path))
         }
 
-        return Image(systemName: item.kind.systemImage)
+        return Image(systemName: kind.systemImage)
     }
 
-    private var dragImage: NSImage {
-        if let image = item.image {
+    var dragImage: NSImage {
+        if let image {
             return image
         }
 
-        if let fileURL = item.fileURL {
+        if let fileURL {
             if !fileURL.hasDirectoryPath,
                let image = NSImage(contentsOf: fileURL),
                image.isValid {
@@ -497,8 +548,114 @@ private struct DropShelfItemCard: View {
             return NSWorkspace.shared.icon(forFile: fileURL.path)
         }
 
-        return NSImage(systemSymbolName: item.kind.systemImage, accessibilityDescription: nil)
+        return NSImage(systemSymbolName: kind.systemImage, accessibilityDescription: nil)
             ?? NSImage(size: CGSize(width: 64, height: 64))
+    }
+}
+
+private struct DropShelfListRow: View {
+    let item: DropShelfItem
+    let previewAction: () -> Void
+    let copyAction: () -> Void
+    let sendAction: () -> Void
+    let removeAction: () -> Void
+    let dragPasteboardWriters: () -> [NSPasteboardWriting]
+    let dragStarted: () -> Void
+    let dragEnded: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        ZStack {
+            HStack(spacing: 10) {
+                thumbnail
+                    .frame(width: 40, height: 40)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.displayName)
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+
+                    Text(item.subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                Spacer(minLength: 34)
+            }
+
+            // Drag/click layer sits above the content but below the remove button.
+            DropShelfDragInteractionView(
+                dragImage: item.dragImage,
+                previewAction: previewAction,
+                pasteboardWriters: dragPasteboardWriters,
+                dragStarted: dragStarted,
+                dragEnded: dragEnded
+            )
+
+            HStack {
+                Spacer()
+
+                DropShelfIconButton(
+                    systemName: "xmark",
+                    help: AppLocalization.string("Remove"),
+                    action: removeAction
+                )
+                .opacity(isHovering ? 1 : 0)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
+        .background(
+            Color.primary.opacity(isHovering ? 0.08 : 0.03),
+            in: RoundedRectangle(cornerRadius: 10)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(.white.opacity(isHovering ? 0.16 : 0.06), lineWidth: 1)
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 10))
+        .onHover { isHovering = $0 }
+        .contextMenu {
+            Button(action: previewAction) {
+                Label(AppLocalization.string("Preview"), systemImage: "eye")
+            }
+
+            Button(action: copyAction) {
+                Label(AppLocalization.string("Copy"), systemImage: "doc.on.doc")
+            }
+
+            Button(action: sendAction) {
+                Label(AppLocalization.string("Send To..."), systemImage: "paperplane")
+            }
+
+            Divider()
+
+            Button(role: .destructive, action: removeAction) {
+                Label(AppLocalization.string("Remove"), systemImage: "xmark")
+            }
+        }
+    }
+
+    private var thumbnail: some View {
+        ZStack {
+            if item.isImageBacked {
+                item.previewImage
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                item.kindTint.opacity(0.16)
+
+                Image(systemName: item.kind.systemImage)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(item.kindTint)
+            }
+        }
     }
 }
 
