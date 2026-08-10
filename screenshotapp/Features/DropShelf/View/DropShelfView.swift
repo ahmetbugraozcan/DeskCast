@@ -370,78 +370,29 @@ private struct DropShelfItemCard: View {
         _draftName = State(initialValue: item.displayName)
     }
 
+    private static let footerHeight: CGFloat = 44
+
+    private var mediaHeight: CGFloat {
+        max(48, itemSize.height - Self.footerHeight)
+    }
+
     var body: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                thumbnail
+        VStack(spacing: 0) {
+            media
+                .frame(width: itemSize.width, height: mediaHeight)
+                .clipped()
 
-                DropShelfDragInteractionView(
-                    dragImage: item.dragImage,
-                    selectAction: selectable ? toggleSelection : previewAction,
-                    previewAction: previewAction,
-                    pasteboardWriters: dragPasteboardWriters,
-                    dragStarted: dragStarted,
-                    dragEnded: dragEnded
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                // Selection tick (left) and remove-on-hover (right).
-                HStack(alignment: .top) {
-                    if selectable && isSelected {
-                        DropShelfSelectedBadge()
-                    }
-
-                    Spacer()
-
-                    if isHovering {
-                        DropShelfIconButton(
-                            systemName: "xmark",
-                            help: AppLocalization.string("Remove"),
-                            action: removeAction
-                        )
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(6)
-
-                // Quick-action toolbar, centered along the bottom on hover.
-                if isHovering {
-                    hoverToolbar
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                        .padding(6)
-                }
-            }
-            .frame(height: max(62, itemSize.height - 52))
-            .contentShape(RoundedRectangle(cornerRadius: 10))
-
-            VStack(alignment: .leading, spacing: 2) {
-                TextField(AppLocalization.string("Name"), text: $draftName)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12, weight: .semibold))
-                    .lineLimit(1)
-                    .onSubmit {
-                        renameAction(draftName)
-                    }
-
-                Text(item.subtitle)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            footer
+                .frame(width: itemSize.width, height: Self.footerHeight)
+                .background(isSelected ? Color.accentColor.opacity(0.16) : Color.clear)
         }
-        .padding(8)
         .frame(width: itemSize.width, height: itemSize.height)
-        .background(
-            isSelected ? Color.accentColor.opacity(0.14) : Color.clear,
-            in: RoundedRectangle(cornerRadius: 12)
-        )
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(
-                    isSelected ? Color.accentColor : .white.opacity(isHovering ? 0.22 : 0.1),
+                    isSelected ? Color.accentColor : .white.opacity(isHovering ? 0.2 : 0.08),
                     lineWidth: isSelected ? 2 : 1
                 )
         }
@@ -502,51 +453,80 @@ private struct DropShelfItemCard: View {
         }
     }
 
-    private var thumbnail: some View {
+    // The image/icon area. Fills its region; the parent clips it. The drag/click
+    // layer covers only this area, so the footer's name field stays editable.
+    private var media: some View {
         ZStack {
             if item.isImageBacked {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.quaternary.opacity(0.5))
+                Color.black.opacity(0.2)
 
                 item.previewImage
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
             } else {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(item.kindTint.opacity(0.16))
+                item.kindTint.opacity(0.14)
 
                 Image(systemName: item.kind.systemImage)
-                    .font(.system(size: 26, weight: .medium))
+                    .font(.system(size: 30, weight: .medium))
                     .foregroundStyle(item.kindTint)
             }
+
+            DropShelfDragInteractionView(
+                dragImage: item.dragImage,
+                selectAction: selectable ? toggleSelection : previewAction,
+                previewAction: previewAction,
+                pasteboardWriters: dragPasteboardWriters,
+                dragStarted: dragStarted,
+                dragEnded: dragEnded
+            )
+
+            VStack {
+                HStack(alignment: .top) {
+                    if selectable && isSelected {
+                        DropShelfSelectedBadge()
+                    }
+
+                    Spacer()
+
+                    if isHovering {
+                        DropShelfIconButton(
+                            systemName: "xmark",
+                            help: AppLocalization.string("Remove"),
+                            action: removeAction
+                        )
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var hoverToolbar: some View {
-        HStack(spacing: 2) {
-            DropShelfIconButton(
-                systemName: "eye",
-                help: AppLocalization.string("Preview"),
-                action: previewAction
-            )
+    private var footer: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(item.kindTint)
+                .frame(width: 7, height: 7)
 
-            DropShelfIconButton(
-                systemName: "doc.on.doc",
-                help: AppLocalization.string("Copy"),
-                action: copyAction
-            )
+            VStack(alignment: .leading, spacing: 1) {
+                TextField(AppLocalization.string("Name"), text: $draftName)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .onSubmit { renameAction(draftName) }
 
-            DropShelfIconButton(
-                systemName: "paperplane",
-                help: AppLocalization.string("Send To..."),
-                action: sendAction
-            )
+                Text(item.subtitle)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            Spacer(minLength: 0)
         }
-        .padding(3)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 1))
+        .padding(.horizontal, 10)
     }
 
     // A clean downward-right cascade: deeper cards sit lower, slightly smaller,
