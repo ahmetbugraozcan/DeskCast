@@ -377,6 +377,7 @@ private struct DropShelfItemCard: View {
 
                 DropShelfDragInteractionView(
                     dragImage: item.dragImage,
+                    selectAction: selectable ? toggleSelection : previewAction,
                     previewAction: previewAction,
                     pasteboardWriters: dragPasteboardWriters,
                     dragStarted: dragStarted,
@@ -384,41 +385,34 @@ private struct DropShelfItemCard: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                // Top row: selection toggle (left) and remove (right).
+                // Selection tick (left) and remove-on-hover (right).
                 HStack(alignment: .top) {
-                    if selectable {
-                        selectionCheckbox
-                            .opacity(isHovering || isSelected ? 1 : 0)
+                    if selectable && isSelected {
+                        DropShelfSelectedBadge()
                     }
-
-                    Spacer()
-
-                    DropShelfIconButton(
-                        systemName: "xmark",
-                        help: AppLocalization.string("Remove"),
-                        action: removeAction
-                    )
-                    .opacity(isHovering ? 1 : 0)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(6)
-
-                // Bottom row: kind badge (left) and quick actions on hover (right).
-                HStack(alignment: .bottom) {
-                    kindBadge
 
                     Spacer()
 
                     if isHovering {
-                        hoverActions
+                        DropShelfIconButton(
+                            systemName: "xmark",
+                            help: AppLocalization.string("Remove"),
+                            action: removeAction
+                        )
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(6)
+
+                // Quick-action toolbar, centered along the bottom on hover.
+                if isHovering {
+                    hoverToolbar
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                        .padding(6)
+                }
             }
             .frame(height: max(62, itemSize.height - 52))
             .contentShape(RoundedRectangle(cornerRadius: 10))
-            .onTapGesture(perform: previewAction)
 
             VStack(alignment: .leading, spacing: 2) {
                 TextField(AppLocalization.string("Name"), text: $draftName)
@@ -530,21 +524,14 @@ private struct DropShelfItemCard: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var selectionCheckbox: some View {
-        DropShelfSelectionToggle(isSelected: isSelected, action: toggleSelection)
-    }
+    private var hoverToolbar: some View {
+        HStack(spacing: 2) {
+            DropShelfIconButton(
+                systemName: "eye",
+                help: AppLocalization.string("Preview"),
+                action: previewAction
+            )
 
-    private var kindBadge: some View {
-        Image(systemName: item.kind.systemImage)
-            .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(.white)
-            .frame(width: 18, height: 18)
-            .background(item.kindTint.opacity(0.92), in: RoundedRectangle(cornerRadius: 5))
-            .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
-    }
-
-    private var hoverActions: some View {
-        HStack(spacing: 4) {
             DropShelfIconButton(
                 systemName: "doc.on.doc",
                 help: AppLocalization.string("Copy"),
@@ -557,6 +544,9 @@ private struct DropShelfItemCard: View {
                 action: sendAction
             )
         }
+        .padding(3)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 1))
     }
 
     // A clean downward-right cascade: deeper cards sit lower, slightly smaller,
@@ -668,6 +658,13 @@ private struct DropShelfListRow: View {
                 thumbnail
                     .frame(width: 40, height: 40)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.accentColor.opacity(0.35))
+                                .overlay { DropShelfSelectedBadge().scaleEffect(0.8) }
+                        }
+                    }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.displayName)
@@ -682,29 +679,29 @@ private struct DropShelfListRow: View {
                         .truncationMode(.middle)
                 }
 
-                Spacer(minLength: 96)
+                Spacer(minLength: 108)
             }
 
             // Drag/click layer sits above the content but below the buttons below.
             DropShelfDragInteractionView(
                 dragImage: item.dragImage,
+                selectAction: toggleSelection,
                 previewAction: previewAction,
                 pasteboardWriters: dragPasteboardWriters,
                 dragStarted: dragStarted,
                 dragEnded: dragEnded
             )
 
-            // Selection toggle over the thumbnail, above the drag layer so it stays clickable.
-            if isHovering || isSelected {
-                DropShelfSelectionToggle(isSelected: isSelected, action: toggleSelection)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                    .offset(x: 2)
-            }
-
             HStack(spacing: 4) {
                 Spacer()
 
                 if isHovering {
+                    DropShelfIconButton(
+                        systemName: "eye",
+                        help: AppLocalization.string("Preview"),
+                        action: previewAction
+                    )
+
                     DropShelfIconButton(
                         systemName: "doc.on.doc",
                         help: AppLocalization.string("Copy"),
@@ -782,20 +779,15 @@ private struct DropShelfListRow: View {
     }
 }
 
-private struct DropShelfSelectionToggle: View {
-    let isSelected: Bool
-    let action: () -> Void
-
+/// Passive "selected" indicator. Selection is toggled by clicking the item body,
+/// so this is a badge, not a control.
+private struct DropShelfSelectedBadge: View {
     var body: some View {
-        Button(action: action) {
-            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(isSelected ? .white : .white.opacity(0.9))
-                .background(Circle().fill(isSelected ? Color.accentColor : .black.opacity(0.4)).padding(1.5))
-                .shadow(color: .black.opacity(0.35), radius: 2)
-        }
-        .buttonStyle(.plain)
-        .help(AppLocalization.string("Select"))
+        Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 18, weight: .bold))
+            .foregroundStyle(.white, Color.accentColor)
+            .background(Circle().fill(.white).padding(3))
+            .shadow(color: .black.opacity(0.3), radius: 2)
     }
 }
 
@@ -843,6 +835,7 @@ private final class WindowDragHandleNSView: NSView {
 
 private struct DropShelfDragInteractionView: NSViewRepresentable {
     let dragImage: NSImage
+    var selectAction: () -> Void = {}
     let previewAction: () -> Void
     let pasteboardWriters: () -> [NSPasteboardWriting]
     let dragStarted: () -> Void
@@ -856,6 +849,7 @@ private struct DropShelfDragInteractionView: NSViewRepresentable {
 
     func updateNSView(_ nsView: DropShelfDragInteractionNSView, context: Context) {
         nsView.dragImage = dragImage
+        nsView.selectAction = selectAction
         nsView.previewAction = previewAction
         nsView.pasteboardWriters = pasteboardWriters
         nsView.dragStarted = dragStarted
@@ -865,6 +859,7 @@ private struct DropShelfDragInteractionView: NSViewRepresentable {
 
 private final class DropShelfDragInteractionNSView: NSView, NSDraggingSource {
     var dragImage = NSImage(size: CGSize(width: 64, height: 64))
+    var selectAction: () -> Void = {}
     var previewAction: () -> Void = {}
     var pasteboardWriters: () -> [NSPasteboardWriting] = { [] }
     var dragStarted: () -> Void = {}
@@ -916,7 +911,15 @@ private final class DropShelfDragInteractionNSView: NSView, NSDraggingSource {
 
     override func mouseUp(with event: NSEvent) {
         if !didBeginDrag {
-            previewAction()
+            // Single click toggles selection; double click opens a preview. On the
+            // double click, revert the toggle the first click already applied so the
+            // selection is left unchanged.
+            if event.clickCount >= 2 {
+                selectAction()
+                previewAction()
+            } else {
+                selectAction()
+            }
         }
 
         initialPoint = nil
