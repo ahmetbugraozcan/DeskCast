@@ -7,9 +7,9 @@
 **A lightweight macOS menu-bar toolbox for everyday desktop work.**
 Capture, collect, and search — without a Dock icon getting in your way.
 
-[![Platform](https://img.shields.io/badge/platform-macOS-0a84ff)](https://github.com/ahmetbugraozcan/macos-toolbox/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-macOS-0a84ff)](https://github.com/ahmetbugraozcan/DeskCast/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
-[![Download](https://img.shields.io/badge/⬇%20Download-.dmg-1f6feb)](https://github.com/ahmetbugraozcan/macos-toolbox/releases/latest/download/DeskCast.dmg)
+[![Download](https://img.shields.io/badge/⬇%20Download-.dmg-1f6feb)](https://github.com/ahmetbugraozcan/DeskCast/releases/latest/download/DeskCast.dmg)
 
 <br/>
 
@@ -65,12 +65,15 @@ Copy the front Finder window's path to the clipboard, or capture a region and co
 ## Download & install
 
 1. Grab the latest notarized build:
-   **[Download DeskCast.dmg](https://github.com/ahmetbugraozcan/macos-toolbox/releases/latest/download/DeskCast.dmg)**
+   **[Download DeskCast.dmg](https://github.com/ahmetbugraozcan/DeskCast/releases/latest/download/DeskCast.dmg)**
 2. Open the `.dmg` and drag **DeskCast** onto **Applications**.
 3. Launch it — DeskCast appears in the menu bar (there is no Dock icon).
 
 The app is signed with a Developer ID certificate and notarized by Apple, so it opens
 cleanly on any Mac — no Gatekeeper workarounds needed.
+
+Installed builds check the signed update feed automatically. You can also trigger a
+check at any time from **Settings → About DeskCast → Check for Updates…**.
 
 <div align="center"><img src="docs/images/settings.png" width="640" alt="DeskCast settings" /></div>
 

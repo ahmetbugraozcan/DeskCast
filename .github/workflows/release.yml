@@ -75,7 +75,8 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath "$KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
 
       - name: Export (Developer ID)
         env:
@@ -149,11 +150,38 @@ jobs:
           VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Package and sign Sparkle update
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          APP="$EXPORT_PATH/$APP_NAME.app"
+          UPDATE_DIR="$GITHUB_WORKSPACE/dist/update"
+          RELEASE_TAG="v${{ steps.meta.outputs.version }}-${{ github.run_number }}"
+          mkdir -p "$UPDATE_DIR"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$UPDATE_DIR/$APP_NAME.zip"
+
+          GENERATE_APPCAST=$(find "$HOME/Library/Developer/Xcode/DerivedData" \
+            -path '*/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast' \
+            -type f -print -quit)
+          test -n "$GENERATE_APPCAST"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | "$GENERATE_APPCAST" \
+            --ed-key-file - \
+            --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/$RELEASE_TAG/" \
+            --link "https://github.com/${{ github.repository }}/releases/latest" \
+            -o "$GITHUB_WORKSPACE/dist/appcast.xml" \
+            "$UPDATE_DIR"
+
+          mv "$UPDATE_DIR/$APP_NAME.zip" "$GITHUB_WORKSPACE/dist/$APP_NAME.zip"
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.meta.outputs.version }}-${{ github.run_number }}
           name: DeskCast ${{ steps.meta.outputs.version }} (build ${{ github.run_number }})
-          files: dist/DeskCast.dmg
-          prerelease: true
+          files: |
+            dist/DeskCast.dmg
+            dist/DeskCast.zip
+            dist/appcast.xml
+          prerelease: false
           generate_release_notes: true

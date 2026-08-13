@@ -184,6 +184,12 @@
 "Copy Path" = "Yolu Kopyala";
 "App" = "Uygulama";
 "Features" = "Özellikler";
+"About DeskCast" = "DeskCast Hakkında";
+"Application" = "Uygulama";
+"Version" = "Sürüm";
+"Updates" = "Güncellemeler";
+"Check for Updates..." = "Güncellemeleri Denetle...";
+"Updates are downloaded, verified, and installed securely." = "Güncellemeler güvenli biçimde indirilir, doğrulanır ve yüklenir.";
 "Menu layout" = "Menü düzeni";
 "Show in menu" = "Menüde göster";
 "Reset Settings" = "Ayarları Sıfırla";

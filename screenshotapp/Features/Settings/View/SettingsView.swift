@@ -3,6 +3,8 @@ import KeyboardShortcuts
 import SwiftUI
 
 struct SettingsView: View {
+    @ObservedObject var updateService: AppUpdateService
+
     @AppStorage(ScreenshotShelfSettings.Keys.previewPosition)
     private var previewPositionRaw = ScreenshotShelfSettings.defaultPreviewPosition.rawValue
 
@@ -193,6 +195,8 @@ struct SettingsView: View {
             finderPathPane
         case .shortcuts:
             shortcutsPane
+        case .about:
+            aboutPane
         }
     }
 
@@ -765,10 +769,11 @@ private enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
     case dropShelf
     case finderPath
     case shortcuts
+    case about
 
     var id: Self { self }
 
-    static let appSections: [Self] = [.menuBar, .shortcuts]
+    static let appSections: [Self] = [.menuBar, .shortcuts, .about]
     static let featureSections: [Self] = [.screenshots, .videoRecording, .dropShelf, .finderPath]
 
     var title: String {
@@ -779,6 +784,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
         case .dropShelf: AppLocalization.string("Drop Shelf")
         case .finderPath: AppLocalization.string("Finder Path")
         case .shortcuts: AppLocalization.string("Shortcuts")
+        case .about: AppLocalization.string("About DeskCast")
         }
     }
 
@@ -790,6 +796,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
         case .dropShelf: "tray.and.arrow.down"
         case .finderPath: "folder"
         case .shortcuts: "keyboard"
+        case .about: "info.circle"
         }
     }
 }
@@ -809,7 +816,7 @@ private struct SettingsPane<Content: View>: View {
     }
 }
 
-private struct SettingsPage<Content: View>: View {
+struct SettingsPage<Content: View>: View {
     let title: String
     let systemImage: String
     @ViewBuilder var content: Content

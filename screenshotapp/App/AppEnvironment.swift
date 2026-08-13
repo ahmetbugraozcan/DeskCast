@@ -8,6 +8,7 @@ final class AppEnvironment: ObservableObject {
     let dropShelf: DropShelfViewModel
     let screenRecorder: ScreenRecordingViewModel
     let screenshotShelf: ScreenshotShelfViewModel
+    let appUpdate: AppUpdateService
 
     // Retained for the app's lifetime; the view models reference them weakly.
     private let dropShelfCoordinator: DropShelfPanelCoordinator
@@ -52,6 +53,7 @@ final class AppEnvironment: ObservableObject {
         self.dropShelf = dropShelf
         self.screenRecorder = screenRecorder
         self.screenshotShelf = screenshotShelf
+        appUpdate = AppUpdateService()
 
         // Wire presentation coordinators and hand them to the view models.
         dropShelfCoordinator = DropShelfPanelCoordinator(store: dropShelf)
