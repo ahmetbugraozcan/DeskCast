@@ -184,6 +184,12 @@
 "Copy Path" = "Copy Path";
 "App" = "App";
 "Features" = "Features";
+"About DeskCast" = "About DeskCast";
+"Application" = "Application";
+"Version" = "Version";
+"Updates" = "Updates";
+"Check for Updates..." = "Check for Updates...";
+"Updates are downloaded, verified, and installed securely." = "Updates are downloaded, verified, and installed securely.";
 "Menu layout" = "Menu layout";
 "Show in menu" = "Show in menu";
 "Reset Settings" = "Reset Settings";
