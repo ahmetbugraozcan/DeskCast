@@ -190,6 +190,9 @@
 "Updates" = "Güncellemeler";
 "Check for Updates..." = "Güncellemeleri Denetle...";
 "Updates are downloaded, verified, and installed securely." = "Güncellemeler güvenli biçimde indirilir, doğrulanır ve yüklenir.";
+"Developer" = "Geliştirici";
+"Name" = "Ad Soyad";
+"GitHub" = "GitHub";
 "Menu layout" = "Menü düzeni";
 "Show in menu" = "Menüde göster";
 "Reset Settings" = "Ayarları Sıfırla";

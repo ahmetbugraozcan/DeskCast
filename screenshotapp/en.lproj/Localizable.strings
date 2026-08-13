@@ -190,6 +190,9 @@
 "Updates" = "Updates";
 "Check for Updates..." = "Check for Updates...";
 "Updates are downloaded, verified, and installed securely." = "Updates are downloaded, verified, and installed securely.";
+"Developer" = "Developer";
+"Name" = "Name";
+"GitHub" = "GitHub";
 "Menu layout" = "Menu layout";
 "Show in menu" = "Show in menu";
 "Reset Settings" = "Reset Settings";
