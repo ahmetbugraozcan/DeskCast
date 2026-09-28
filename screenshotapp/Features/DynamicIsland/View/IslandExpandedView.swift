@@ -1,0 +1,273 @@
+import AppKit
+import SwiftUI
+
+/// The expanded island: a header plus the selected panel (or the launcher grid).
+/// Pages slide horizontally when switching so it reads as one continuous surface.
+struct IslandExpandedView: View {
+    @ObservedObject var store: DynamicIslandViewModel
+    let panels: IslandPanelModels
+    let geometry: DynamicIslandGeometry
+    let namespace: Namespace.ID
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            switch store.expandedContent {
+            case .launcher:
+                IslandLauncherView(store: store)
+                    .transition(pageTransition)
+            case .panel(let panel):
+                panelView(panel)
+                    .id(panel)
+                    .transition(pageTransition)
+            }
+        }
+        .padding(.top, geometry.notchSize.height + 4)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .animation(.spring(response: 0.38, dampingFraction: 0.86), value: store.expandedContent)
+    }
+
+    private var pageTransition: AnyTransition {
+        .asymmetric(
+            insertion: .opacity.combined(with: .offset(y: 8)).combined(with: .scale(scale: 0.97, anchor: .top)),
+            removal: .opacity.animation(.easeOut(duration: 0.1))
+        )
+    }
+
+    @ViewBuilder
+    private func panelView(_ panel: IslandPanel) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            IslandPanelHeader(
+                title: AppLocalization.string(panel.titleKey),
+                isPinned: store.isPinned,
+                onPin: { store.togglePin() },
+                onCollapse: { store.collapse() }
+            ) {
+                headerAccessory(for: panel)
+            }
+
+            panelContent(panel)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    @ViewBuilder
+    private func headerAccessory(for panel: IslandPanel) -> some View {
+        switch panel {
+        case .nowPlaying:
+            if let nowPlaying = store.nowPlaying, store.availablePlayers.count > 1 {
+                Menu {
+                    ForEach(store.availablePlayers) { player in
+                        Button(player.displayName) {
+                            store.preferPlayer(player)
+                        }
+                    }
+                } label: {
+                    Text(nowPlaying.player.displayName)
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            }
+        case .notifications:
+            if !store.notificationHistory.isEmpty {
+                IslandIconButton(
+                    systemImage: "trash",
+                    help: AppLocalization.string("island.notifications.clear"),
+                    action: { store.clearNotificationHistory() }
+                )
+            }
+        default:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func panelContent(_ panel: IslandPanel) -> some View {
+        switch panel {
+        case .controls:
+            ControlsPanelView(controls: panels.controls, audio: panels.audio)
+        case .volume:
+            VolumePanelView(audio: panels.audio)
+        case .nowPlaying:
+            NowPlayingPanelView(store: store, audio: panels.audio, namespace: namespace)
+        case .captures:
+            CapturesPanelView(shelf: panels.screenshots, actions: panels.actions)
+        case .files:
+            FilesPanelView(dropShelf: panels.dropShelf, actions: panels.actions)
+        case .system:
+            SystemPanelView(model: panels.system)
+        case .tools:
+            ToolsPanelView(actions: panels.actions)
+        case .calendar:
+            CalendarPanelView(model: panels.calendar)
+        case .notifications:
+            NotificationsPanelView(store: store)
+        case .timer:
+            TimerPanelView(timer: panels.timer)
+        case .camera:
+            CameraPanelView(model: panels.camera)
+        case .downloads:
+            DownloadsPanelView(model: panels.downloads)
+        case .scratchpad:
+            ScratchpadPanelView()
+        case .aiAgents:
+            AIAgentsPanelView(model: panels.aiUsage)
+        }
+    }
+}
+
+/// Starts a panel model's polling while the panel is on screen.
+struct IslandPanelActivation: ViewModifier {
+    let model: IslandPanelActivating
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { model.setActive(true) }
+            .onDisappear { model.setActive(false) }
+    }
+}
+
+extension View {
+    func activatesIslandPanel(_ model: IslandPanelActivating) -> some View {
+        modifier(IslandPanelActivation(model: model))
+    }
+}
+
+// MARK: - Launcher
+
+struct IslandLauncherView: View {
+    @ObservedObject var store: DynamicIslandViewModel
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                IslandIconButton(
+                    systemImage: "chevron.left",
+                    help: AppLocalization.string("island.back"),
+                    action: { store.showLauncher() }
+                )
+
+                Text(AppLocalization.string("island.launcher.title"))
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                IslandIconButton(
+                    systemImage: store.isPinned ? "pin.fill" : "pin",
+                    help: AppLocalization.string(store.isPinned ? "island.unpin" : "island.pin"),
+                    action: { store.togglePin() }
+                )
+            }
+            .frame(height: 26)
+
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(Array(IslandPanel.allCases.enumerated()), id: \.element) { index, panel in
+                    LauncherTile(
+                        panel: panel,
+                        isSelected: store.lastSelectedPanel == panel,
+                        showsShortcut: store.preferences.panelShortcutsEnabled
+                    ) {
+                        store.select(panel)
+                    }
+                    .transition(.scale(scale: 0.8).combined(with: .opacity))
+                    .animation(.spring(response: 0.4, dampingFraction: 0.75).delay(Double(index) * 0.015), value: store.expandedContent)
+                }
+            }
+        }
+    }
+}
+
+private struct LauncherTile: View {
+    let panel: IslandPanel
+    let isSelected: Bool
+    let showsShortcut: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: panel.systemImage)
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(panel.tint ?? .white)
+                    .frame(height: 24)
+
+                Text(AppLocalization.string(panel.titleKey))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.85)
+
+                if showsShortcut, let label = panel.shortcutLabel {
+                    Text(label)
+                        .font(.system(size: 9.5, weight: .medium))
+                        .foregroundStyle(IslandPalette.tertiaryText)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 76)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isSelected || isHovered ? Color(white: 0.17) : IslandPalette.card)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isSelected ? Color.white.opacity(0.35) : IslandPalette.cardStroke, lineWidth: isSelected ? 1.5 : 1)
+            )
+            .overlay(alignment: .topTrailing) {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .padding(6)
+                }
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(IslandScaleButtonStyle())
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHovered)
+    }
+}
+
+// MARK: - Compact timer
+
+struct CompactTimerView: View {
+    @ObservedObject var timer: IslandTimerViewModel
+    let geometry: DynamicIslandGeometry
+
+    var body: some View {
+        let height = geometry.notchSize.height
+
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle().stroke(Color.orange.opacity(0.25), lineWidth: 2.5)
+                    Circle()
+                        .trim(from: 0, to: timer.progress(at: context.date))
+                        .stroke(Color.orange, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .animation(.linear(duration: 1), value: timer.progress(at: context.date))
+                }
+                .frame(width: height - 14, height: height - 14)
+
+                Spacer(minLength: geometry.hasNotch ? geometry.notchSize.width : 12)
+
+                Text(IslandFormat.clock(timer.remaining(at: context.date)))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(timer.isPaused ? .white.opacity(0.5) : .orange)
+                    .contentTransition(.numericText(countsDown: true))
+                    .animation(.snappy, value: Int(timer.remaining(at: context.date)))
+            }
+            .padding(.horizontal, 10)
+            .frame(height: height)
+        }
+    }
+}

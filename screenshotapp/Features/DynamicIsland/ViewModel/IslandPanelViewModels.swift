@@ -1,0 +1,546 @@
+import AppKit
+import AVFoundation
+import Combine
+import CoreAudio
+
+/// Panel view models poll only while their panel is on screen: each view calls
+/// `setActive(true)` on appear and `setActive(false)` on disappear.
+@MainActor
+protocol IslandPanelActivating: AnyObject {
+    func setActive(_ active: Bool)
+}
+
+// MARK: - System
+
+@MainActor
+final class SystemStatsViewModel: ObservableObject, IslandPanelActivating {
+    @Published private(set) var stats = SystemStatsSnapshot()
+
+    private let service: SystemStatsService
+    private let queue = DispatchQueue(label: "com.ahmetbugraozcan.screenshotapp.systemstats", qos: .utility)
+    private var timer: Timer?
+
+    init(service: SystemStatsService = SystemStatsService()) {
+        self.service = service
+    }
+
+    func setActive(_ active: Bool) {
+        timer?.invalidate()
+        timer = nil
+
+        guard active else { return }
+
+        sample()
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.sample()
+            }
+        }
+        timer.tolerance = 0.2
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    private func sample() {
+        let service = service
+
+        queue.async { [weak self] in
+            let snapshot = service.sample()
+
+            Task { @MainActor in
+                self?.stats = snapshot
+            }
+        }
+    }
+}
+
+// MARK: - Audio
+
+@MainActor
+final class AudioViewModel: ObservableObject, IslandPanelActivating {
+    @Published private(set) var volume: Double = 0
+    @Published private(set) var isMuted = false
+    @Published private(set) var hasVolumeControl = true
+    @Published private(set) var devices: [AudioDevice] = []
+    @Published private(set) var currentDeviceID: AudioDeviceID?
+    @Published private(set) var inputVolume: Double?
+    @Published private(set) var isMicrophoneMuted = false
+
+    private let service: AudioOutputService
+    private var timer: Timer?
+    private var activeCount = 0
+    /// Input level to restore when the microphone is un-muted by volume.
+    private var savedInputVolume: Double?
+
+    init(service: AudioOutputService = AudioOutputService()) {
+        self.service = service
+    }
+
+    var currentDeviceName: String {
+        devices.first { $0.id == currentDeviceID }?.name ?? AppLocalization.string("island.audio.output")
+    }
+
+    /// Several panels (Now Playing, Volume, Controls) share this model.
+    func setActive(_ active: Bool) {
+        activeCount = max(activeCount + (active ? 1 : -1), 0)
+
+        if activeCount > 0, timer == nil {
+            refresh()
+            let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.refresh()
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            self.timer = timer
+        } else if activeCount == 0 {
+            timer?.invalidate()
+            timer = nil
+        }
+    }
+
+    func refresh() {
+        let currentVolume = service.volume()
+        hasVolumeControl = currentVolume != nil
+        setIfChanged(\.volume, currentVolume ?? 0)
+        setIfChanged(\.isMuted, service.isMuted())
+        setIfChanged(\.currentDeviceID, service.defaultDevice())
+        setIfChanged(\.devices, service.outputDevices())
+
+        let input = service.volume(input: true)
+        setIfChanged(\.inputVolume, input)
+        setIfChanged(\.isMicrophoneMuted, service.isMuted(input: true) || input == 0)
+    }
+
+    func setVolume(_ value: Double) {
+        volume = value
+        service.setVolume(value)
+
+        if value > 0 {
+            isMuted = false
+        }
+    }
+
+    func setInputVolume(_ value: Double) {
+        inputVolume = value
+        isMicrophoneMuted = value == 0
+        service.setVolume(value, input: true)
+
+        if value > 0 {
+            service.setMuted(false, input: true)
+        }
+    }
+
+    func toggleMute() {
+        let newValue = !isMuted
+
+        if service.setMuted(newValue) {
+            isMuted = newValue
+        }
+    }
+
+    func selectDevice(_ id: AudioDeviceID) {
+        service.setDefaultOutputDevice(id)
+        refresh()
+    }
+
+    func toggleMicrophone() {
+        if isMicrophoneMuted {
+            if !service.setMuted(false, input: true) || (inputVolume ?? 0) == 0 {
+                service.setVolume(savedInputVolume ?? 0.75, input: true)
+            }
+        } else if !service.setMuted(true, input: true) {
+            // Many built-in mics have no mute switch; drop the input level instead.
+            savedInputVolume = inputVolume
+            service.setVolume(0, input: true)
+        }
+
+        refresh()
+    }
+
+    private func setIfChanged<Value: Equatable>(_ keyPath: ReferenceWritableKeyPath<AudioViewModel, Value>, _ value: Value) {
+        if self[keyPath: keyPath] != value {
+            self[keyPath: keyPath] = value
+        }
+    }
+}
+
+// MARK: - AI agents
+
+@MainActor
+final class AIUsageViewModel: ObservableObject, IslandPanelActivating {
+    enum SpendPeriod: String, CaseIterable, Identifiable {
+        case today
+        case week
+
+        var id: String { rawValue }
+    }
+
+    @Published private(set) var report = AIUsageReport()
+    @Published private(set) var isLoading = false
+    @Published private(set) var hasLoaded = false
+    @Published var spendPeriod: SpendPeriod = .today
+
+    private let service: AIUsageService
+    private var timer: Timer?
+    private var loadTask: Task<Void, Never>?
+
+    private static let refreshInterval: TimeInterval = 90
+
+    init(service: AIUsageService = AIUsageService()) {
+        self.service = service
+    }
+
+    var spend: AIDailySpend {
+        let days = spendPeriod == .today ? Array(report.dailySpend.suffix(1)) : report.dailySpend
+
+        return days.reduce(AIDailySpend(day: Date(), cost: 0, tokens: 0, cacheReadTokens: 0)) { total, day in
+            AIDailySpend(
+                day: total.day,
+                cost: total.cost + day.cost,
+                tokens: total.tokens + day.tokens,
+                cacheReadTokens: total.cacheReadTokens + day.cacheReadTokens
+            )
+        }
+    }
+
+    func setActive(_ active: Bool) {
+        timer?.invalidate()
+        timer = nil
+
+        guard active else { return }
+
+        refresh()
+        let timer = Timer(timeInterval: Self.refreshInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.refresh()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    func refresh() {
+        guard loadTask == nil else { return }
+
+        isLoading = true
+        let service = service
+
+        loadTask = Task { [weak self] in
+            let report = await Task.detached(priority: .utility) {
+                await service.load()
+            }.value
+
+            guard let self else { return }
+            self.report = report
+            self.isLoading = false
+            self.hasLoaded = true
+            self.loadTask = nil
+        }
+    }
+}
+
+// MARK: - Calendar
+
+@MainActor
+final class CalendarViewModel: ObservableObject, IslandPanelActivating {
+    @Published private(set) var accessState: CalendarAccessState
+    @Published private(set) var events: [IslandCalendarEvent] = []
+    @Published private(set) var week: [Date] = []
+    @Published private(set) var daysWithEvents: Set<Date> = []
+
+    private let service: CalendarService
+
+    init(service: CalendarService = CalendarService()) {
+        self.service = service
+        accessState = service.accessState
+    }
+
+    func setActive(_ active: Bool) {
+        guard active else { return }
+        reload()
+    }
+
+    func requestAccess() {
+        Task {
+            _ = await service.requestAccess()
+            reload()
+        }
+    }
+
+    func openCalendar() {
+        service.openCalendarApp()
+    }
+
+    private func reload() {
+        accessState = service.accessState
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let weekday = calendar.component(.weekday, from: today)
+        let offset = (weekday - calendar.firstWeekday + 7) % 7
+
+        if let weekStart = calendar.date(byAdding: .day, value: -offset, to: today) {
+            week = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) }
+        }
+
+        events = service.upcomingEvents()
+        daysWithEvents = service.daysWithEvents(in: week)
+    }
+}
+
+// MARK: - Downloads
+
+@MainActor
+final class DownloadsViewModel: ObservableObject, IslandPanelActivating {
+    @Published private(set) var files: [DownloadedFile] = []
+
+    private let service = DownloadsService()
+    private var timer: Timer?
+
+    func setActive(_ active: Bool) {
+        timer?.invalidate()
+        timer = nil
+
+        guard active else { return }
+
+        reload()
+        let timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.reload()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    func open(_ file: DownloadedFile) {
+        NSWorkspace.shared.open(file.url)
+    }
+
+    func reveal(_ file: DownloadedFile) {
+        NSWorkspace.shared.activateFileViewerSelecting([file.url])
+    }
+
+    func openFolder() {
+        NSWorkspace.shared.open(service.folderURL)
+    }
+
+    private func reload() {
+        let service = service
+
+        Task { [weak self] in
+            let files = await Task.detached(priority: .utility) {
+                service.recentFiles()
+            }.value
+
+            if self?.files != files {
+                self?.files = files
+            }
+        }
+    }
+}
+
+// MARK: - Timer
+
+@MainActor
+final class IslandTimerViewModel: ObservableObject {
+    @Published private(set) var totalDuration: TimeInterval = 5 * 60
+    @Published private(set) var endDate: Date?
+    @Published private(set) var pausedRemaining: TimeInterval?
+
+    /// Called when a running timer reaches zero.
+    var onFinish: (() -> Void)?
+
+    private var finishTask: Task<Void, Never>?
+
+    static let presetMinutes = [1, 5, 10, 25, 45]
+
+    var isRunning: Bool { endDate != nil }
+    var isPaused: Bool { pausedRemaining != nil }
+    var isActive: Bool { isRunning || isPaused }
+
+    func remaining(at date: Date = Date()) -> TimeInterval {
+        if let endDate {
+            return max(endDate.timeIntervalSince(date), 0)
+        }
+
+        return pausedRemaining ?? totalDuration
+    }
+
+    func progress(at date: Date = Date()) -> Double {
+        guard totalDuration > 0 else { return 0 }
+        return min(max(remaining(at: date) / totalDuration, 0), 1)
+    }
+
+    func start(minutes: Int) {
+        totalDuration = TimeInterval(minutes * 60)
+        pausedRemaining = nil
+        run(for: totalDuration)
+    }
+
+    func toggle() {
+        if isRunning {
+            pausedRemaining = remaining()
+            endDate = nil
+            finishTask?.cancel()
+        } else {
+            run(for: pausedRemaining ?? totalDuration)
+            pausedRemaining = nil
+        }
+    }
+
+    func addMinute() {
+        if let endDate {
+            self.endDate = endDate.addingTimeInterval(60)
+            totalDuration += 60
+            scheduleFinish()
+        } else if let pausedRemaining {
+            self.pausedRemaining = pausedRemaining + 60
+            totalDuration += 60
+        } else {
+            totalDuration += 60
+        }
+    }
+
+    func reset() {
+        finishTask?.cancel()
+        endDate = nil
+        pausedRemaining = nil
+    }
+
+    private func run(for duration: TimeInterval) {
+        guard duration > 0 else { return }
+        endDate = Date().addingTimeInterval(duration)
+        scheduleFinish()
+    }
+
+    private func scheduleFinish() {
+        finishTask?.cancel()
+
+        guard let endDate else { return }
+
+        finishTask = Task { [weak self] in
+            let delay = max(endDate.timeIntervalSinceNow, 0)
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled, let self, self.endDate == endDate else { return }
+            self.endDate = nil
+            NSSound(named: NSSound.Name("Glass"))?.play()
+            self.onFinish?()
+        }
+    }
+}
+
+// MARK: - Controls
+
+@MainActor
+final class ControlsViewModel: ObservableObject, IslandPanelActivating {
+    @Published private(set) var isDarkMode = false
+    @Published private(set) var isKeepingAwake = false
+
+    private let service: SystemControlsService
+
+    init(service: SystemControlsService = SystemControlsService()) {
+        self.service = service
+        isDarkMode = service.isDarkMode
+    }
+
+    func setActive(_ active: Bool) {
+        guard active else { return }
+        isDarkMode = service.isDarkMode
+        isKeepingAwake = service.isKeepingAwake
+    }
+
+    func toggleDarkMode() {
+        // Optimistic; re-read once System Events has applied it.
+        isDarkMode.toggle()
+        service.toggleDarkMode { [weak self] in
+            guard let self else { return }
+            self.isDarkMode = self.service.isDarkMode
+        }
+    }
+
+    func toggleKeepAwake() {
+        service.setKeepAwake(!service.isKeepingAwake)
+        isKeepingAwake = service.isKeepingAwake
+    }
+
+    func sleepDisplay() {
+        service.sleepDisplay()
+    }
+
+    func startScreenSaver() {
+        service.startScreenSaver()
+    }
+
+    func openSystemSettings() {
+        service.openSystemSettings()
+    }
+}
+
+// MARK: - Camera
+
+@MainActor
+final class CameraMirrorViewModel: ObservableObject, IslandPanelActivating {
+    @Published private(set) var authorization: AVAuthorizationStatus = CameraPreviewService.authorizationStatus
+
+    let preview = CameraPreviewService()
+
+    func setActive(_ active: Bool) {
+        authorization = CameraPreviewService.authorizationStatus
+
+        if active, authorization == .authorized {
+            preview.start()
+        } else {
+            preview.stop()
+        }
+    }
+
+    func requestAccess() {
+        Task {
+            _ = await CameraPreviewService.requestAccess()
+            setActive(true)
+        }
+    }
+}
+
+// MARK: - Container
+
+/// DeskCast actions the Tools / Captures / Files panels trigger. Supplied by the
+/// composition root so the island doesn't depend on other features' types.
+struct IslandToolActions {
+    var captureArea: () -> Void = {}
+    var captureVideo: () -> Void = {}
+    var captureText: () -> Void = {}
+    var copyFinderPath: () -> Void = {}
+    var toggleDropShelf: () -> Void = {}
+    var openSettings: () -> Void = {}
+}
+
+/// Everything the expanded panels render, built once in `AppEnvironment`.
+@MainActor
+final class IslandPanelModels {
+    let system = SystemStatsViewModel()
+    let audio = AudioViewModel()
+    let aiUsage = AIUsageViewModel()
+    let calendar = CalendarViewModel()
+    let downloads = DownloadsViewModel()
+    let timer: IslandTimerViewModel
+    let controls = ControlsViewModel()
+    let camera = CameraMirrorViewModel()
+    let screenshots: ScreenshotShelfViewModel
+    let dropShelf: DropShelfViewModel
+    let actions: IslandToolActions
+
+    init(
+        timer: IslandTimerViewModel,
+        screenshots: ScreenshotShelfViewModel,
+        dropShelf: DropShelfViewModel,
+        actions: IslandToolActions
+    ) {
+        self.timer = timer
+        self.screenshots = screenshots
+        self.dropShelf = dropShelf
+        self.actions = actions
+    }
+}

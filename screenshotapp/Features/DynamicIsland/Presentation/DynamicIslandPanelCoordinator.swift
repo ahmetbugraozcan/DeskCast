@@ -9,17 +9,21 @@ import SwiftUI
 @MainActor
 final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
     private let store: DynamicIslandViewModel
+    private let panels: IslandPanelModels
     private var panel: DynamicIslandPanel?
     private var globalMouseMonitor: Any?
     private var localMouseMonitor: Any?
+    private var globalClickMonitor: Any?
+    private var localKeyMonitor: Any?
     private var screenObserver: NSObjectProtocol?
     private var storeObserver: AnyCancellable?
 
     /// Extra slack around the collapsed island so it is easy to hit with the pointer.
     private static let collapsedHoverInset = CGSize(width: 10, height: 6)
 
-    init(store: DynamicIslandViewModel) {
+    init(store: DynamicIslandViewModel, panels: IslandPanelModels) {
         self.store = store
+        self.panels = panels
 
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
@@ -90,7 +94,7 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
             defer: false
         )
 
-        let hostingView = DynamicIslandHostingView(rootView: DynamicIslandView(store: store))
+        let hostingView = DynamicIslandHostingView(rootView: DynamicIslandView(store: store, panels: panels))
         hostingView.sizingOptions = []
         panel.contentView = hostingView
 
@@ -154,6 +158,26 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
             }
             return event
         }
+
+        // Global click events only arrive for clicks outside DeskCast's windows,
+        // i.e. outside the island, which closes a click/shortcut-opened island.
+        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.store.handleOutsideClick()
+            }
+        }
+
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // Escape closes the island (reachable while the scratchpad has focus).
+            let isEscape = event.keyCode == 53
+            let handled = MainActor.assumeIsolated { () -> Bool in
+                guard isEscape, let self, self.panel?.isKeyWindow == true else { return false }
+                self.store.collapse()
+                self.panel?.resignKey()
+                return true
+            }
+            return handled ? nil : event
+        }
     }
 
     private func removeMouseMonitors() {
@@ -165,48 +189,73 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
             NSEvent.removeMonitor(localMouseMonitor)
         }
 
+        if let globalClickMonitor {
+            NSEvent.removeMonitor(globalClickMonitor)
+        }
+
+        if let localKeyMonitor {
+            NSEvent.removeMonitor(localKeyMonitor)
+        }
+
         globalMouseMonitor = nil
         localMouseMonitor = nil
+        globalClickMonitor = nil
+        localKeyMonitor = nil
     }
 
     private func updateMouseInteraction() {
         guard let panel, panel.isVisible else { return }
 
-        let isInside = hoverRect(in: panel.frame).contains(NSEvent.mouseLocation)
+        let wantsKeyboard = store.mode == .expanded && store.expandedContent == .panel(.scratchpad)
+        panel.allowsKey = wantsKeyboard
+
+        if !wantsKeyboard, panel.isKeyWindow {
+            panel.resignKey()
+        }
+
+        let location = NSEvent.mouseLocation
+        // While the scratchpad has keyboard focus, keep the island open even if
+        // the pointer wanders off; clicking elsewhere resigns key and closes it.
+        let isInside = hoverRects(in: panel.frame).contains { $0.contains(location) }
+            || (wantsKeyboard && panel.isKeyWindow)
+
         panel.ignoresMouseEvents = !isInside
         store.setHovering(isInside)
     }
 
-    /// The island's current on-screen rect (top-center of the panel), padded
-    /// while collapsed so the small shape is forgiving to hit.
-    private func hoverRect(in panelFrame: NSRect) -> NSRect {
-        let mode = store.mode
-        let size = DynamicIslandView.islandSize(
-            for: mode,
-            geometry: store.geometry,
-            hasMedia: store.hasMedia
-        )
-        let rect = NSRect(
-            x: panelFrame.midX - size.width / 2,
-            y: panelFrame.maxY - size.height,
-            width: size.width,
-            height: size.height
-        )
+    /// The island and its side buttons in screen coordinates, padded while
+    /// collapsed so the small shape is forgiving to hit.
+    private func hoverRects(in panelFrame: NSRect) -> [NSRect] {
+        let layout = DynamicIslandView.layout(for: store)
+        let isExpanded = store.mode == .expanded
 
-        guard mode != .expanded else { return rect }
+        return layout.interactiveFrames.map { frame in
+            // SwiftUI frames are top-left based; screen space is bottom-left.
+            let rect = NSRect(
+                x: panelFrame.minX + frame.minX,
+                y: panelFrame.maxY - frame.maxY,
+                width: frame.width,
+                height: frame.height
+            )
 
-        let inset = Self.collapsedHoverInset
-        return NSRect(
-            x: rect.minX - inset.width,
-            y: rect.minY - inset.height,
-            width: rect.width + inset.width * 2,
-            height: rect.height + inset.height
-        )
+            guard !isExpanded else { return rect }
+
+            let inset = Self.collapsedHoverInset
+            return NSRect(
+                x: rect.minX - inset.width,
+                y: rect.minY - inset.height,
+                width: rect.width + inset.width * 2,
+                height: rect.height + inset.height
+            )
+        }
     }
 }
 
 private final class DynamicIslandPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
+    /// Only the scratchpad needs typing; otherwise the panel never steals focus.
+    var allowsKey = false
+
+    override var canBecomeKey: Bool { allowsKey }
     override var canBecomeMain: Bool { false }
 }
 

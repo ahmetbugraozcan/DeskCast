@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 
@@ -52,11 +53,45 @@ final class AppEnvironment: ObservableObject {
             screenRecording: ScreenRecordingPermissionService()
         )
 
+        let islandTimer = IslandTimerViewModel()
         let dynamicIsland = DynamicIslandViewModel(
             nowPlayingService: MediaPlayerNowPlayingService(),
             batteryMonitor: BatteryMonitorService(),
             systemNotifications: SystemNotificationMonitorService(),
+            timer: islandTimer,
             settings: settings
+        )
+        // Island panels trigger other tools; each action closes the island first
+        // so it doesn't cover the capture overlay or the opened window.
+        let islandActions = IslandToolActions(
+            captureArea: { [weak dynamicIsland, weak screenshotShelf] in
+                dynamicIsland?.collapse()
+                screenshotShelf?.captureSelectedArea()
+            },
+            captureVideo: { [weak dynamicIsland, weak screenRecorder] in
+                dynamicIsland?.collapse()
+                screenRecorder?.captureSelectedAreaVideo()
+            },
+            captureText: { [weak dynamicIsland, weak screenshotShelf] in
+                dynamicIsland?.collapse()
+                screenshotShelf?.captureOCRTextFromSelectedArea()
+            },
+            copyFinderPath: { [weak screenshotShelf] in
+                screenshotShelf?.copyFrontFinderPath()
+            },
+            toggleDropShelf: { [weak dropShelf] in
+                dropShelf?.toggleShelf()
+            },
+            openSettings: { [weak dynamicIsland] in
+                dynamicIsland?.collapse()
+                Self.openSettingsWindow()
+            }
+        )
+        let islandPanels = IslandPanelModels(
+            timer: islandTimer,
+            screenshots: screenshotShelf,
+            dropShelf: dropShelf,
+            actions: islandActions
         )
 
         self.dropShelf = dropShelf
@@ -69,7 +104,7 @@ final class AppEnvironment: ObservableObject {
         dropShelfCoordinator = DropShelfPanelCoordinator(store: dropShelf)
         screenRecordingCoordinator = ScreenRecordingPanelCoordinator(store: screenRecorder)
         screenshotShelfCoordinator = ScreenshotShelfPanelCoordinator(store: screenshotShelf)
-        dynamicIslandCoordinator = DynamicIslandPanelCoordinator(store: dynamicIsland)
+        dynamicIslandCoordinator = DynamicIslandPanelCoordinator(store: dynamicIsland, panels: islandPanels)
         dropShelf.presenter = dropShelfCoordinator
         screenRecorder.presenter = screenRecordingCoordinator
         screenshotShelf.presenter = screenshotShelfCoordinator
@@ -81,6 +116,23 @@ final class AppEnvironment: ObservableObject {
         // so defer it to the next main-actor turn, after launch has finished.
         Task { @MainActor in
             dynamicIsland.start()
+        }
+    }
+
+    /// Opens the SwiftUI `Settings` scene from AppKit code. SwiftUI only exposes
+    /// `openSettings` inside views, so trigger the app menu's "Settings…" item
+    /// (⌘,) that the scene installs.
+    static func openSettingsWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+
+        let settingsItem = NSApp.mainMenu?.items.first?.submenu?.items.first { item in
+            item.keyEquivalent == "," && item.keyEquivalentModifierMask == .command
+        }
+
+        if let settingsItem, let action = settingsItem.action {
+            NSApp.sendAction(action, to: settingsItem.target, from: settingsItem)
+        } else {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         }
     }
 }

@@ -13,6 +13,7 @@ enum DynamicIslandNotificationStyle: Equatable {
 
 struct DynamicIslandNotification: Identifiable {
     let id = UUID()
+    let date = Date()
     /// Small caption above the title, e.g. the posting app's name.
     var caption: String?
     let title: String
@@ -33,6 +34,7 @@ struct DynamicIslandNotification: Identifiable {
 enum DynamicIslandMode: Equatable {
     case idle
     case compactMedia
+    case compactTimer
     case notification
     case expanded
 }

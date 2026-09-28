@@ -1,37 +1,148 @@
 import AppKit
 import SwiftUI
 
+/// Where the island and its floating side buttons sit inside the panel, in
+/// SwiftUI (top-left origin) coordinates. The coordinator converts these frames
+/// to screen space for hover and click hit-testing, so view and hit area share
+/// one source of truth.
+struct DynamicIslandLayout: Equatable {
+    let panelSize: CGSize
+    let islandFrame: CGRect
+    let orbFrames: [DynamicIslandOrb: CGRect]
+
+    var interactiveFrames: [CGRect] {
+        [islandFrame] + orbFrames.values
+    }
+}
+
+/// Round buttons floating beside the expanded island.
+enum DynamicIslandOrb: CaseIterable, Hashable {
+    case launcher
+    case timer
+    case settings
+    case volume
+    case nowPlaying
+
+    var systemImage: String {
+        switch self {
+        case .launcher: "square.grid.2x2"
+        case .timer: "timer"
+        case .settings: "gearshape"
+        case .volume: "speaker.wave.2"
+        case .nowPlaying: "music.note"
+        }
+    }
+}
+
 /// Notch-anchored "Dynamic Island". The panel is a fixed, transparent canvas; the
 /// island shape inside it morphs between modes with a spring so AppKit never has
-/// to animate the window frame. `DynamicIslandPanelCoordinator` sizes the panel
-/// and its hover region from the static metrics below.
+/// to animate the window frame.
 struct DynamicIslandView: View {
     @ObservedObject var store: DynamicIslandViewModel
+    let panels: IslandPanelModels
     @Namespace private var namespace
 
     static let shadowPadding: CGFloat = 26
-    static let expandedMinimumWidth: CGFloat = 440
-    static let expandedMediaContentHeight: CGFloat = 150
-    static let expandedIdleContentHeight: CGFloat = 70
+    static let expandedMinimumWidth: CGFloat = 560
     static let notificationContentHeight: CGFloat = 60
     static let notificationMinimumWidth: CGFloat = 380
+    static let orbSize: CGFloat = 40
+    static let orbGap: CGFloat = 12
 
-    static let morphAnimation = Animation.spring(response: 0.42, dampingFraction: 0.76)
+    static let morphAnimation = Animation.spring(response: 0.42, dampingFraction: 0.78)
 
     // MARK: - Metrics
 
+    /// Content height below the notch for each expanded page.
+    static func expandedContentHeight(for content: IslandExpandedContent) -> CGFloat {
+        switch content {
+        case .launcher: return 276
+        case .panel(let panel):
+            switch panel {
+            case .controls: return 212
+            case .volume: return 262
+            case .nowPlaying: return 214
+            case .captures: return 196
+            case .files: return 208
+            case .system: return 258
+            case .tools: return 196
+            case .calendar: return 244
+            case .notifications: return 262
+            case .timer: return 214
+            case .camera: return 290
+            case .downloads: return 262
+            case .scratchpad: return 224
+            case .aiAgents: return 300
+            }
+        }
+    }
+
+    private static var maxExpandedContentHeight: CGFloat {
+        IslandPanel.allCases.map { expandedContentHeight(for: .panel($0)) }.max() ?? 300
+    }
+
+    private static func expandedWidth(for geometry: DynamicIslandGeometry) -> CGFloat {
+        max(expandedMinimumWidth, geometry.notchSize.width + 220)
+    }
+
     static func panelSize(for geometry: DynamicIslandGeometry) -> CGSize {
-        let islandWidth = max(expandedMinimumWidth, geometry.notchSize.width + 220) + cornerMetrics(for: .expanded).top * 2
+        let islandWidth = expandedWidth(for: geometry) + cornerMetrics(for: .expanded).top * 2
+        let orbColumns = (orbSize + orbGap) * 2
 
         return CGSize(
-            width: islandWidth + shadowPadding * 2,
-            height: geometry.notchSize.height + expandedMediaContentHeight + shadowPadding
+            width: islandWidth + orbColumns + shadowPadding * 2,
+            height: geometry.notchSize.height + maxExpandedContentHeight + orbGap + orbSize + shadowPadding
         )
+    }
+
+    static func layout(for store: DynamicIslandViewModel) -> DynamicIslandLayout {
+        let mode = store.mode
+        let geometry = store.geometry
+        let panelSize = panelSize(for: geometry)
+        let size = islandSize(
+            for: mode,
+            content: store.expandedContent,
+            geometry: geometry,
+            hasMedia: store.hasMedia
+        )
+        let islandFrame = CGRect(
+            x: ((panelSize.width - size.width) / 2).rounded(),
+            y: 0,
+            width: size.width,
+            height: size.height
+        )
+
+        var orbs: [DynamicIslandOrb: CGRect] = [:]
+
+        if mode == .expanded, store.preferences.showsSideButtons {
+            let ears = cornerMetrics(for: .expanded).top
+            let leftX = islandFrame.minX + ears - orbGap - orbSize
+            let rightX = islandFrame.maxX - ears + orbGap
+            let firstY = geometry.notchSize.height + 14
+            let secondY = firstY + orbSize + orbGap
+
+            orbs[.launcher] = CGRect(x: leftX, y: firstY, width: orbSize, height: orbSize)
+            orbs[.timer] = CGRect(x: leftX, y: secondY, width: orbSize, height: orbSize)
+            orbs[.settings] = CGRect(x: rightX, y: firstY, width: orbSize, height: orbSize)
+            orbs[.volume] = CGRect(x: rightX, y: secondY, width: orbSize, height: orbSize)
+
+            if store.expandedContent != .panel(.nowPlaying) {
+                orbs[.nowPlaying] = CGRect(
+                    x: islandFrame.midX - orbSize / 2,
+                    y: islandFrame.maxY + orbGap,
+                    width: orbSize,
+                    height: orbSize
+                )
+            }
+        }
+
+        return DynamicIslandLayout(panelSize: panelSize, islandFrame: islandFrame, orbFrames: orbs)
     }
 
     /// Full island frame for a mode, including the flared top "ears".
     static func islandSize(
         for mode: DynamicIslandMode,
+        content: IslandExpandedContent,
         geometry: DynamicIslandGeometry,
         hasMedia: Bool
     ) -> CGSize {
@@ -41,8 +152,8 @@ struct DynamicIslandView: View {
         switch mode {
         case .idle:
             return CGSize(width: notch.width + ears, height: notch.height)
-        case .compactMedia:
-            let sideWidth = notch.height + 18
+        case .compactMedia, .compactTimer:
+            let sideWidth = notch.height + (mode == .compactTimer ? 34 : 18)
             let centerWidth = geometry.hasNotch ? notch.width : max(notch.width, 220)
             return CGSize(width: centerWidth + sideWidth * 2 + ears, height: notch.height)
         case .notification:
@@ -52,8 +163,8 @@ struct DynamicIslandView: View {
             )
         case .expanded:
             return CGSize(
-                width: max(expandedMinimumWidth, notch.width + 220) + ears,
-                height: notch.height + (hasMedia ? expandedMediaContentHeight : expandedIdleContentHeight)
+                width: expandedWidth(for: geometry) + ears,
+                height: notch.height + expandedContentHeight(for: content)
             )
         }
     }
@@ -61,7 +172,7 @@ struct DynamicIslandView: View {
     static func cornerMetrics(for mode: DynamicIslandMode) -> (top: CGFloat, bottom: CGFloat) {
         switch mode {
         case .idle: return (top: 6, bottom: 9)
-        case .compactMedia: return (top: 6, bottom: 13)
+        case .compactMedia, .compactTimer: return (top: 6, bottom: 13)
         case .notification: return (top: 12, bottom: 24)
         case .expanded: return (top: 14, bottom: 30)
         }
@@ -72,19 +183,19 @@ struct DynamicIslandView: View {
     var body: some View {
         let mode = store.mode
         let geometry = store.geometry
-        let size = Self.islandSize(for: mode, geometry: geometry, hasMedia: store.hasMedia)
+        let layout = Self.layout(for: store)
         let corners = Self.cornerMetrics(for: mode)
         let shape = DynamicIslandShape(topCornerRadius: corners.top, bottomCornerRadius: corners.bottom)
         // On displays without a notch the idle island disappears; the hover
         // region at the top center still reveals it.
         let isShapeVisible = mode != .idle || geometry.hasNotch
 
-        VStack(spacing: 0) {
+        ZStack(alignment: .topLeading) {
             ZStack(alignment: .top) {
                 content(for: mode, geometry: geometry)
                     .padding(.horizontal, corners.top)
             }
-            .frame(width: size.width, height: size.height, alignment: .top)
+            .frame(width: layout.islandFrame.width, height: layout.islandFrame.height, alignment: .top)
             .background(Color.black)
             .clipShape(shape)
             .contentShape(shape)
@@ -93,17 +204,45 @@ struct DynamicIslandView: View {
             .onTapGesture {
                 store.handleTap()
             }
+            .offset(x: layout.islandFrame.minX, y: layout.islandFrame.minY)
 
-            Spacer(minLength: 0)
+            ForEach(DynamicIslandOrb.allCases, id: \.self) { orb in
+                if let frame = layout.orbFrames[orb] {
+                    IslandOrbButton(orb: orb, isSelected: isOrbSelected(orb)) {
+                        handleOrb(orb)
+                    }
+                    .frame(width: frame.width, height: frame.height)
+                    .offset(x: frame.minX, y: frame.minY)
+                    .transition(.scale(scale: 0.4).combined(with: .opacity))
+                }
+            }
         }
-        .frame(
-            width: Self.panelSize(for: geometry).width,
-            height: Self.panelSize(for: geometry).height,
-            alignment: .top
-        )
+        .frame(width: layout.panelSize.width, height: layout.panelSize.height, alignment: .topLeading)
         .animation(Self.morphAnimation, value: mode)
-        .animation(Self.morphAnimation, value: size)
+        .animation(Self.morphAnimation, value: layout)
         .environment(\.colorScheme, .dark)
+        .environment(\.locale, AppLocalization.currentLocale)
+    }
+
+    private func isOrbSelected(_ orb: DynamicIslandOrb) -> Bool {
+        switch orb {
+        case .launcher: store.expandedContent == .launcher
+        case .timer: store.expandedContent == .panel(.timer)
+        case .volume: store.expandedContent == .panel(.volume)
+        case .nowPlaying, .settings: false
+        }
+    }
+
+    private func handleOrb(_ orb: DynamicIslandOrb) {
+        switch orb {
+        case .launcher: store.showLauncher()
+        case .timer: store.select(.timer)
+        case .volume: store.select(.volume)
+        case .nowPlaying: store.select(.nowPlaying)
+        case .settings:
+            store.collapse()
+            panels.actions.openSettings()
+        }
     }
 
     @ViewBuilder
@@ -120,6 +259,9 @@ struct DynamicIslandView: View {
                 )
                 .transition(Self.contentTransition)
             }
+        case .compactTimer:
+            CompactTimerView(timer: store.timer, geometry: geometry)
+                .transition(Self.contentTransition)
         case .notification:
             if let notification = store.activeNotification {
                 NotificationBannerView(notification: notification, geometry: geometry)
@@ -127,36 +269,38 @@ struct DynamicIslandView: View {
                     .transition(Self.contentTransition)
             }
         case .expanded:
-            Group {
-                if store.hasMedia, let nowPlaying = store.nowPlaying {
-                    ExpandedMediaView(
-                        nowPlaying: nowPlaying,
-                        geometry: geometry,
-                        namespace: namespace,
-                        onPrevious: { store.previousTrack() },
-                        onPlayPause: { store.togglePlayPause() },
-                        onNext: { store.nextTrack() },
-                        onOpenPlayer: { store.openPlayer() }
-                    )
-                } else {
-                    ExpandedIdleView(
-                        geometry: geometry,
-                        showsPlayers: store.preferences.showsNowPlaying,
-                        onOpenPlayer: { store.openPlayer($0) }
-                    )
-                }
-            }
-            .transition(Self.contentTransition)
+            IslandExpandedView(store: store, panels: panels, geometry: geometry, namespace: namespace)
+                .transition(Self.contentTransition)
         }
     }
 
-    private static var contentTransition: AnyTransition {
+    static var contentTransition: AnyTransition {
         .asymmetric(
             insertion: .opacity
                 .combined(with: .scale(scale: 0.86, anchor: .top))
                 .animation(morphAnimation.delay(0.06)),
             removal: .opacity.animation(.easeOut(duration: 0.12))
         )
+    }
+}
+
+private struct IslandOrbButton: View {
+    let orb: DynamicIslandOrb
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: orb.systemImage)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: DynamicIslandView.orbSize, height: DynamicIslandView.orbSize)
+                .background(Circle().fill(isSelected ? Color(white: 0.22) : Color.black))
+                .overlay(Circle().stroke(.white.opacity(0.08), lineWidth: 1))
+                .shadow(color: .black.opacity(0.35), radius: 8, y: 3)
+                .contentShape(Circle())
+        }
+        .buttonStyle(IslandPressButtonStyle())
     }
 }
 
@@ -209,7 +353,7 @@ struct DynamicIslandShape: Shape {
 
 // MARK: - Compact
 
-private struct CompactMediaView: View {
+struct CompactMediaView: View {
     let nowPlaying: NowPlayingInfo
     let geometry: DynamicIslandGeometry
     let namespace: Namespace.ID
@@ -242,129 +386,7 @@ private struct CompactMediaView: View {
     }
 }
 
-// MARK: - Expanded
-
-private struct ExpandedMediaView: View {
-    let nowPlaying: NowPlayingInfo
-    let geometry: DynamicIslandGeometry
-    let namespace: Namespace.ID
-    let onPrevious: () -> Void
-    let onPlayPause: () -> Void
-    let onNext: () -> Void
-    let onOpenPlayer: () -> Void
-
-    var body: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 12) {
-                Button(action: onOpenPlayer) {
-                    ArtworkView(nowPlaying: nowPlaying, cornerRadius: 12)
-                        .frame(width: 58, height: 58)
-                        .matchedGeometryEffect(id: "artwork", in: namespace)
-                        .shadow(color: nowPlaying.tintColor.opacity(0.35), radius: 10, y: 3)
-                }
-                .buttonStyle(.plain)
-                .help(AppLocalization.formatted("Open %@", nowPlaying.player.displayName))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(nowPlaying.title)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-
-                    Text(nowPlaying.artist.isEmpty ? nowPlaying.album : nowPlaying.artist)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.62))
-                        .lineLimit(1)
-
-                    Text(nowPlaying.player.displayName)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.38))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentTransition(.opacity)
-
-                EqualizerBarsView(isPlaying: nowPlaying.isPlaying, tint: nowPlaying.tintColor)
-                    .frame(width: 22, height: 18)
-                    .matchedGeometryEffect(id: "equalizer", in: namespace)
-            }
-
-            PlaybackProgressView(nowPlaying: nowPlaying)
-
-            HStack(spacing: 34) {
-                MediaControlButton(systemImage: "backward.fill", size: 17, action: onPrevious)
-                    .help(AppLocalization.string("Previous Track"))
-
-                MediaControlButton(
-                    systemImage: nowPlaying.isPlaying ? "pause.fill" : "play.fill",
-                    size: 24,
-                    action: onPlayPause
-                )
-                .help(AppLocalization.string("Play / Pause"))
-
-                MediaControlButton(systemImage: "forward.fill", size: 17, action: onNext)
-                    .help(AppLocalization.string("Next Track"))
-            }
-        }
-        .padding(.top, geometry.notchSize.height + 4)
-        .padding(.horizontal, 22)
-        .padding(.bottom, 14)
-    }
-}
-
-private struct ExpandedIdleView: View {
-    let geometry: DynamicIslandGeometry
-    let showsPlayers: Bool
-    let onOpenPlayer: (MediaPlayerApp) -> Void
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            TimelineView(.everyMinute) { context in
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(context.date, format: .dateTime.hour().minute())
-                        .font(.system(size: 24, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .contentTransition(.numericText())
-
-                    Text(context.date, format: .dateTime.weekday(.wide).day().month(.wide))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.55))
-                }
-                .environment(\.locale, AppLocalization.currentLocale)
-            }
-
-            Spacer(minLength: 12)
-
-            if showsPlayers {
-                VStack(alignment: .trailing, spacing: 7) {
-                    Label(AppLocalization.string("Nothing playing"), systemImage: "music.note")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.6))
-
-                    HStack(spacing: 8) {
-                        ForEach(MediaPlayerApp.allCases) { player in
-                            if let icon = player.appIcon {
-                                Button {
-                                    onOpenPlayer(player)
-                                } label: {
-                                    Image(nsImage: icon)
-                                        .resizable()
-                                        .frame(width: 24, height: 24)
-                                }
-                                .buttonStyle(IslandPressButtonStyle())
-                                .help(AppLocalization.formatted("Open %@", player.displayName))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.top, geometry.notchSize.height + 2)
-        .padding(.horizontal, 22)
-        .padding(.bottom, 12)
-    }
-}
-
-private struct PlaybackProgressView: View {
+struct PlaybackProgressView: View {
     let nowPlaying: NowPlayingInfo
 
     var body: some View {
@@ -411,7 +433,7 @@ private struct PlaybackProgressView: View {
 
 // MARK: - Notification
 
-private struct NotificationBannerView: View {
+struct NotificationBannerView: View {
     let notification: DynamicIslandNotification
     let geometry: DynamicIslandGeometry
 
@@ -474,7 +496,7 @@ private struct NotificationBannerView: View {
     }
 }
 
-private struct ProgressRingView: View {
+struct ProgressRingView: View {
     let progress: Double
     let tint: Color
     @State private var animatedProgress: Double = 0
@@ -499,7 +521,7 @@ private struct ProgressRingView: View {
 
 // MARK: - Shared pieces
 
-private struct ArtworkView: View {
+struct ArtworkView: View {
     let nowPlaying: NowPlayingInfo
     let cornerRadius: CGFloat
 
@@ -529,7 +551,7 @@ private struct ArtworkView: View {
 
 /// Four capsules bouncing on offset sine waves while playing; they settle into
 /// short dots when paused.
-private struct EqualizerBarsView: View {
+struct EqualizerBarsView: View {
     let isPlaying: Bool
     let tint: Color
 
@@ -568,7 +590,7 @@ private struct EqualizerBarsView: View {
     }
 }
 
-private struct MediaControlButton: View {
+struct MediaControlButton: View {
     let systemImage: String
     let size: CGFloat
     let action: () -> Void
@@ -586,14 +608,14 @@ private struct MediaControlButton: View {
     }
 }
 
-private struct IslandPressButtonStyle: ButtonStyle {
+struct IslandPressButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         IslandPressButtonBody(configuration: configuration)
     }
 }
 
 /// Separate view so the hover highlight can keep its own `@State`.
-private struct IslandPressButtonBody: View {
+struct IslandPressButtonBody: View {
     let configuration: ButtonStyleConfiguration
     @State private var isHovered = false
 
@@ -611,13 +633,13 @@ private struct IslandPressButtonBody: View {
     }
 }
 
-private extension NowPlayingInfo {
+extension NowPlayingInfo {
     var tintColor: Color {
         artworkTint.map(Color.init(nsColor:)) ?? Color(red: 0.36, green: 0.86, blue: 0.52)
     }
 }
 
-private extension DynamicIslandNotificationStyle {
+extension DynamicIslandNotificationStyle {
     var tint: Color {
         switch self {
         case .info: .blue

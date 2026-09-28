@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import KeyboardShortcuts
 
 /// Presentation boundary for the island panel; the view model publishes state
 /// and drives the AppKit panel through this protocol.
@@ -23,7 +24,13 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     @Published private(set) var nowPlaying: NowPlayingInfo?
     @Published private(set) var activeNotification: DynamicIslandNotification?
     @Published private(set) var isHovering = false
-    @Published private(set) var isPinnedOpen = false
+    /// Sticky open from the pin button; only the pin/collapse buttons close it.
+    @Published private(set) var isPinned = false
+    /// Opened by a click or shortcut; closes on an outside click, or when the
+    /// pointer leaves after having entered.
+    @Published private(set) var isForcedOpen = false
+    @Published private(set) var expandedContent: IslandExpandedContent
+    @Published private(set) var notificationHistory: [DynamicIslandNotification] = []
     @Published private(set) var geometry = DynamicIslandGeometry.fallback
     @Published private(set) var isEnabled = false
     @Published private(set) var preferences: DynamicIslandSettingsSnapshot
@@ -40,22 +47,35 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     private var lastBatteryStatus: BatteryStatus?
     private var hasReceivedNowPlaying = false
     private var defaultsObserver: AnyCancellable?
+    private var timerObserver: AnyCancellable?
+    private var pointerEnteredSinceForcedOpen = false
+    /// After the collapse button, ignore hover until the pointer leaves once.
+    private var suppressesHoverUntilExit = false
+    private var hasRegisteredShortcuts = false
+
+    let timer: IslandTimerViewModel
 
     private static let maxQueuedNotifications = 4
     private static let hoverEndDelay: Duration = .milliseconds(160)
     private static let lowBatteryThresholds = [20, 10]
+    private static let maxHistoryCount = 30
+    private static let lastPanelKey = "dynamicIsland.lastPanel"
 
     init(
         nowPlayingService: NowPlayingProviding,
         batteryMonitor: BatteryMonitoring,
         systemNotifications: SystemNotificationMonitoring,
+        timer: IslandTimerViewModel = IslandTimerViewModel(),
         settings: DynamicIslandSettingsReading & ToolboxSettingsReading
     ) {
+        self.timer = timer
         self.nowPlayingService = nowPlayingService
         self.batteryMonitor = batteryMonitor
         self.systemNotifications = systemNotifications
         self.settings = settings
         preferences = settings.dynamicIslandSettings()
+        let lastPanel = UserDefaults.standard.string(forKey: Self.lastPanelKey).flatMap(IslandPanel.init(rawValue:))
+        expandedContent = .panel(lastPanel ?? .nowPlaying)
 
         nowPlayingService.onChange = { [weak self] info in
             self?.handleNowPlayingChange(info)
@@ -65,6 +85,21 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         }
         systemNotifications.onBanner = { [weak self] banner in
             self?.handleSystemBanner(banner)
+        }
+
+        // The compact island shows the running timer, so re-render with it.
+        timerObserver = timer.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
+        timer.onFinish = { [weak self] in
+            self?.post(
+                DynamicIslandNotification(
+                    title: AppLocalization.string("island.timer.finished"),
+                    message: nil,
+                    systemImage: "timer",
+                    style: .warning
+                )
+            )
         }
 
         defaultsObserver = NotificationCenter.default.publisher(
@@ -87,7 +122,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     // MARK: - Derived state
 
     var mode: DynamicIslandMode {
-        if isPinnedOpen {
+        if isPinned || isForcedOpen {
             return .expanded
         }
 
@@ -96,7 +131,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             return .notification
         }
 
-        if isHovering && preferences.expandsOnHover {
+        if isExpandedByHover {
             return .expanded
         }
 
@@ -104,7 +139,19 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             return .compactMedia
         }
 
+        if timer.isActive {
+            return .compactTimer
+        }
+
         return .idle
+    }
+
+    private var isExpandedByHover: Bool {
+        isHovering && preferences.expandsOnHover && !suppressesHoverUntilExit
+    }
+
+    var availablePlayers: [MediaPlayerApp] {
+        MediaPlayerApp.allCases.filter(\.isRunning)
     }
 
     var hasMedia: Bool {
@@ -123,6 +170,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             hoverEndTask?.cancel()
             hoverEndTask = nil
 
+            pointerEnteredSinceForcedOpen = true
+
             if !isHovering {
                 isHovering = true
                 // Hold the banner while the pointer is on it.
@@ -133,7 +182,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             return
         }
 
-        guard isHovering || isPinnedOpen, hoverEndTask == nil else { return }
+        guard isHovering || (isForcedOpen && pointerEnteredSinceForcedOpen), hoverEndTask == nil else {
+            return
+        }
 
         // A short grace period keeps the island from snapping shut when the
         // pointer brushes the edge while moving between controls.
@@ -142,7 +193,11 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             guard !Task.isCancelled, let self else { return }
             self.hoverEndTask = nil
             self.isHovering = false
-            self.isPinnedOpen = false
+            self.suppressesHoverUntilExit = false
+
+            if self.isForcedOpen, self.pointerEnteredSinceForcedOpen {
+                self.isForcedOpen = false
+            }
 
             if let notification = self.activeNotification {
                 self.scheduleDismiss(of: notification)
@@ -153,6 +208,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// Clicking a banner opens the app that posted it; otherwise it toggles
     /// click-to-expand.
     func handleTap() {
+        // Taps on an open island belong to its panel content, never close it.
+        guard mode != .expanded else { return }
+
         guard mode == .notification, let notification = activeNotification else {
             toggleExpanded()
             return
@@ -169,8 +227,76 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     /// Click-to-expand, used when hover expansion is turned off.
     func toggleExpanded() {
-        guard !(isHovering && preferences.expandsOnHover) else { return }
-        isPinnedOpen.toggle()
+        guard !isExpandedByHover || isForcedOpen else { return }
+        isForcedOpen.toggle()
+        pointerEnteredSinceForcedOpen = isHovering
+    }
+
+    /// A click anywhere outside the island closes a click/shortcut-opened island.
+    func handleOutsideClick() {
+        guard isForcedOpen, !isPinned else { return }
+        isForcedOpen = false
+    }
+
+    // MARK: - Panels
+
+    func select(_ panel: IslandPanel) {
+        expandedContent = .panel(panel)
+        UserDefaults.standard.set(panel.rawValue, forKey: Self.lastPanelKey)
+    }
+
+    func showLauncher() {
+        expandedContent = expandedContent == .launcher ? lastPanelContent : .launcher
+    }
+
+    /// Opens the island on a panel (side buttons, shortcuts); toggles closed when
+    /// that panel is already showing.
+    func open(_ panel: IslandPanel) {
+        if mode == .expanded, expandedContent == .panel(panel) {
+            collapse()
+            return
+        }
+
+        select(panel)
+
+        if mode != .expanded {
+            isForcedOpen = true
+            pointerEnteredSinceForcedOpen = isHovering
+        }
+    }
+
+    func togglePin() {
+        isPinned.toggle()
+
+        if !isPinned {
+            // Stay open until the pointer leaves, like a click-open.
+            isForcedOpen = true
+            pointerEnteredSinceForcedOpen = isHovering
+        }
+    }
+
+    func collapse() {
+        isPinned = false
+        isForcedOpen = false
+        suppressesHoverUntilExit = isHovering
+    }
+
+    func clearNotificationHistory() {
+        notificationHistory = []
+    }
+
+    func preferPlayer(_ player: MediaPlayerApp) {
+        nowPlayingService.prefer(player)
+    }
+
+    /// The panel the launcher highlights and returns to.
+    var lastSelectedPanel: IslandPanel {
+        UserDefaults.standard.string(forKey: Self.lastPanelKey).flatMap(IslandPanel.init(rawValue:)) ?? .nowPlaying
+    }
+
+    private var lastPanelContent: IslandExpandedContent {
+        let lastPanel = UserDefaults.standard.string(forKey: Self.lastPanelKey).flatMap(IslandPanel.init(rawValue:))
+        return .panel(lastPanel ?? .nowPlaying)
     }
 
     func togglePlayPause() {
@@ -216,6 +342,14 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     func post(_ notification: DynamicIslandNotification) {
         guard isEnabled else { return }
+
+        if notification.style != .media {
+            notificationHistory.insert(notification, at: 0)
+
+            if notificationHistory.count > Self.maxHistoryCount {
+                notificationHistory.removeLast(notificationHistory.count - Self.maxHistoryCount)
+            }
+        }
 
         guard activeNotification != nil else {
             show(notification)
@@ -435,15 +569,46 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             systemNotifications.stop()
         }
 
+        updateShortcuts()
+
         if !isEnabled {
             clearNotifications()
             hoverEndTask?.cancel()
             hoverEndTask = nil
             isHovering = false
-            isPinnedOpen = false
+            isPinned = false
+            isForcedOpen = false
             presenter?.hide()
         } else {
             presenter?.refresh()
+        }
+    }
+}
+
+// MARK: - Shortcuts
+
+private extension DynamicIslandViewModel {
+    /// ⌥⌘-letter shortcuts open each panel; registered once and enabled only
+    /// while the island and the shortcut setting are on.
+    func updateShortcuts() {
+        let names = IslandPanel.allCases.map(\.shortcutName)
+
+        if !hasRegisteredShortcuts {
+            hasRegisteredShortcuts = true
+
+            for panel in IslandPanel.allCases {
+                KeyboardShortcuts.onKeyUp(for: panel.shortcutName) { [weak self] in
+                    Task { @MainActor in
+                        self?.open(panel)
+                    }
+                }
+            }
+        }
+
+        if isEnabled && preferences.panelShortcutsEnabled {
+            KeyboardShortcuts.enable(names)
+        } else {
+            KeyboardShortcuts.disable(names)
         }
     }
 }

@@ -15,6 +15,7 @@ private final class FakeNowPlayingService: NowPlayingProviding {
     func send(_ command: MediaCommand, to player: MediaPlayerApp) {
         sentCommands.append((command, player))
     }
+    func prefer(_ player: MediaPlayerApp) {}
 
     func emit(_ info: NowPlayingInfo?) {
         onChange?(info)
@@ -73,6 +74,8 @@ private struct StubIslandSettings: DynamicIslandSettingsReading, ToolboxSettings
             showsSystemNotifications: true,
             showsBatteryEvents: true,
             expandsOnHover: expandsOnHover,
+            panelShortcutsEnabled: false,
+            showsSideButtons: true,
             notificationDurationSeconds: 4
         )
     }
@@ -208,6 +211,55 @@ struct DynamicIslandViewModelTests {
 
         viewModel.handleTap()
         #expect(viewModel.activeNotification == nil)
+    }
+
+    @Test func sideButtonOpensPanelAndOutsideClickClosesIt() {
+        let viewModel = makeViewModel()
+
+        viewModel.open(.system)
+        #expect(viewModel.mode == .expanded)
+        #expect(viewModel.expandedContent == .panel(.system))
+
+        // Pointer movement outside doesn't close it before it ever entered…
+        viewModel.setHovering(false)
+        #expect(viewModel.mode == .expanded)
+
+        // …but a click elsewhere does.
+        viewModel.handleOutsideClick()
+        #expect(viewModel.mode == .idle)
+    }
+
+    @Test func pinnedIslandIgnoresOutsideClicks() {
+        let viewModel = makeViewModel()
+
+        viewModel.open(.timer)
+        viewModel.togglePin()
+        viewModel.handleOutsideClick()
+        #expect(viewModel.mode == .expanded)
+
+        viewModel.collapse()
+        #expect(viewModel.mode == .idle)
+    }
+
+    @Test func runningTimerShowsCompactTimerAndNotifiesOnReset() {
+        let viewModel = makeViewModel()
+
+        viewModel.timer.start(minutes: 5)
+        #expect(viewModel.mode == .compactTimer)
+        #expect(viewModel.timer.remaining() <= 300)
+
+        viewModel.timer.reset()
+        #expect(viewModel.mode == .idle)
+    }
+
+    @Test func postedNotificationsAreKeptInHistory() {
+        let viewModel = makeViewModel()
+
+        #expect(viewModel.postToast("Copied", systemImage: "checkmark", style: .success))
+        #expect(viewModel.notificationHistory.count == 1)
+
+        viewModel.clearNotificationHistory()
+        #expect(viewModel.notificationHistory.isEmpty)
     }
 
     @Test func playPauseSendsCommandAndFlipsStateOptimistically() {

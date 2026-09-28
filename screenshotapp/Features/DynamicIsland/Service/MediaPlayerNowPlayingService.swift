@@ -10,6 +10,8 @@ protocol NowPlayingProviding: AnyObject {
     func stop()
     func refresh()
     func send(_ command: MediaCommand, to player: MediaPlayerApp)
+    /// Shows this player's track when several players have one loaded.
+    func prefer(_ player: MediaPlayerApp)
 }
 
 /// macOS has no public API for the system "Now Playing" session (MediaRemote is
@@ -32,6 +34,8 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
     private var refreshGeneration = 0
     private var current: NowPlayingInfo?
     private var lastActivePlayer: MediaPlayerApp?
+    /// Picked in the Now Playing source menu; wins over "whichever is playing".
+    private var preferredPlayer: MediaPlayerApp?
     private var artworkCache: [String: (image: NSImage, tint: NSColor?)] = [:]
     private var artworkLoadingKeys: Set<String> = []
     /// Tracks without artwork, so the poll doesn't re-run the artwork script.
@@ -55,6 +59,11 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
                 queue: .main
             ) { [weak self] _ in
                 MainActor.assumeIsolated {
+                    // Activity in another player overrides a manual pick.
+                    if self?.preferredPlayer != player {
+                        self?.preferredPlayer = nil
+                    }
+
                     self?.lastActivePlayer = player
                     self?.scheduleRefresh(after: 0.15)
                 }
@@ -150,6 +159,12 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
         }
     }
 
+    func prefer(_ player: MediaPlayerApp) {
+        lastActivePlayer = player
+        preferredPlayer = player
+        refresh()
+    }
+
     private func scheduleRefresh(after delay: TimeInterval) {
         pendingRefresh?.cancel()
 
@@ -167,7 +182,8 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
 
         // Prefer whatever is audibly playing, then the player that last changed,
         // then the one already on screen.
-        let chosen = snapshots.first(where: \.isPlaying)
+        let chosen = snapshots.first(where: { $0.player == preferredPlayer })
+            ?? snapshots.first(where: \.isPlaying)
             ?? snapshots.first(where: { $0.player == lastActivePlayer })
             ?? snapshots.first(where: { $0.player == current?.player })
             ?? snapshots.first

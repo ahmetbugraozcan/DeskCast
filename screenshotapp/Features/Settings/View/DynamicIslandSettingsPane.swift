@@ -1,3 +1,4 @@
+import KeyboardShortcuts
 import SwiftUI
 
 struct DynamicIslandSettingsPane: View {
@@ -15,6 +16,10 @@ struct DynamicIslandSettingsPane: View {
     private var showsBatteryEvents = DynamicIslandSettings.defaultShowsBatteryEvents
     @AppStorage(DynamicIslandSettings.Keys.expandsOnHover)
     private var expandsOnHover = DynamicIslandSettings.defaultExpandsOnHover
+    @AppStorage(DynamicIslandSettings.Keys.panelShortcutsEnabled)
+    private var panelShortcutsEnabled = DynamicIslandSettings.defaultPanelShortcutsEnabled
+    @AppStorage(DynamicIslandSettings.Keys.showsSideButtons)
+    private var showsSideButtons = DynamicIslandSettings.defaultShowsSideButtons
     @AppStorage(DynamicIslandSettings.Keys.notificationDurationSeconds)
     private var notificationDurationSeconds = DynamicIslandSettings.defaultNotificationDurationSeconds
     @StateObject private var permissionStore = PrivacyPermissionViewModel()
@@ -109,6 +114,28 @@ struct DynamicIslandSettingsPane: View {
                         title: AppLocalization.string("Expand on hover"),
                         isOn: $expandsOnHover
                     )
+
+                    SettingsSectionDivider()
+
+                    SettingsToggleRow(
+                        title: AppLocalization.string("island.settings.sideButtons"),
+                        isOn: $showsSideButtons
+                    )
+
+                    SettingsSectionDivider()
+
+                    SettingsToggleRow(
+                        title: AppLocalization.string("island.settings.panelShortcuts"),
+                        isOn: $panelShortcutsEnabled
+                    )
+
+                    Text(AppLocalization.string("island.settings.panelShortcutsHint"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .disabled(!isEnabled)
@@ -117,6 +144,7 @@ struct DynamicIslandSettingsPane: View {
             FeatureResetSection {
                 DynamicIslandSettings.resetToDefaults()
                 ToolboxSettings.resetTools([.dynamicIsland])
+                KeyboardShortcuts.reset(IslandPanel.allCases.map(\.shortcutName))
             }
         }
         .onAppear {

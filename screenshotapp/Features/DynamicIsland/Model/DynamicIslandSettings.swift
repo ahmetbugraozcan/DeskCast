@@ -7,6 +7,8 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     let showsSystemNotifications: Bool
     let showsBatteryEvents: Bool
     let expandsOnHover: Bool
+    let panelShortcutsEnabled: Bool
+    let showsSideButtons: Bool
     let notificationDurationSeconds: Int
 }
 
@@ -18,6 +20,9 @@ enum DynamicIslandSettings {
         static let showsSystemNotifications = "dynamicIsland.showsSystemNotifications"
         static let showsBatteryEvents = "dynamicIsland.showsBatteryEvents"
         static let expandsOnHover = "dynamicIsland.expandsOnHover"
+        static let panelShortcutsEnabled = "dynamicIsland.panelShortcutsEnabled"
+        static let showsSideButtons = "dynamicIsland.showsSideButtons"
+        static let scratchpadText = "dynamicIsland.scratchpadText"
         static let notificationDurationSeconds = "dynamicIsland.notificationDurationSeconds"
     }
 
@@ -29,10 +34,13 @@ enum DynamicIslandSettings {
     static let defaultShowsSystemNotifications = true
     static let defaultShowsBatteryEvents = true
     static let defaultExpandsOnHover = true
+    static let defaultPanelShortcutsEnabled = true
+    static let defaultShowsSideButtons = true
     static let defaultNotificationDurationSeconds = 4
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
-        defaults.register(defaults: defaultValues)
+        // Scratchpad text is user content, so it's registered but never reset.
+        defaults.register(defaults: defaultValues.merging([Keys.scratchpadText: ""]) { current, _ in current })
     }
 
     static func resetToDefaults(in defaults: UserDefaults = .standard) {
@@ -49,6 +57,8 @@ enum DynamicIslandSettings {
             Keys.showsSystemNotifications: defaultShowsSystemNotifications,
             Keys.showsBatteryEvents: defaultShowsBatteryEvents,
             Keys.expandsOnHover: defaultExpandsOnHover,
+            Keys.panelShortcutsEnabled: defaultPanelShortcutsEnabled,
+            Keys.showsSideButtons: defaultShowsSideButtons,
             Keys.notificationDurationSeconds: defaultNotificationDurationSeconds
         ]
     }
@@ -61,6 +71,8 @@ enum DynamicIslandSettings {
             showsSystemNotifications: defaults.bool(forKey: Keys.showsSystemNotifications),
             showsBatteryEvents: defaults.bool(forKey: Keys.showsBatteryEvents),
             expandsOnHover: defaults.bool(forKey: Keys.expandsOnHover),
+            panelShortcutsEnabled: defaults.bool(forKey: Keys.panelShortcutsEnabled),
+            showsSideButtons: defaults.bool(forKey: Keys.showsSideButtons),
             notificationDurationSeconds: clampedNotificationDuration(
                 defaults.integer(forKey: Keys.notificationDurationSeconds)
             )

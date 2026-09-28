@@ -422,7 +422,9 @@
 				INFOPLIST_KEY_CFBundleDisplayName = DeskCast;
 				INFOPLIST_KEY_CFBundleName = DeskCast;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "DeskCast needs Finder access to copy the current folder path, and Music or Spotify access to show and control the playing song.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "DeskCast needs Finder access to copy the current folder path, Music or Spotify access to show and control the playing song, and System Events access to switch Dark Mode.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "DeskCast shows your upcoming events in the Dynamic Island calendar panel.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "DeskCast shows a live mirror preview in the Dynamic Island camera panel. Video never leaves your Mac.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "DeskCast uses the selected microphone when you enable microphone audio for a screen recording.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -462,7 +464,9 @@
 				INFOPLIST_KEY_CFBundleDisplayName = DeskCast;
 				INFOPLIST_KEY_CFBundleName = DeskCast;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "DeskCast needs Finder access to copy the current folder path, and Music or Spotify access to show and control the playing song.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "DeskCast needs Finder access to copy the current folder path, Music or Spotify access to show and control the playing song, and System Events access to switch Dark Mode.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "DeskCast shows your upcoming events in the Dynamic Island calendar panel.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "DeskCast shows a live mirror preview in the Dynamic Island camera panel. Video never leaves your Mac.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "DeskCast uses the selected microphone when you enable microphone audio for a screen recording.";
 				LD_RUNPATH_SEARCH_PATHS = (
