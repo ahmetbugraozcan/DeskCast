@@ -38,7 +38,7 @@
 "Required by Capture Selected Area and Capture OCR." = "Required by Capture Selected Area and Capture OCR.";
 "Required by Capture Selected Area, Capture Video, and Capture OCR." = "Required by Capture Selected Area, Capture Video, and Capture OCR.";
 "Required to read the front Finder window path." = "Required to read the front Finder window path.";
-"Required to open Drop Shelf from the shake gesture." = "Required to open Drop Shelf from the shake gesture.";
+"Required to open Drop Shelf from the shake gesture and to show other apps' notifications in the Dynamic Island." = "Required to open Drop Shelf from the shake gesture and to show other apps' notifications in the Dynamic Island.";
 "Checking" = "Checking";
 "Granted" = "Granted";
 "Not Granted" = "Not Granted";
@@ -292,3 +292,5 @@
 "Notification duration: %ld s" = "Notification duration: %ld s";
 "Behavior" = "Behavior";
 "Expand on hover" = "Expand on hover";
+"Show notifications from other apps" = "Show notifications from other apps";
+"Messages, Mail, Gmail in your browser and other apps' banners are mirrored in the island. Requires Accessibility permission." = "Messages, Mail, Gmail in your browser and other apps' banners are mirrored in the island. Requires Accessibility permission.";

@@ -12,7 +12,7 @@ A macOS menu-bar utility toolbox. It bundles several small productivity tools be
 - **Copy Finder Path** — copy the front Finder window's path via AppleScript.
 - **Search Images** — index and search local images by filename + recognized text.
 - **Drop Shelf** — a floating shelf that collects dragged files/folders/links/text/images to send together.
-- **Dynamic Island** — a notch-anchored panel showing the playing song (Music/Spotify), media controls, DeskCast toasts, and battery alerts; expands on hover.
+- **Dynamic Island** — a notch-anchored panel showing the playing song (Music/Spotify), media controls, other apps' notifications, DeskCast toasts, and battery alerts; expands on hover.
 
 ### Naming (important)
 
@@ -80,7 +80,8 @@ Entitlements grant Apple Events (`com.apple.security.automation.apple-events`) a
 ## Dynamic Island architecture
 
 - macOS has no public "Now Playing" API (MediaRemote is entitlement-gated), so `MediaPlayerNowPlayingService` drives **Music and Spotify** only: their distributed playback notifications trigger a refresh, AppleScript (on a serial background queue) reads track/artwork and sends play-pause/next/previous. Scripts only run for players that are already running, so nothing is launched.
-- Other apps' Notification Center banners cannot be read; the island shows DeskCast's own toasts (routed from `ToastPresenter.islandRouter`), track changes, and IOKit battery events (`BatteryMonitorService`).
+- Other apps' banners (Messages, Mail, browser Gmail, …) are mirrored by `SystemNotificationMonitorService`, which reads the `com.apple.notificationcenterui` process through the Accessibility API (AXObserver + 1 s poll, scans off-main, diffed against the previous scan). It needs the Accessibility permission and relies on Notification Center's private AX layout (`AXNotificationCenter…` subroles), so re-check it on new macOS releases. The island also shows DeskCast's own toasts (routed from `ToastPresenter.islandRouter`), track changes, and IOKit battery events (`BatteryMonitorService`).
+- While a banner is showing, hover holds it (no expand); clicking opens the posting app.
 - `DynamicIslandPanelCoordinator` keeps a fixed-size transparent panel above the menu bar and toggles `ignoresMouseEvents` from global/local mouse-move monitors, so only the island shape takes clicks. Island sizes come from static metrics on `DynamicIslandView`; keep the coordinator's hover rect and the view in sync.
 
 ## Build & test

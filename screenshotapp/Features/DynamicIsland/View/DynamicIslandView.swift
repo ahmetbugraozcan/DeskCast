@@ -13,7 +13,7 @@ struct DynamicIslandView: View {
     static let expandedMinimumWidth: CGFloat = 440
     static let expandedMediaContentHeight: CGFloat = 150
     static let expandedIdleContentHeight: CGFloat = 70
-    static let notificationContentHeight: CGFloat = 54
+    static let notificationContentHeight: CGFloat = 60
     static let notificationMinimumWidth: CGFloat = 380
 
     static let morphAnimation = Animation.spring(response: 0.42, dampingFraction: 0.76)
@@ -91,7 +91,7 @@ struct DynamicIslandView: View {
             .shadow(color: .black.opacity(mode == .idle ? 0 : 0.38), radius: mode == .expanded ? 18 : 10, y: 6)
             .opacity(isShapeVisible ? 1 : 0)
             .onTapGesture {
-                store.toggleExpanded()
+                store.handleTap()
             }
 
             Spacer(minLength: 0)
@@ -421,6 +421,14 @@ private struct NotificationBannerView: View {
                 .frame(width: 36, height: 36)
 
             VStack(alignment: .leading, spacing: 2) {
+                if let caption = notification.caption, !caption.isEmpty {
+                    Text(caption)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .textCase(.uppercase)
+                        .lineLimit(1)
+                }
+
                 Text(notification.title)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white)
@@ -618,6 +626,7 @@ private extension DynamicIslandNotificationStyle {
         case .error: .red
         case .media: Color(red: 0.36, green: 0.86, blue: 0.52)
         case .battery: .green
+        case .system: .white
         }
     }
 }

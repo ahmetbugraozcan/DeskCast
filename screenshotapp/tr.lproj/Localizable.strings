@@ -38,7 +38,7 @@
 "Required by Capture Selected Area and Capture OCR." = "Seçili Alanı Yakala ve OCR Yakala için gereklidir.";
 "Required by Capture Selected Area, Capture Video, and Capture OCR." = "Seçili Alanı Yakala, Video Yakala ve OCR Yakala için gereklidir.";
 "Required to read the front Finder window path." = "Öndeki Finder penceresinin yolunu okumak için gereklidir.";
-"Required to open Drop Shelf from the shake gesture." = "Bırakma Rafını sallama hareketiyle açmak için gereklidir.";
+"Required to open Drop Shelf from the shake gesture and to show other apps' notifications in the Dynamic Island." = "Bırakma Rafını sallama hareketiyle açmak ve diğer uygulamaların bildirimlerini Dynamic Island'da göstermek için gereklidir.";
 "Checking" = "Denetleniyor";
 "Granted" = "İzin Verildi";
 "Not Granted" = "İzin Verilmedi";
@@ -292,3 +292,5 @@
 "Notification duration: %ld s" = "Bildirim süresi: %ld sn";
 "Behavior" = "Davranış";
 "Expand on hover" = "Üzerine gelince büyüt";
+"Show notifications from other apps" = "Diğer uygulamaların bildirimlerini göster";
+"Messages, Mail, Gmail in your browser and other apps' banners are mirrored in the island. Requires Accessibility permission." = "Mesajlar, Mail, tarayıcıdaki Gmail ve diğer uygulamaların bildirimleri adada gösterilir. Erişilebilirlik izni gerekir.";

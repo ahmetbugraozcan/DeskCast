@@ -9,12 +9,15 @@ struct DynamicIslandSettingsPane: View {
     private var showsTrackChanges = DynamicIslandSettings.defaultShowsTrackChanges
     @AppStorage(DynamicIslandSettings.Keys.showsAppNotifications)
     private var showsAppNotifications = DynamicIslandSettings.defaultShowsAppNotifications
+    @AppStorage(DynamicIslandSettings.Keys.showsSystemNotifications)
+    private var showsSystemNotifications = DynamicIslandSettings.defaultShowsSystemNotifications
     @AppStorage(DynamicIslandSettings.Keys.showsBatteryEvents)
     private var showsBatteryEvents = DynamicIslandSettings.defaultShowsBatteryEvents
     @AppStorage(DynamicIslandSettings.Keys.expandsOnHover)
     private var expandsOnHover = DynamicIslandSettings.defaultExpandsOnHover
     @AppStorage(DynamicIslandSettings.Keys.notificationDurationSeconds)
     private var notificationDurationSeconds = DynamicIslandSettings.defaultNotificationDurationSeconds
+    @StateObject private var permissionStore = PrivacyPermissionViewModel()
 
     var body: some View {
         SettingsPage(
@@ -24,6 +27,11 @@ struct DynamicIslandSettingsPane: View {
             ToolCategorySection(
                 title: AppLocalization.string("Tool"),
                 tools: [.dynamicIsland]
+            )
+
+            FeaturePermissionManagerView(
+                store: permissionStore,
+                permissions: [.accessibility]
             )
 
             VStack(alignment: .leading, spacing: 24) {
@@ -53,6 +61,23 @@ struct DynamicIslandSettingsPane: View {
                 }
 
                 SettingsControlSection(title: AppLocalization.string("Notifications")) {
+                    SettingsToggleRow(
+                        title: AppLocalization.string("Show notifications from other apps"),
+                        isOn: $showsSystemNotifications
+                    )
+
+                    SettingsSectionDivider()
+
+                    Text(AppLocalization.string("Messages, Mail, Gmail in your browser and other apps' banners are mirrored in the island. Requires Accessibility permission."))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    SettingsSectionDivider()
+
                     SettingsToggleRow(
                         title: AppLocalization.string("Show DeskCast notifications in the island"),
                         isOn: $showsAppNotifications

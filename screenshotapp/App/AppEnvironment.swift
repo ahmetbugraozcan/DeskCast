@@ -55,6 +55,7 @@ final class AppEnvironment: ObservableObject {
         let dynamicIsland = DynamicIslandViewModel(
             nowPlayingService: MediaPlayerNowPlayingService(),
             batteryMonitor: BatteryMonitorService(),
+            systemNotifications: SystemNotificationMonitorService(),
             settings: settings
         )
 

@@ -4,6 +4,7 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     let showsNowPlaying: Bool
     let showsTrackChanges: Bool
     let showsAppNotifications: Bool
+    let showsSystemNotifications: Bool
     let showsBatteryEvents: Bool
     let expandsOnHover: Bool
     let notificationDurationSeconds: Int
@@ -14,6 +15,7 @@ enum DynamicIslandSettings {
         static let showsNowPlaying = "dynamicIsland.showsNowPlaying"
         static let showsTrackChanges = "dynamicIsland.showsTrackChanges"
         static let showsAppNotifications = "dynamicIsland.showsAppNotifications"
+        static let showsSystemNotifications = "dynamicIsland.showsSystemNotifications"
         static let showsBatteryEvents = "dynamicIsland.showsBatteryEvents"
         static let expandsOnHover = "dynamicIsland.expandsOnHover"
         static let notificationDurationSeconds = "dynamicIsland.notificationDurationSeconds"
@@ -24,6 +26,7 @@ enum DynamicIslandSettings {
     static let defaultShowsNowPlaying = true
     static let defaultShowsTrackChanges = true
     static let defaultShowsAppNotifications = true
+    static let defaultShowsSystemNotifications = true
     static let defaultShowsBatteryEvents = true
     static let defaultExpandsOnHover = true
     static let defaultNotificationDurationSeconds = 4
@@ -43,6 +46,7 @@ enum DynamicIslandSettings {
             Keys.showsNowPlaying: defaultShowsNowPlaying,
             Keys.showsTrackChanges: defaultShowsTrackChanges,
             Keys.showsAppNotifications: defaultShowsAppNotifications,
+            Keys.showsSystemNotifications: defaultShowsSystemNotifications,
             Keys.showsBatteryEvents: defaultShowsBatteryEvents,
             Keys.expandsOnHover: defaultExpandsOnHover,
             Keys.notificationDurationSeconds: defaultNotificationDurationSeconds
@@ -54,6 +58,7 @@ enum DynamicIslandSettings {
             showsNowPlaying: defaults.bool(forKey: Keys.showsNowPlaying),
             showsTrackChanges: defaults.bool(forKey: Keys.showsTrackChanges),
             showsAppNotifications: defaults.bool(forKey: Keys.showsAppNotifications),
+            showsSystemNotifications: defaults.bool(forKey: Keys.showsSystemNotifications),
             showsBatteryEvents: defaults.bool(forKey: Keys.showsBatteryEvents),
             expandsOnHover: defaults.bool(forKey: Keys.expandsOnHover),
             notificationDurationSeconds: clampedNotificationDuration(

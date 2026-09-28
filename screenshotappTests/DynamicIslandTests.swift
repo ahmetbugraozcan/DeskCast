@@ -37,6 +37,20 @@ private final class FakeBatteryMonitor: BatteryMonitoring {
 }
 
 @MainActor
+private final class FakeSystemNotificationMonitor: SystemNotificationMonitoring {
+    var onBanner: ((SystemNotificationBanner) -> Void)?
+    var isAuthorized = true
+    private(set) var isStarted = false
+
+    func start() { isStarted = true }
+    func stop() { isStarted = false }
+
+    func emit(_ banner: SystemNotificationBanner) {
+        onBanner?(banner)
+    }
+}
+
+@MainActor
 private final class FakeIslandPresenter: DynamicIslandPresenting {
     var isVisible = true
     private(set) var refreshCount = 0
@@ -56,6 +70,7 @@ private struct StubIslandSettings: DynamicIslandSettingsReading, ToolboxSettings
             showsNowPlaying: true,
             showsTrackChanges: true,
             showsAppNotifications: true,
+            showsSystemNotifications: true,
             showsBatteryEvents: true,
             expandsOnHover: expandsOnHover,
             notificationDurationSeconds: 4
@@ -90,11 +105,13 @@ struct DynamicIslandViewModelTests {
     private let nowPlaying = FakeNowPlayingService()
     private let battery = FakeBatteryMonitor()
     private let presenter = FakeIslandPresenter()
+    private let systemNotifications = FakeSystemNotificationMonitor()
 
     private func makeViewModel(settings: StubIslandSettings = StubIslandSettings()) -> DynamicIslandViewModel {
         let viewModel = DynamicIslandViewModel(
             nowPlayingService: nowPlaying,
             batteryMonitor: battery,
+            systemNotifications: systemNotifications,
             settings: settings
         )
         viewModel.presenter = presenter
@@ -172,6 +189,25 @@ struct DynamicIslandViewModelTests {
 
         #expect(viewModel.activeNotification?.style == .battery)
         #expect(viewModel.activeNotification?.progress == 0.5)
+    }
+
+    @Test func otherAppBannerIsMirroredAndHeldWhileHovered() {
+        let viewModel = makeViewModel()
+        #expect(systemNotifications.isStarted)
+
+        systemNotifications.emit(SystemNotificationBanner(appName: "DeskCastTestApp", title: "Ayşe", message: "Selam"))
+
+        #expect(viewModel.mode == .notification)
+        #expect(viewModel.activeNotification?.style == .system)
+        #expect(viewModel.activeNotification?.caption == "DeskCastTestApp")
+        #expect(viewModel.activeNotification?.title == "Ayşe")
+
+        // Hovering keeps the banner on screen instead of expanding.
+        viewModel.setHovering(true)
+        #expect(viewModel.mode == .notification)
+
+        viewModel.handleTap()
+        #expect(viewModel.activeNotification == nil)
     }
 
     @Test func playPauseSendsCommandAndFlipsStateOptimistically() {

@@ -8,10 +8,13 @@ enum DynamicIslandNotificationStyle: Equatable {
     case error
     case media
     case battery
+    case system
 }
 
 struct DynamicIslandNotification: Identifiable {
     let id = UUID()
+    /// Small caption above the title, e.g. the posting app's name.
+    var caption: String?
     let title: String
     let message: String?
     let systemImage: String
@@ -22,6 +25,8 @@ struct DynamicIslandNotification: Identifiable {
     var progress: Double?
     /// Identifies the track a media banner belongs to, so late artwork can patch it.
     var mediaKey: String?
+    /// App to open when the banner is clicked.
+    var sourceAppURL: URL?
 }
 
 /// What the island is currently showing; drives size and content.

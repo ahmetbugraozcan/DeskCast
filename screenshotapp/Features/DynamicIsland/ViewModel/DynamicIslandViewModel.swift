@@ -32,6 +32,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     private let nowPlayingService: NowPlayingProviding
     private let batteryMonitor: BatteryMonitoring
+    private let systemNotifications: SystemNotificationMonitoring
     private let settings: DynamicIslandSettingsReading & ToolboxSettingsReading
     private var pendingNotifications: [DynamicIslandNotification] = []
     private var notificationDismissTask: Task<Void, Never>?
@@ -47,10 +48,12 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     init(
         nowPlayingService: NowPlayingProviding,
         batteryMonitor: BatteryMonitoring,
+        systemNotifications: SystemNotificationMonitoring,
         settings: DynamicIslandSettingsReading & ToolboxSettingsReading
     ) {
         self.nowPlayingService = nowPlayingService
         self.batteryMonitor = batteryMonitor
+        self.systemNotifications = systemNotifications
         self.settings = settings
         preferences = settings.dynamicIslandSettings()
 
@@ -59,6 +62,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         }
         batteryMonitor.onChange = { [weak self] status in
             self?.handleBatteryChange(status)
+        }
+        systemNotifications.onBanner = { [weak self] banner in
+            self?.handleSystemBanner(banner)
         }
 
         defaultsObserver = NotificationCenter.default.publisher(
@@ -81,12 +87,17 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     // MARK: - Derived state
 
     var mode: DynamicIslandMode {
-        if (isHovering && preferences.expandsOnHover) || isPinnedOpen {
+        if isPinnedOpen {
             return .expanded
         }
 
+        // A banner stays put while hovered so it can be read and clicked.
         if activeNotification != nil {
             return .notification
+        }
+
+        if isHovering && preferences.expandsOnHover {
+            return .expanded
         }
 
         if hasMedia {
@@ -114,6 +125,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
             if !isHovering {
                 isHovering = true
+                // Hold the banner while the pointer is on it.
+                notificationDismissTask?.cancel()
+                notificationDismissTask = nil
             }
 
             return
@@ -129,7 +143,28 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             self.hoverEndTask = nil
             self.isHovering = false
             self.isPinnedOpen = false
+
+            if let notification = self.activeNotification {
+                self.scheduleDismiss(of: notification)
+            }
         }
+    }
+
+    /// Clicking a banner opens the app that posted it; otherwise it toggles
+    /// click-to-expand.
+    func handleTap() {
+        guard mode == .notification, let notification = activeNotification else {
+            toggleExpanded()
+            return
+        }
+
+        if let url = notification.sourceAppURL {
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        } else if notification.style == .media {
+            openPlayer()
+        }
+
+        dismissNotification()
     }
 
     /// Click-to-expand, used when hover expansion is turned off.
@@ -218,8 +253,18 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     }
 
     private func show(_ notification: DynamicIslandNotification) {
-        notificationDismissTask?.cancel()
         activeNotification = notification
+
+        if isHovering {
+            notificationDismissTask?.cancel()
+            notificationDismissTask = nil
+        } else {
+            scheduleDismiss(of: notification)
+        }
+    }
+
+    private func scheduleDismiss(of notification: DynamicIslandNotification) {
+        notificationDismissTask?.cancel()
 
         let duration = Duration.seconds(preferences.notificationDurationSeconds)
         let id = notification.id
@@ -280,6 +325,41 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         )
         banner.mediaKey = info.cacheKey
         post(banner)
+    }
+
+    private func handleSystemBanner(_ banner: SystemNotificationBanner) {
+        guard preferences.showsSystemNotifications else { return }
+
+        let app = banner.appName.flatMap(Self.application(named:))
+
+        post(
+            DynamicIslandNotification(
+                caption: banner.appName,
+                title: banner.title,
+                message: banner.message,
+                systemImage: "bell.badge.fill",
+                style: .system,
+                image: app?.icon,
+                sourceAppURL: app?.url
+            )
+        )
+    }
+
+    /// Resolves the app a banner names, preferring a running instance.
+    private static func application(named name: String) -> (icon: NSImage, url: URL)? {
+        if let running = NSWorkspace.shared.runningApplications.first(where: { $0.localizedName == name }),
+           let url = running.bundleURL {
+            return (running.icon ?? NSWorkspace.shared.icon(forFile: url.path), url)
+        }
+
+        let candidates = ["/Applications", "/System/Applications", "/System/Applications/Utilities"]
+            .map { URL(fileURLWithPath: $0).appendingPathComponent("\(name).app") }
+
+        guard let url = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
+            return nil
+        }
+
+        return (NSWorkspace.shared.icon(forFile: url.path), url)
     }
 
     private func handleBatteryChange(_ status: BatteryStatus) {
@@ -347,6 +427,12 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         } else {
             batteryMonitor.stop()
             lastBatteryStatus = nil
+        }
+
+        if isEnabled && preferences.showsSystemNotifications {
+            systemNotifications.start()
+        } else {
+            systemNotifications.stop()
         }
 
         if !isEnabled {
