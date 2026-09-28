@@ -97,4 +97,6 @@ xcodebuild -project screenshotapp.xcodeproj -scheme screenshotapp -configuration
 xcodebuild -project screenshotapp.xcodeproj -scheme screenshotapp -destination 'platform=macOS' test
 ```
 
+CI: `.github/workflows/build.yml` runs an unsigned Debug `build-for-testing`, the unit tests, and strict SwiftLint on every pushed branch (use it when no Mac is available). `release.yml` signs, notarizes and publishes — don't trigger it for checks.
+
 Tests include placeholder Swift Testing units + XCTest UI tests that launch the accessory app. Before treating a UI-test failure as a regression, check whether it's just app launch/termination flakiness from the menu-bar/accessory activation.
