@@ -1,5 +1,6 @@
 import AppKit
 import CoreAudio
+import OSLog
 
 /// An app that is (or recently was) producing audio.
 struct AppAudioSource: Identifiable, Equatable {
@@ -243,6 +244,7 @@ nonisolated final class AppAudioTap: @unchecked Sendable {
     private var aggregateID = AudioObjectID(kAudioObjectUnknown)
     private var ioProcID: AudioDeviceIOProcID?
     private let queue = DispatchQueue(label: "com.ahmetbugraozcan.screenshotapp.appvolume", qos: .userInteractive)
+    private static let logger = Logger(subsystem: "com.ahmetbugraozcan.screenshotapp", category: "AppVolume")
 
     init?(processObjectIDs: [AudioObjectID], outputUID: String, gain: Float) {
         self.processObjectIDs = processObjectIDs
@@ -254,7 +256,11 @@ nonisolated final class AppAudioTap: @unchecked Sendable {
         description.isPrivate = true
         description.name = "DeskCast volume"
 
-        guard AudioHardwareCreateProcessTap(description, &tapID) == noErr else { return nil }
+        let tapStatus = AudioHardwareCreateProcessTap(description, &tapID)
+        guard tapStatus == noErr else {
+            Self.logger.error("Process tap failed: \(tapStatus) for \(processObjectIDs)")
+            return nil
+        }
 
         let aggregate: [String: Any] = [
             kAudioAggregateDeviceNameKey: "DeskCast Volume",
@@ -270,7 +276,9 @@ nonisolated final class AppAudioTap: @unchecked Sendable {
             ]]
         ]
 
-        guard AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID) == noErr else {
+        let aggregateStatus = AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID)
+        guard aggregateStatus == noErr else {
+            Self.logger.error("Aggregate device failed: \(aggregateStatus)")
             AudioHardwareDestroyProcessTap(tapID)
             return nil
         }
@@ -280,10 +288,20 @@ nonisolated final class AppAudioTap: @unchecked Sendable {
             Self.render(input: inputData, output: outputData, gain: gainBox.value)
         }
 
-        guard status == noErr, let ioProcID, AudioDeviceStart(aggregateID, ioProcID) == noErr else {
+        guard status == noErr, let ioProcID else {
+            Self.logger.error("IO proc failed: \(status)")
             stop()
             return nil
         }
+
+        let startStatus = AudioDeviceStart(aggregateID, ioProcID)
+        guard startStatus == noErr else {
+            Self.logger.error("Aggregate start failed: \(startStatus)")
+            stop()
+            return nil
+        }
+
+        Self.logger.info("Tap running for \(processObjectIDs) at gain \(gain)")
     }
 
     func stop() {

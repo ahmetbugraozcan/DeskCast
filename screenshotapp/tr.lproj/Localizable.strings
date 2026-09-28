@@ -444,3 +444,4 @@
 "island.settings.hideInFullScreen" = "Tam ekranda gizle";
 "island.settings.showInCaptures" = "Ekran görüntülerinde ve videolarda göster";
 "island.settings.outline" = "Kenarlığı göster";
+"island.ai.remaining" = "%@ kaldı";

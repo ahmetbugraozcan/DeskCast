@@ -444,3 +444,4 @@
 "island.settings.hideInFullScreen" = "Hide in full screen";
 "island.settings.showInCaptures" = "Show in screenshots and recordings";
 "island.settings.outline" = "Show outline";
+"island.ai.remaining" = "%@ left";

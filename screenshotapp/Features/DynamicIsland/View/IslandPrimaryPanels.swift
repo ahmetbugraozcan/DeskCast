@@ -950,10 +950,11 @@ private struct AgentLimitsCard: View {
 
     private func limitRow(_ title: String, _ window: AIUsageWindow?, windowLength: TimeInterval, now: Date) -> some View {
         let window = window?.current(at: now)
-        let used = window?.usedFraction ?? 0
-        // Marker: how far through the window we are, to compare pace vs. usage.
-        let elapsed: Double? = window?.resetsAt.map { resetsAt in
-            1 - min(max(resetsAt.timeIntervalSince(now) / windowLength, 0), 1)
+        // Shown as what's left of the limit, like a fuel gauge.
+        let remaining = 1 - (window?.usedFraction ?? 0)
+        // Marker: share of the window's time still left, to compare pace vs. what's left.
+        let timeLeft: Double? = window?.resetsAt.map { resetsAt in
+            min(max(resetsAt.timeIntervalSince(now) / windowLength, 0), 1)
         }
 
         return VStack(spacing: 4) {
@@ -972,14 +973,14 @@ private struct AgentLimitsCard: View {
                 Spacer()
 
                 IslandRollingText(
-                    text: IslandFormat.localizedPercent(used),
-                    value: (used * 100).rounded(),
+                    text: AppLocalization.formatted("island.ai.remaining", IslandFormat.localizedPercent(remaining)),
+                    value: (remaining * 100).rounded(),
                     size: 12,
                     weight: .bold
                 )
             }
 
-            IslandBar(value: used, tint: tint, height: 6, marker: elapsed)
+            IslandBar(value: remaining, tint: remaining < 0.15 ? .red : tint, height: 6, marker: timeLeft)
         }
     }
 }
