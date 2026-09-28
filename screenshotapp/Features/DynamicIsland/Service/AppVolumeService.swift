@@ -248,9 +248,9 @@ nonisolated final class AppAudioTap: @unchecked Sendable {
         self.processObjectIDs = processObjectIDs
         self.gain = AudioGain(gain)
 
-        let description = CATapDescription(stereoMixdownOfProcesses: processObjectIDs.map { NSNumber(value: $0) })
+        let description = CATapDescription(stereoMixdownOfProcesses: processObjectIDs)
         description.uuid = UUID()
-        description.muteBehavior = .mutedWhenTapped
+        description.muteBehavior = CATapMuteBehavior.mutedWhenTapped
         description.isPrivate = true
         description.name = "DeskCast volume"
 
