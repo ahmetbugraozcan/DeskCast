@@ -1,4 +1,5 @@
 import AppKit
+import CoreAudio
 import Foundation
 import Testing
 @testable import screenshotapp
@@ -344,5 +345,61 @@ struct LyricsParsingTests {
 
     @Test func textWithoutTimestampsIsNotSyncedLyrics() {
         #expect(LyricsService.parseLRC("just words\nno tags") == nil)
+    }
+}
+
+struct AppAudioTapRenderTests {
+    /// Runs `render` on a stereo tap buffer and returns the output buffers.
+    private func render(tap: [Float], outputChannels: [Int], frames: Int, gain: Float = 0.5) -> [[Float]] {
+        let tapData = UnsafeMutablePointer<Float>.allocate(capacity: tap.count)
+        tapData.initialize(from: tap, count: tap.count)
+        let outData = outputChannels.map { channels in
+            let data = UnsafeMutablePointer<Float>.allocate(capacity: channels * frames)
+            data.initialize(repeating: -1, count: channels * frames)
+            return data
+        }
+        let input = AudioBufferList.allocate(maximumBuffers: 1)
+        let output = AudioBufferList.allocate(maximumBuffers: outputChannels.count)
+        defer {
+            tapData.deallocate()
+            outData.forEach { $0.deallocate() }
+            free(input.unsafeMutablePointer)
+            free(output.unsafeMutablePointer)
+        }
+
+        input[0] = AudioBuffer(
+            mNumberChannels: 2,
+            mDataByteSize: UInt32(tap.count * MemoryLayout<Float>.size),
+            mData: tapData
+        )
+
+        for (index, channels) in outputChannels.enumerated() {
+            output[index] = AudioBuffer(
+                mNumberChannels: UInt32(channels),
+                mDataByteSize: UInt32(channels * frames * MemoryLayout<Float>.size),
+                mData: outData[index]
+            )
+        }
+
+        AppAudioTap.render(input: input.unsafePointer, output: output.unsafeMutablePointer, gain: gain)
+
+        return zip(outData, outputChannels).map { data, channels in
+            Array(UnsafeBufferPointer(start: data, count: channels * frames))
+        }
+    }
+
+    @Test func interleavedStereoOutputGetsBothChannels() {
+        let out = render(tap: [1, 2, 3, 4], outputChannels: [2], frames: 2)
+        #expect(out == [[0.5, 1, 1.5, 2]])
+    }
+
+    @Test func perChannelOutputBuffersGetLeftAndRight() {
+        let out = render(tap: [1, 2, 3, 4], outputChannels: [1, 1], frames: 2)
+        #expect(out == [[0.5, 1.5], [1, 2]])
+    }
+
+    @Test func extraOutputChannelsStaySilent() {
+        let out = render(tap: [1, 2], outputChannels: [6], frames: 1)
+        #expect(out == [[0.5, 1, 0, 0, 0, 0]])
     }
 }

@@ -308,9 +308,12 @@ nonisolated final class AppAudioTap: @unchecked Sendable {
         stop()
     }
 
-    /// Copies the tapped interleaved Float32 stream to the output with gain,
-    /// mapping channels onto interleaved or per-channel output buffers.
-    private static func render(
+    /// Copies the tapped interleaved Float32 stream to the output with gain.
+    /// Output channels are numbered across all output buffers (interleaved or
+    /// one buffer per channel); the tap's channels go to the first output
+    /// channels (front L/R) and any further channels (center, LFE, surrounds,
+    /// extra interface outputs) are left silent.
+    static func render(
         input: UnsafePointer<AudioBufferList>,
         output: UnsafeMutablePointer<AudioBufferList>,
         gain: Float
@@ -318,40 +321,33 @@ nonisolated final class AppAudioTap: @unchecked Sendable {
         let inputs = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: input))
         let outputs = UnsafeMutableAudioBufferListPointer(output)
 
-        for outputIndex in 0..<outputs.count {
-            let outBuffer = outputs[outputIndex]
+        // The tap's stereo stream comes after any input streams of the output
+        // device itself (e.g. a headset mic), so read the last one.
+        let inBuffer = inputs.last
+        let inData = inBuffer?.mData?.assumingMemoryBound(to: Float.self)
+        let inChannels = Int(max(inBuffer?.mNumberChannels ?? 1, 1))
+        let inFrames = inData == nil ? 0 : Int(inBuffer?.mDataByteSize ?? 0) / MemoryLayout<Float>.size / inChannels
+
+        var firstChannel = 0
+
+        for outBuffer in outputs {
+            let outChannels = Int(max(outBuffer.mNumberChannels, 1))
+            defer { firstChannel += outChannels }
+
             guard let outData = outBuffer.mData?.assumingMemoryBound(to: Float.self) else { continue }
 
-            let outChannels = Int(max(outBuffer.mNumberChannels, 1))
+            memset(outData, 0, Int(outBuffer.mDataByteSize))
+
+            guard let inData else { continue }
+
             let outFrames = Int(outBuffer.mDataByteSize) / MemoryLayout<Float>.size / outChannels
-
-            guard !inputs.isEmpty else {
-                memset(outData, 0, Int(outBuffer.mDataByteSize))
-                continue
-            }
-
-            // The tap's stereo stream comes after any input streams of the
-            // output device itself (e.g. a headset mic), so read the last one.
-            let inBuffer = inputs[inputs.count - 1]
-
-            guard let inData = inBuffer.mData?.assumingMemoryBound(to: Float.self) else {
-                memset(outData, 0, Int(outBuffer.mDataByteSize))
-                continue
-            }
-
-            let inChannels = Int(max(inBuffer.mNumberChannels, 1))
-            let inFrames = Int(inBuffer.mDataByteSize) / MemoryLayout<Float>.size / inChannels
             let frames = min(outFrames, inFrames)
+            let mappedChannels = min(outChannels, max(inChannels - firstChannel, 0))
 
             for frame in 0..<frames {
-                for channel in 0..<outChannels {
-                    let inChannel = min(channel + outputIndex * outChannels, inChannels - 1)
-                    outData[frame * outChannels + channel] = inData[frame * inChannels + inChannel] * gain
+                for channel in 0..<mappedChannels {
+                    outData[frame * outChannels + channel] = inData[frame * inChannels + firstChannel + channel] * gain
                 }
-            }
-
-            if frames < outFrames {
-                memset(outData + frames * outChannels, 0, (outFrames - frames) * outChannels * MemoryLayout<Float>.size)
             }
         }
     }
