@@ -110,7 +110,8 @@ struct DynamicIslandViewModelTests {
     private let presenter = FakeIslandPresenter()
     private let systemNotifications = FakeSystemNotificationMonitor()
 
-    private func makeViewModel(settings: StubIslandSettings = StubIslandSettings()) -> DynamicIslandViewModel {
+    private func makeViewModel(settings: StubIslandSettings? = nil) -> DynamicIslandViewModel {
+        let settings = settings ?? StubIslandSettings()
         let viewModel = DynamicIslandViewModel(
             nowPlayingService: nowPlaying,
             batteryMonitor: battery,

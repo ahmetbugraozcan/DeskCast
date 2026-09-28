@@ -293,7 +293,7 @@
 "Behavior" = "Davranış";
 "Expand on hover" = "Üzerine gelince büyüt";
 "Show notifications from other apps" = "Diğer uygulamaların bildirimlerini göster";
-"Messages, Mail, Gmail in your browser and other apps' banners are mirrored in the island. Requires Accessibility permission." = "Mesajlar, Mail, tarayıcıdaki Gmail ve diğer uygulamaların bildirimleri adada gösterilir. Erişilebilirlik izni gerekir.";
+"island.settings.systemNotificationsHint" = "Mesajlar, Mail, tarayıcıdaki Gmail ve diğer uygulamaların bildirimleri adada gösterilir. Erişilebilirlik izni gerekir.";
 
 /* Dynamic Island panels */
 "island.panel.controls" = "Denetimler";

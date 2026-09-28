@@ -74,7 +74,7 @@ struct DynamicIslandSettingsPane: View {
 
                     SettingsSectionDivider()
 
-                    Text(AppLocalization.string("Messages, Mail, Gmail in your browser and other apps' banners are mirrored in the island. Requires Accessibility permission."))
+                    Text(AppLocalization.string("island.settings.systemNotificationsHint"))
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

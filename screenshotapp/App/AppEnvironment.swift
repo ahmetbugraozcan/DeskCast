@@ -62,31 +62,11 @@ final class AppEnvironment: ObservableObject {
             timer: islandTimer,
             settings: settings
         )
-        // Island panels trigger other tools; each action closes the island first
-        // so it doesn't cover the capture overlay or the opened window.
-        let islandActions = IslandToolActions(
-            captureArea: { [weak dynamicIsland, weak screenshotShelf] in
-                dynamicIsland?.collapse()
-                screenshotShelf?.captureSelectedArea()
-            },
-            captureVideo: { [weak dynamicIsland, weak screenRecorder] in
-                dynamicIsland?.collapse()
-                screenRecorder?.captureSelectedAreaVideo()
-            },
-            captureText: { [weak dynamicIsland, weak screenshotShelf] in
-                dynamicIsland?.collapse()
-                screenshotShelf?.captureOCRTextFromSelectedArea()
-            },
-            copyFinderPath: { [weak screenshotShelf] in
-                screenshotShelf?.copyFrontFinderPath()
-            },
-            toggleDropShelf: { [weak dropShelf] in
-                dropShelf?.toggleShelf()
-            },
-            openSettings: { [weak dynamicIsland] in
-                dynamicIsland?.collapse()
-                Self.openSettingsWindow()
-            }
+        let islandActions = Self.makeIslandActions(
+            island: dynamicIsland,
+            screenshotShelf: screenshotShelf,
+            screenRecorder: screenRecorder,
+            dropShelf: dropShelf
         )
         let spotifyAccount = SpotifyAccountViewModel()
         let islandPanels = IslandPanelModels(
@@ -121,6 +101,40 @@ final class AppEnvironment: ObservableObject {
         Task { @MainActor in
             dynamicIsland.start()
         }
+    }
+
+    /// Island panels trigger other tools; each capture action closes the island
+    /// first so it doesn't cover the capture overlay or the opened window.
+    private static func makeIslandActions(
+        island dynamicIsland: DynamicIslandViewModel,
+        screenshotShelf: ScreenshotShelfViewModel,
+        screenRecorder: ScreenRecordingViewModel,
+        dropShelf: DropShelfViewModel
+    ) -> IslandToolActions {
+        IslandToolActions(
+            captureArea: { [weak dynamicIsland, weak screenshotShelf] in
+                dynamicIsland?.collapse()
+                screenshotShelf?.captureSelectedArea()
+            },
+            captureVideo: { [weak dynamicIsland, weak screenRecorder] in
+                dynamicIsland?.collapse()
+                screenRecorder?.captureSelectedAreaVideo()
+            },
+            captureText: { [weak dynamicIsland, weak screenshotShelf] in
+                dynamicIsland?.collapse()
+                screenshotShelf?.captureOCRTextFromSelectedArea()
+            },
+            copyFinderPath: { [weak screenshotShelf] in
+                screenshotShelf?.copyFrontFinderPath()
+            },
+            toggleDropShelf: { [weak dropShelf] in
+                dropShelf?.toggleShelf()
+            },
+            openSettings: { [weak dynamicIsland] in
+                dynamicIsland?.collapse()
+                openSettingsWindow()
+            }
+        )
     }
 
     /// Opens the SwiftUI `Settings` scene from AppKit code. SwiftUI only exposes

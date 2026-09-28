@@ -21,7 +21,9 @@ extension PrivacyPermissionID {
         case .finderAutomation:
             AppLocalization.string("Required to read the front Finder window path.")
         case .accessibility:
-            AppLocalization.string("Required to open Drop Shelf from the shake gesture and to show other apps' notifications in the Dynamic Island.")
+            AppLocalization.string(
+                "Required to open Drop Shelf from the shake gesture and to show other apps' notifications in the Dynamic Island."
+            )
         }
     }
 }
