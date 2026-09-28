@@ -51,23 +51,46 @@ struct IslandExpandedView: View {
         }
     }
 
+    private func sourceLabel(_ nowPlaying: NowPlayingInfo) -> some View {
+        HStack(spacing: 5) {
+            if let icon = nowPlaying.source.appIcon {
+                // Menu labels ignore SwiftUI frames, so hand them a small bitmap.
+                Image(nsImage: NSImage(size: NSSize(width: 14, height: 14), flipped: false) { rect in
+                    icon.draw(in: rect)
+                    return true
+                })
+            }
+
+            Text(nowPlaying.source.displayName)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(IslandPalette.secondaryText)
+                .lineLimit(1)
+        }
+    }
+
     @ViewBuilder
     private func headerAccessory(for panel: IslandPanel) -> some View {
         switch panel {
         case .nowPlaying:
-            if let nowPlaying = store.nowPlaying, store.availablePlayers.count > 1 {
-                Menu {
-                    ForEach(store.availablePlayers) { player in
-                        Button(player.displayName) {
-                            store.preferPlayer(player)
+            if let nowPlaying = store.nowPlaying {
+                // Other running players can be picked; otherwise just name the source.
+                let others = store.availablePlayers.filter { $0 != nowPlaying.player }
+
+                if others.isEmpty {
+                    sourceLabel(nowPlaying)
+                } else {
+                    Menu {
+                        ForEach(store.availablePlayers) { player in
+                            Button(player.displayName) {
+                                store.preferPlayer(player)
+                            }
                         }
+                    } label: {
+                        sourceLabel(nowPlaying)
                     }
-                } label: {
-                    Text(nowPlaying.source.displayName)
-                        .font(.system(size: 12, weight: .semibold))
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
                 }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
             }
         case .notifications:
             if !store.notificationHistory.isEmpty {

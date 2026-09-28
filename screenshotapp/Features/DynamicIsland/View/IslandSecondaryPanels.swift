@@ -284,26 +284,31 @@ struct ToolsPanelView: View {
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 8) {
-            IslandTileButton(title: AppLocalization.string("island.tools.captureArea"), systemImage: "camera.viewfinder") {
+            IslandTileButton(title: AppLocalization.string("island.tools.captureArea"), systemImage: "camera.viewfinder", minHeight: 72) {
                 actions.captureArea()
             }
-            IslandTileButton(title: AppLocalization.string("island.tools.captureVideo"), systemImage: "record.circle", tint: .red) {
+            IslandTileButton(
+                title: AppLocalization.string("island.tools.captureVideo"),
+                systemImage: "record.circle",
+                tint: .red,
+                minHeight: 72
+            ) {
                 actions.captureVideo()
             }
-            IslandTileButton(title: AppLocalization.string("island.tools.captureText"), systemImage: "text.viewfinder") {
+            IslandTileButton(title: AppLocalization.string("island.tools.captureText"), systemImage: "text.viewfinder", minHeight: 72) {
                 actions.captureText()
             }
-            IslandTileButton(title: AppLocalization.string("island.tools.finderPath"), systemImage: "folder") {
+            IslandTileButton(title: AppLocalization.string("island.tools.finderPath"), systemImage: "folder", minHeight: 72) {
                 actions.copyFinderPath()
             }
-            IslandTileButton(title: AppLocalization.string("island.tools.dropShelf"), systemImage: "tray.and.arrow.down") {
+            IslandTileButton(title: AppLocalization.string("island.tools.dropShelf"), systemImage: "tray.and.arrow.down", minHeight: 72) {
                 actions.toggleDropShelf()
             }
-            IslandTileButton(title: AppLocalization.string("Settings"), systemImage: "gearshape") {
+            IslandTileButton(title: AppLocalization.string("Settings"), systemImage: "gearshape", minHeight: 72) {
                 actions.openSettings()
             }
         }
-        .frame(height: 146)
+        .frame(height: 156)
     }
 }
 

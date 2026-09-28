@@ -193,6 +193,8 @@ struct IslandTileButton: View {
     var subtitle: String?
     var tint: Color?
     var isOn = false
+    /// Grids don't stretch their cells, so tiles carry their own height.
+    var minHeight: CGFloat = 60
     let action: () -> Void
 
     @State private var isHovered = false
@@ -204,6 +206,8 @@ struct IslandTileButton: View {
                     .font(.system(size: 19, weight: .medium))
                     .foregroundStyle(isOn ? .black : (tint ?? .white))
                     .symbolEffect(.bounce, value: isOn)
+                    // Symbols differ in height; a fixed box keeps titles on one line.
+                    .frame(height: 22)
 
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
@@ -218,7 +222,7 @@ struct IslandTileButton: View {
                         .lineLimit(1)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(isOn ? Color.white : (isHovered ? Color(white: 0.16) : IslandPalette.card))
@@ -303,6 +307,8 @@ enum IslandFormat {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .decimal
         formatter.allowedUnits = [.useKB, .useMB, .useGB]
+        // "0 KB/s", not "Zero KB/s".
+        formatter.allowsNonnumericFormatting = false
         return formatter.string(fromByteCount: Int64(bytesPerSecond)) + "/s"
     }
 

@@ -24,6 +24,9 @@ struct NowPlayingPanelView: View {
             if store.hasMedia, let nowPlaying = store.nowPlaying {
                 content(nowPlaying)
                     .onChange(of: nowPlaying.cacheKey, initial: true) { _, _ in
+                        if detail == .queue, nowPlaying.player != .spotify {
+                            detail = .none
+                        }
                         loadDetail(for: nowPlaying)
                     }
                     .onChange(of: detail) { _, _ in
@@ -84,12 +87,15 @@ struct NowPlayingPanelView: View {
                     detail = detail == .lyrics ? .none : .lyrics
                 }
 
-                IslandChipButton(
-                    title: AppLocalization.string("island.nowPlaying.upNext"),
-                    systemImage: "list.bullet",
-                    isOn: detail == .queue
-                ) {
-                    detail = detail == .queue ? .none : .queue
+                // "Up Next" comes from Spotify's Web API; other sources have no queue.
+                if nowPlaying.player == .spotify {
+                    IslandChipButton(
+                        title: AppLocalization.string("island.nowPlaying.upNext"),
+                        systemImage: "list.bullet",
+                        isOn: detail == .queue
+                    ) {
+                        detail = detail == .queue ? .none : .queue
+                    }
                 }
             }
         }

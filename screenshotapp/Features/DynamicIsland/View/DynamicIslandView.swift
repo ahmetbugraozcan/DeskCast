@@ -56,7 +56,7 @@ struct DynamicIslandView: View {
     /// Content height below the notch for each expanded page.
     static func expandedContentHeight(for content: IslandExpandedContent) -> CGFloat {
         switch content {
-        case .launcher: 286
+        case .launcher: 300
         case .panel(let panel): panelContentHeights[panel] ?? 260
         }
     }
@@ -563,6 +563,15 @@ struct ArtworkView: View {
     let cornerRadius: CGFloat
 
     var body: some View {
+        // `Color.clear` takes the offered frame, so wide covers (videos) are
+        // cropped to it instead of widening the view.
+        Color.clear
+            .overlay { content }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .animation(.easeInOut(duration: 0.25), value: nowPlaying.artwork != nil)
+    }
+
+    private var content: some View {
         ZStack {
             if let artwork = nowPlaying.artwork {
                 Image(nsImage: artwork)
@@ -581,8 +590,6 @@ struct ArtworkView: View {
                     .foregroundStyle(.white.opacity(0.85))
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .animation(.easeInOut(duration: 0.25), value: nowPlaying.artwork != nil)
     }
 }
 
