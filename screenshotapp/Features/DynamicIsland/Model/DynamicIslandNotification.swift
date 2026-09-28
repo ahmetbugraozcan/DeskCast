@@ -35,8 +35,17 @@ enum DynamicIslandMode: Equatable {
     case idle
     case compactMedia
     case compactTimer
+    case compactBattery
     case notification
     case expanded
+}
+
+/// Direction of a trackpad swipe (finger movement) over the island.
+enum IslandSwipeDirection: Equatable {
+    case up
+    case down
+    case left
+    case right
 }
 
 /// Hardware notch (or simulated notch) metrics of the screen hosting the island.

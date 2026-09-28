@@ -100,7 +100,18 @@ final class AppEnvironment: ObservableObject {
         // so defer it to the next main-actor turn, after launch has finished.
         Task { @MainActor in
             dynamicIsland.start()
+            await Self.openDemoSettingsIfRequested()
         }
+    }
+
+    /// Debug builds only: `-DeskCastDemoSettings <section>` opens Settings on
+    /// that page for screenshots.
+    private static func openDemoSettingsIfRequested() async {
+        #if DEBUG
+        guard UserDefaults.standard.string(forKey: "DeskCastDemoSettings") != nil else { return }
+        try? await Task.sleep(for: .seconds(1.5))
+        openSettingsWindow()
+        #endif
     }
 
     /// Island panels trigger other tools; each capture action closes the island
@@ -139,12 +150,17 @@ final class AppEnvironment: ObservableObject {
 
     /// Opens the SwiftUI `Settings` scene from AppKit code. SwiftUI only exposes
     /// `openSettings` inside views, so trigger the app menu's "Settings…" item
-    /// (⌘,) that the scene installs.
+    /// that the scene installs. Its key equivalent follows the keyboard layout
+    /// (⌘ö on a Turkish Q layout, not ⌘,), so also match the scene's own
+    /// `menuAction:`, which no other item in the app menu uses.
     static func openSettingsWindow() {
         NSApp.activate(ignoringOtherApps: true)
 
-        let settingsItem = NSApp.mainMenu?.items.first?.submenu?.items.first { item in
+        let appMenuItems = NSApp.mainMenu?.items.first?.submenu?.items ?? []
+        let settingsItem = appMenuItems.first { item in
             item.keyEquivalent == "," && item.keyEquivalentModifierMask == .command
+        } ?? appMenuItems.first { item in
+            item.action.map(NSStringFromSelector) == "menuAction:"
         }
 
         if let settingsItem, let action = settingsItem.action {

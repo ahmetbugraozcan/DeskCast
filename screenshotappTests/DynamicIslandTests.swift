@@ -65,20 +65,15 @@ private final class FakeIslandPresenter: DynamicIslandPresenting {
 @MainActor
 private struct StubIslandSettings: DynamicIslandSettingsReading, ToolboxSettingsReading {
     var isEnabled = true
-    var expandsOnHover = true
+    var snapshot = DynamicIslandSettingsSnapshot(hoverDelay: 0, panelShortcutsEnabled: false)
+
+    init(isEnabled: Bool = true, configure: (inout DynamicIslandSettingsSnapshot) -> Void = { _ in }) {
+        self.isEnabled = isEnabled
+        configure(&snapshot)
+    }
 
     func dynamicIslandSettings() -> DynamicIslandSettingsSnapshot {
-        DynamicIslandSettingsSnapshot(
-            showsNowPlaying: true,
-            showsTrackChanges: true,
-            showsAppNotifications: true,
-            showsSystemNotifications: true,
-            showsBatteryEvents: true,
-            expandsOnHover: expandsOnHover,
-            panelShortcutsEnabled: false,
-            showsSideButtons: true,
-            notificationDurationSeconds: 4
-        )
+        snapshot
     }
 
     func isToolEnabled(_ tool: ToolboxToolID) -> Bool {
@@ -153,7 +148,7 @@ struct DynamicIslandViewModelTests {
     }
 
     @Test func clickExpandsWhenHoverExpansionIsOff() {
-        let viewModel = makeViewModel(settings: StubIslandSettings(expandsOnHover: false))
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.openMode = .click })
         nowPlaying.emit(track("a"))
 
         viewModel.setHovering(true)
@@ -161,6 +156,55 @@ struct DynamicIslandViewModelTests {
 
         viewModel.toggleExpanded()
         #expect(viewModel.mode == .expanded)
+    }
+
+    @Test func hiddenUntilHoverHidesCollapsedIslandOnly() {
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.openMode = .hiddenUntilHover })
+        nowPlaying.emit(track("a"))
+        #expect(viewModel.mode == .compactMedia)
+        #expect(viewModel.hidesCollapsedIsland)
+
+        viewModel.setHovering(true)
+        #expect(viewModel.mode == .expanded)
+        #expect(!viewModel.hidesCollapsedIsland)
+    }
+
+    @Test func idleContentNothingKeepsMusicOutOfTheClosedIsland() {
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.idleContent = .nothing })
+        nowPlaying.emit(track("a"))
+        #expect(viewModel.mode == .idle)
+        #expect(viewModel.nowPlaying != nil)
+    }
+
+    @Test func reopeningOnLauncherStartsOnThePanelGrid() {
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.reopenTarget = .launcher })
+        viewModel.select(.timer)
+
+        viewModel.setHovering(true)
+        #expect(viewModel.mode == .expanded)
+        #expect(viewModel.expandedContent == .launcher)
+    }
+
+    @Test func swipesOpenCloseAndSkipTracks() {
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.openMode = .click })
+        nowPlaying.emit(track("a"))
+
+        #expect(viewModel.handleSwipe(.left, inTopRow: true))
+        #expect(nowPlaying.sentCommands.last?.0 == .nextTrack)
+
+        #expect(viewModel.handleSwipe(.down, inTopRow: false))
+        #expect(viewModel.mode == .expanded)
+
+        // Scrolling up inside a panel's content is left to its lists.
+        #expect(!viewModel.handleSwipe(.up, inTopRow: false))
+        #expect(viewModel.handleSwipe(.up, inTopRow: true))
+        #expect(viewModel.mode == .compactMedia)
+    }
+
+    @Test func gesturesCanBeTurnedOff() {
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.gesturesEnabled = false })
+        #expect(!viewModel.handleSwipe(.down, inTopRow: false))
+        #expect(viewModel.mode == .idle)
     }
 
     @Test func firstTrackIsSilentButTrackChangePostsBanner() {
@@ -306,14 +350,18 @@ struct NowPlayingInfoTests {
         defaults.removePersistentDomain(forName: suiteName)
 
         DynamicIslandSettings.registerDefaults(in: defaults)
-        defaults.set(false, forKey: DynamicIslandSettings.Keys.showsNowPlaying)
+        defaults.set(IslandIdleContent.nothing.rawValue, forKey: DynamicIslandSettings.Keys.idleContent)
+        defaults.set(["timer", "bogus", "timer"], forKey: DynamicIslandSettings.Keys.panelOrder)
+        #expect(DynamicIslandSettings.snapshot(from: defaults).panelOrder.first == .timer)
+        #expect(DynamicIslandSettings.snapshot(from: defaults).panelOrder.count == IslandPanel.allCases.count)
         defaults.set(42, forKey: DynamicIslandSettings.Keys.notificationDurationSeconds)
         #expect(DynamicIslandSettings.snapshot(from: defaults).notificationDurationSeconds == 10)
 
         DynamicIslandSettings.resetToDefaults(in: defaults)
         let snapshot = DynamicIslandSettings.snapshot(from: defaults)
 
-        #expect(snapshot.showsNowPlaying == DynamicIslandSettings.defaultShowsNowPlaying)
+        #expect(snapshot.idleContent == DynamicIslandSettings.defaultIdleContent)
+        #expect(snapshot.panelOrder == IslandPanel.allCases)
         #expect(snapshot.notificationDurationSeconds == DynamicIslandSettings.defaultNotificationDurationSeconds)
 
         defaults.removePersistentDomain(forName: suiteName)

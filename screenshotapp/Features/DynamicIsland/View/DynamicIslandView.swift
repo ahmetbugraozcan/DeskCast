@@ -153,8 +153,8 @@ struct DynamicIslandView: View {
         switch mode {
         case .idle:
             return CGSize(width: notch.width + ears, height: notch.height)
-        case .compactMedia, .compactTimer:
-            let sideWidth = notch.height + (mode == .compactTimer ? 34 : 18)
+        case .compactMedia, .compactTimer, .compactBattery:
+            let sideWidth = notch.height + (mode == .compactMedia ? 18 : 34)
             let centerWidth = geometry.hasNotch ? notch.width : max(notch.width, 220)
             return CGSize(width: centerWidth + sideWidth * 2 + ears, height: notch.height)
         case .notification:
@@ -173,7 +173,7 @@ struct DynamicIslandView: View {
     static func cornerMetrics(for mode: DynamicIslandMode) -> (top: CGFloat, bottom: CGFloat) {
         switch mode {
         case .idle: return (top: 6, bottom: 9)
-        case .compactMedia, .compactTimer: return (top: 6, bottom: 13)
+        case .compactMedia, .compactTimer, .compactBattery: return (top: 6, bottom: 13)
         case .notification: return (top: 12, bottom: 24)
         case .expanded: return (top: 14, bottom: 30)
         }
@@ -189,7 +189,7 @@ struct DynamicIslandView: View {
         let shape = DynamicIslandShape(topCornerRadius: corners.top, bottomCornerRadius: corners.bottom)
         // On displays without a notch the idle island disappears; the hover
         // region at the top center still reveals it.
-        let isShapeVisible = mode != .idle || geometry.hasNotch
+        let isShapeVisible = (mode != .idle || geometry.hasNotch) && !store.hidesCollapsedIsland
 
         ZStack(alignment: .topLeading) {
             ZStack(alignment: .top) {
@@ -199,6 +199,11 @@ struct DynamicIslandView: View {
             .frame(width: layout.islandFrame.width, height: layout.islandFrame.height, alignment: .top)
             .background(Color.black)
             .clipShape(shape)
+            .overlay {
+                if store.preferences.showsOutline, mode != .idle {
+                    shape.stroke(Color.white.opacity(0.16), lineWidth: 1)
+                }
+            }
             .contentShape(shape)
             .shadow(color: .black.opacity(mode == .idle ? 0 : 0.38), radius: mode == .expanded ? 18 : 10, y: 6)
             .opacity(isShapeVisible ? 1 : 0)
@@ -263,6 +268,11 @@ struct DynamicIslandView: View {
         case .compactTimer:
             CompactTimerView(timer: store.timer, geometry: geometry)
                 .transition(Self.contentTransition)
+        case .compactBattery:
+            if let status = store.batteryStatus {
+                CompactBatteryView(status: status, geometry: geometry)
+                    .transition(Self.contentTransition)
+            }
         case .notification:
             if let notification = store.activeNotification {
                 NotificationBannerView(notification: notification, geometry: geometry)

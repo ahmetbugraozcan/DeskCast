@@ -418,3 +418,29 @@
 "island.audio.muteApp" = "Mute";
 "island.audio.unmuteApp" = "Unmute";
 "island.audio.resetApp" = "Reset to 100%";
+
+/* Dynamic Island settings */
+"island.settings.opening" = "Opening";
+"island.settings.open.click" = "Click to open";
+"island.settings.open.hover" = "Expand on hover";
+"island.settings.open.hiddenUntilHover" = "Hidden until hover";
+"island.settings.hoverDelay" = "Hover delay: %.2f s";
+"island.settings.gestures" = "Island gestures";
+"island.settings.gesturesHint" = "Swipe down on the island to open it, swipe up on its top row to close it, and swipe sideways over music to change the track. Lists keep their own scrolling.";
+"island.settings.haptics" = "Haptic feedback";
+"island.settings.reopen" = "When reopened";
+"island.settings.reopen.lastPanel" = "Last panel";
+"island.settings.reopen.launcher" = "Panel grid";
+"island.settings.whileIdle" = "While Idle";
+"island.settings.idle.nothing" = "Nothing";
+"island.settings.idle.battery" = "Battery";
+"island.settings.idle.music" = "Music";
+"island.settings.panels" = "Panels";
+"island.settings.panelsHint" = "Drag to reorder the panel grid. Uncheck a panel to hide it from the island; its shortcut turns off too.";
+"island.settings.display" = "Display";
+"island.settings.display.automatic" = "Automatic";
+"island.settings.display.builtIn" = "Built-in display";
+"island.settings.display.main" = "Main display";
+"island.settings.hideInFullScreen" = "Hide in full screen";
+"island.settings.showInCaptures" = "Show in screenshots and recordings";
+"island.settings.outline" = "Show outline";

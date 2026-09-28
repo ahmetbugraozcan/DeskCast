@@ -24,6 +24,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     @Published private(set) var nowPlaying: NowPlayingInfo?
     @Published private(set) var activeNotification: DynamicIslandNotification?
     @Published private(set) var isHovering = false
+    /// The pointer has rested on the island for the hover delay.
+    @Published private(set) var isHoverActivated = false
     /// Sticky open from the pin button; only the pin/collapse buttons close it.
     @Published private(set) var isPinned = false
     /// Opened by a click or shortcut; closes on an outside click, or when the
@@ -44,6 +46,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     private var pendingNotifications: [DynamicIslandNotification] = []
     private var notificationDismissTask: Task<Void, Never>?
     private var hoverEndTask: Task<Void, Never>?
+    private var hoverActivationTask: Task<Void, Never>?
     private var lastBatteryStatus: BatteryStatus?
     private var hasReceivedNowPlaying = false
     private var defaultsObserver: AnyCancellable?
@@ -73,9 +76,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         self.batteryMonitor = batteryMonitor
         self.systemNotifications = systemNotifications
         self.settings = settings
-        preferences = settings.dynamicIslandSettings()
-        let lastPanel = UserDefaults.standard.string(forKey: Self.lastPanelKey).flatMap(IslandPanel.init(rawValue:))
-        expandedContent = .panel(lastPanel ?? .nowPlaying)
+        let initialPreferences = settings.dynamicIslandSettings()
+        preferences = initialPreferences
+        expandedContent = .panel(Self.storedLastPanel(visible: initialPreferences.visiblePanels))
 
         nowPlayingService.onChange = { [weak self] info in
             self?.handleNowPlayingChange(info)
@@ -147,11 +150,25 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             return .compactTimer
         }
 
+        if preferences.idleContent == .battery, batteryStatus != nil {
+            return .compactBattery
+        }
+
         return .idle
     }
 
     private var isExpandedByHover: Bool {
-        isHovering && preferences.expandsOnHover && !suppressesHoverUntilExit
+        isHoverActivated && preferences.openMode.expandsOnHover && !suppressesHoverUntilExit
+    }
+
+    /// "Hidden until hover": the collapsed island is invisible; banners still show.
+    var hidesCollapsedIsland: Bool {
+        preferences.openMode == .hiddenUntilHover && (mode == .idle || mode == .compactMedia
+            || mode == .compactTimer || mode == .compactBattery)
+    }
+
+    var batteryStatus: BatteryStatus? {
+        lastBatteryStatus
     }
 
     var availablePlayers: [MediaPlayerApp] {
@@ -159,7 +176,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     }
 
     var hasMedia: Bool {
-        preferences.showsNowPlaying && nowPlaying != nil
+        preferences.idleContent == .music && nowPlaying != nil
     }
 
     // MARK: - Interaction (driven by the panel coordinator / view)
@@ -181,6 +198,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
                 // Hold the banner while the pointer is on it.
                 notificationDismissTask?.cancel()
                 notificationDismissTask = nil
+                scheduleHoverActivation()
             }
 
             return
@@ -197,6 +215,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             guard !Task.isCancelled, let self else { return }
             self.hoverEndTask = nil
             self.isHovering = false
+            self.hoverActivationTask?.cancel()
+            self.hoverActivationTask = nil
+            self.isHoverActivated = false
             self.suppressesHoverUntilExit = false
 
             if self.isForcedOpen, self.pointerEnteredSinceForcedOpen {
@@ -206,6 +227,42 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             if let notification = self.activeNotification {
                 self.scheduleDismiss(of: notification)
             }
+        }
+    }
+
+    /// Expanding on hover waits for the pointer to rest for the hover delay, so
+    /// passing over the menu bar doesn't pop the island open.
+    private func scheduleHoverActivation() {
+        hoverActivationTask?.cancel()
+
+        let delay = preferences.hoverDelay
+
+        guard delay > 0 else {
+            activateHover()
+            return
+        }
+
+        hoverActivationTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled, let self, self.isHovering else { return }
+            self.activateHover()
+        }
+    }
+
+    private func activateHover() {
+        hoverActivationTask = nil
+
+        if preferences.openMode.expandsOnHover, mode != .expanded {
+            prepareForOpening()
+        }
+
+        isHoverActivated = true
+    }
+
+    /// "Reopen on: launcher" starts every fresh opening on the panel grid.
+    private func prepareForOpening() {
+        if preferences.reopenTarget == .launcher {
+            expandedContent = .launcher
         }
     }
 
@@ -232,6 +289,11 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// Click-to-expand, used when hover expansion is turned off.
     func toggleExpanded() {
         guard !isExpandedByHover || isForcedOpen else { return }
+
+        if !isForcedOpen, mode != .expanded {
+            prepareForOpening()
+        }
+
         isForcedOpen.toggle()
         pointerEnteredSinceForcedOpen = isHovering
     }
@@ -240,6 +302,41 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     func handleOutsideClick() {
         guard isForcedOpen, !isPinned else { return }
         isForcedOpen = false
+    }
+
+    // MARK: - Gestures
+
+    /// Trackpad/mouse swipes on the island. Returns whether the swipe did
+    /// something, so the caller can play haptic feedback and swallow the event.
+    @discardableResult
+    func handleSwipe(_ direction: IslandSwipeDirection, inTopRow: Bool) -> Bool {
+        guard preferences.gesturesEnabled else { return false }
+
+        switch direction {
+        case .down:
+            guard mode != .expanded else { return false }
+            prepareForOpening()
+            isForcedOpen = true
+            pointerEnteredSinceForcedOpen = isHovering
+            return true
+        case .up:
+            // Inside an open panel, upward scrolls belong to its lists; only the
+            // header row closes the island.
+            guard mode == .expanded, inTopRow, !isPinned else { return false }
+            collapse()
+            return true
+        case .left, .right:
+            guard mode == .compactMedia || (mode == .expanded && expandedContent == .panel(.nowPlaying) && inTopRow) else {
+                return false
+            }
+            // Like flicking cards: swiping left brings the next track.
+            if direction == .left {
+                nextTrack()
+            } else {
+                previousTrack()
+            }
+            return true
+        }
     }
 
     // MARK: - Panels
@@ -295,12 +392,22 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     /// The panel the launcher highlights and returns to.
     var lastSelectedPanel: IslandPanel {
-        UserDefaults.standard.string(forKey: Self.lastPanelKey).flatMap(IslandPanel.init(rawValue:)) ?? .nowPlaying
+        Self.storedLastPanel(visible: preferences.visiblePanels)
     }
 
     private var lastPanelContent: IslandExpandedContent {
-        let lastPanel = UserDefaults.standard.string(forKey: Self.lastPanelKey).flatMap(IslandPanel.init(rawValue:))
-        return .panel(lastPanel ?? .nowPlaying)
+        .panel(lastSelectedPanel)
+    }
+
+    /// The last opened panel, unless it has since been hidden from the island.
+    private static func storedLastPanel(visible: [IslandPanel]) -> IslandPanel {
+        let stored = UserDefaults.standard.string(forKey: lastPanelKey).flatMap(IslandPanel.init(rawValue:))
+
+        if let stored, visible.contains(stored) {
+            return stored
+        }
+
+        return visible.contains(.nowPlaying) ? .nowPlaying : (visible.first ?? .nowPlaying)
     }
 
     func togglePlayPause() {
@@ -502,6 +609,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     private func handleBatteryChange(_ status: BatteryStatus) {
         let previous = lastBatteryStatus
+        // The compact battery readout depends on it.
+        objectWillChange.send()
         lastBatteryStatus = status
 
         guard let previous, preferences.showsBatteryEvents else { return }
@@ -551,7 +660,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         preferences = newPreferences
         isEnabled = newIsEnabled
 
-        if isEnabled && preferences.showsNowPlaying {
+        // The Now Playing panel needs the player even when the closed island
+        // shows something else.
+        if isEnabled {
             nowPlayingService.start()
         } else {
             nowPlayingService.stop()
@@ -559,7 +670,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             hasReceivedNowPlaying = false
         }
 
-        if isEnabled && preferences.showsBatteryEvents {
+        if isEnabled && (preferences.showsBatteryEvents || preferences.idleContent == .battery) {
             batteryMonitor.start()
             lastBatteryStatus = lastBatteryStatus ?? batteryMonitor.currentStatus()
         } else {
@@ -573,13 +684,21 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             systemNotifications.stop()
         }
 
+        // A panel hidden from the island shouldn't stay open.
+        if case .panel(let panel) = expandedContent, preferences.hiddenPanels.contains(panel) {
+            expandedContent = .launcher
+        }
+
         updateShortcuts()
 
         if !isEnabled {
             clearNotifications()
             hoverEndTask?.cancel()
             hoverEndTask = nil
+            hoverActivationTask?.cancel()
+            hoverActivationTask = nil
             isHovering = false
+            isHoverActivated = false
             isPinned = false
             isForcedOpen = false
             presenter?.hide()
@@ -609,11 +728,14 @@ private extension DynamicIslandViewModel {
             }
         }
 
-        if isEnabled && preferences.panelShortcutsEnabled {
-            KeyboardShortcuts.enable(names)
-        } else {
+        guard isEnabled && preferences.panelShortcutsEnabled else {
             KeyboardShortcuts.disable(names)
+            return
         }
+
+        let hidden = preferences.hiddenPanels
+        KeyboardShortcuts.enable(IslandPanel.allCases.filter { !hidden.contains($0) }.map(\.shortcutName))
+        KeyboardShortcuts.disable(IslandPanel.allCases.filter { hidden.contains($0) }.map(\.shortcutName))
     }
 }
 

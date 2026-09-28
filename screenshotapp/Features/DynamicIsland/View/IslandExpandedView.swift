@@ -171,7 +171,7 @@ struct IslandLauncherView: View {
             .frame(height: 26)
 
             LazyVGrid(columns: columns, spacing: 8) {
-                ForEach(Array(IslandPanel.allCases.enumerated()), id: \.element) { index, panel in
+                ForEach(Array(store.preferences.visiblePanels.enumerated()), id: \.element) { index, panel in
                     LauncherTile(
                         panel: panel,
                         isSelected: store.lastSelectedPanel == panel,
@@ -274,5 +274,35 @@ struct CompactTimerView: View {
             .padding(.horizontal, 10)
             .frame(height: height)
         }
+    }
+}
+
+/// Closed-island battery readout ("While idle: Battery").
+struct CompactBatteryView: View {
+    let status: BatteryStatus
+    let geometry: DynamicIslandGeometry
+
+    var body: some View {
+        let height = geometry.notchSize.height
+        let isLow = status.level <= 20 && !status.isPluggedIn
+        let tint: Color = status.isPluggedIn ? .green : (isLow ? .red : .white)
+
+        HStack(spacing: 8) {
+            Image(systemName: status.isPluggedIn ? "bolt.fill" : "battery.75percent")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(tint)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: height - 12)
+
+            Spacer(minLength: geometry.hasNotch ? geometry.notchSize.width : 12)
+
+            Text("\(status.level)%")
+                .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
+                .foregroundStyle(tint)
+                .contentTransition(.numericText(value: Double(status.level)))
+                .animation(.snappy, value: status.level)
+        }
+        .padding(.horizontal, 10)
+        .frame(height: height)
     }
 }

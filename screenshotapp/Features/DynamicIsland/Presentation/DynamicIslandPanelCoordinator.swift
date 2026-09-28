@@ -15,8 +15,16 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
     private var localMouseMonitor: Any?
     private var globalClickMonitor: Any?
     private var localKeyMonitor: Any?
+    private var localScrollMonitor: Any?
     private var screenObserver: NSObjectProtocol?
+    private var workspaceObservers: [NSObjectProtocol] = []
     private var storeObserver: AnyCancellable?
+    private var fullScreenCheckTask: Task<Void, Never>?
+    /// A full-screen app covers the island's screen ("Hide in full screen").
+    private var isCoveredByFullScreenApp = false
+    private var scrollTravel = CGSize.zero
+    private var scrollGestureHandled = false
+    private var lastWheelSwipe = Date.distantPast
 
     /// Extra slack around the collapsed island so it is easy to hit with the pointer.
     private static let collapsedHoverInset = CGSize(width: 10, height: 6)
@@ -32,6 +40,19 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.refreshIfVisible()
+            }
+        }
+
+        // Full-screen apps live in their own Space and activate on entry.
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+        workspaceObservers = [
+            NSWorkspace.activeSpaceDidChangeNotification,
+            NSWorkspace.didActivateApplicationNotification
+        ].map { name in
+            workspaceCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.scheduleFullScreenCheck()
+                }
             }
         }
 
@@ -55,6 +76,13 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
             return
         }
 
+        isCoveredByFullScreenApp = store.preferences.hidesInFullScreen && Self.isFullScreenAppActive(on: screen)
+
+        guard !isCoveredByFullScreenApp else {
+            hide()
+            return
+        }
+
         let geometry = Self.geometry(for: screen)
         store.updateGeometry(geometry)
 
@@ -67,6 +95,7 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
             y: screen.frame.maxY - size.height
         )
         panel.setFrame(NSRect(origin: origin, size: size), display: true)
+        panel.sharingType = sharingType
         panel.orderFrontRegardless()
 
         installMouseMonitors()
@@ -82,6 +111,74 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
     private func refreshIfVisible() {
         guard isVisible else { return }
         refresh()
+    }
+
+    /// Entering or leaving full screen animates for a moment before the
+    /// window reaches its final frame, so check again once it settles.
+    private func scheduleFullScreenCheck() {
+        fullScreenCheckTask?.cancel()
+
+        guard store.isEnabled, store.preferences.hidesInFullScreen || isCoveredByFullScreenApp else { return }
+
+        fullScreenCheckTask = Task { [weak self] in
+            for delay in [0.1, 0.8] {
+                try? await Task.sleep(for: .seconds(delay))
+                guard !Task.isCancelled, let self, let screen = self.targetScreen() else { return }
+
+                let isCovered = self.store.preferences.hidesInFullScreen && Self.isFullScreenAppActive(on: screen)
+
+                if isCovered != self.isCoveredByFullScreenApp {
+                    self.refresh()
+                }
+            }
+        }
+    }
+
+    /// The frontmost app has a window covering the whole screen (including
+    /// the menu bar area), which only full-screen windows do. Window bounds
+    /// are readable without Screen Recording permission.
+    private static func isFullScreenAppActive(on screen: NSScreen) -> Bool {
+        guard
+            let frontmost = NSWorkspace.shared.frontmostApplication,
+            frontmost.processIdentifier != ProcessInfo.processInfo.processIdentifier,
+            let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+                as? [[String: Any]]
+        else {
+            return false
+        }
+
+        // Window bounds are top-left based, relative to the primary screen.
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? screen.frame.height
+        let screenBounds = CGRect(
+            x: screen.frame.minX,
+            y: primaryHeight - screen.frame.maxY,
+            width: screen.frame.width,
+            height: screen.frame.height
+        )
+
+        return windows.contains { info in
+            guard
+                (info[kCGWindowOwnerPID as String] as? pid_t) == frontmost.processIdentifier,
+                (info[kCGWindowLayer as String] as? Int) == 0,
+                let boundsInfo = info[kCGWindowBounds as String] as? NSDictionary,
+                let bounds = CGRect(dictionaryRepresentation: boundsInfo)
+            else {
+                return false
+            }
+
+            return bounds == screenBounds
+        }
+    }
+
+    private var sharingType: NSWindow.SharingType {
+        #if DEBUG
+        // CI screenshots (`-DeskCastAllowsIslandCapture YES`) need the island visible.
+        if UserDefaults.standard.bool(forKey: "DeskCastAllowsIslandCapture") {
+            return .readOnly
+        }
+        #endif
+
+        return store.preferences.showsInCaptures ? .readOnly : .none
     }
 
     // MARK: - Panel
@@ -108,20 +205,34 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
         panel.isReleasedWhenClosed = false
         // Above the menu bar so the island can sit over (and grow out of) the notch.
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
-        // Keep the island out of DeskCast's own screenshots and other captures.
-        panel.sharingType = .none
-        #if DEBUG
-        // CI screenshots (`-DeskCastAllowsIslandCapture YES`) need the island visible.
-        if UserDefaults.standard.bool(forKey: "DeskCastAllowsIslandCapture") {
-            panel.sharingType = .readOnly
-        }
-        #endif
+        // Unless "Show in screenshots and recordings" is on, keep the island
+        // out of DeskCast's own screenshots and other captures.
+        panel.sharingType = sharingType
 
         return panel
     }
 
     private func targetScreen() -> NSScreen? {
-        NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.screens.first
+        let screens = NSScreen.screens
+        // The first screen is the one with the menu bar.
+        let mainScreen = screens.first
+
+        switch store.preferences.displayTarget {
+        case .automatic:
+            return screens.first { $0.safeAreaInsets.top > 0 } ?? mainScreen
+        case .builtIn:
+            return screens.first(where: Self.isBuiltIn) ?? mainScreen
+        case .main:
+            return mainScreen
+        }
+    }
+
+    private static func isBuiltIn(_ screen: NSScreen) -> Bool {
+        guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
+            return false
+        }
+
+        return CGDisplayIsBuiltin(CGDirectDisplayID(number.uint32Value)) != 0
     }
 
     private static func geometry(for screen: NSScreen) -> DynamicIslandGeometry {
@@ -173,6 +284,15 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
             }
         }
 
+        // The panel takes mouse events only while the pointer is on the island,
+        // so its scroll events are the swipes made over the island.
+        localScrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+            let handled = MainActor.assumeIsolated {
+                self?.handleScroll(event) ?? false
+            }
+            return handled ? nil : event
+        }
+
         localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             // Escape closes the island (reachable while the scratchpad has focus).
             let isEscape = event.keyCode == 53
@@ -203,10 +323,95 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
             NSEvent.removeMonitor(localKeyMonitor)
         }
 
+        if let localScrollMonitor {
+            NSEvent.removeMonitor(localScrollMonitor)
+        }
+
         globalMouseMonitor = nil
         localMouseMonitor = nil
         globalClickMonitor = nil
         localKeyMonitor = nil
+        localScrollMonitor = nil
+    }
+
+    // MARK: - Gestures
+
+    /// Swipe distance (points) before a trackpad gesture counts.
+    private static let swipeThreshold: CGFloat = 24
+    /// Minimum gap between mouse-wheel swipes, which arrive as separate clicks.
+    private static let wheelSwipeInterval: TimeInterval = 0.35
+    /// Height of the island's top row, where swiping up closes it.
+    private static let topRowExtraHeight: CGFloat = 36
+
+    /// Turns scrolls over the island into swipes: down opens, up (in the top
+    /// row) closes, sideways over music changes the track. Returns whether
+    /// the event was used, so it doesn't also scroll the panel's lists.
+    private func handleScroll(_ event: NSEvent) -> Bool {
+        guard let panel, event.window === panel, store.preferences.gesturesEnabled else { return false }
+
+        // Momentum after a swipe belongs to the swipe that already fired.
+        guard event.momentumPhase.isEmpty else { return scrollGestureHandled }
+
+        let topOffset = panel.frame.height - event.locationInWindow.y
+        let inTopRow = topOffset <= store.geometry.notchSize.height + Self.topRowExtraHeight
+
+        // Finger movement: with natural scrolling the deltas already follow the fingers.
+        let sign: CGFloat = event.isDirectionInvertedFromDevice ? 1 : -1
+        let delta = CGSize(width: event.scrollingDeltaX * sign, height: event.scrollingDeltaY * sign)
+
+        guard event.hasPreciseScrollingDeltas else {
+            // Mouse wheel: one notch is one swipe, rate-limited.
+            guard Date().timeIntervalSince(lastWheelSwipe) > Self.wheelSwipeInterval,
+                  let direction = Self.direction(of: delta, threshold: 0.5)
+            else {
+                return false
+            }
+
+            let handled = performSwipe(direction, inTopRow: inTopRow)
+            if handled { lastWheelSwipe = Date() }
+            return handled
+        }
+
+        if event.phase.contains(.began) {
+            scrollTravel = .zero
+            scrollGestureHandled = false
+        }
+
+        guard !scrollGestureHandled else { return true }
+
+        scrollTravel.width += delta.width
+        scrollTravel.height += delta.height
+
+        guard let direction = Self.direction(of: scrollTravel, threshold: Self.swipeThreshold) else { return false }
+
+        scrollGestureHandled = performSwipe(direction, inTopRow: inTopRow)
+
+        // Keep a vertical scroll that didn't trigger a swipe scrolling the list.
+        if !scrollGestureHandled {
+            scrollTravel = .zero
+        }
+
+        return scrollGestureHandled
+    }
+
+    private func performSwipe(_ direction: IslandSwipeDirection, inTopRow: Bool) -> Bool {
+        guard store.handleSwipe(direction, inTopRow: inTopRow) else { return false }
+
+        if store.preferences.hapticsEnabled {
+            NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+        }
+
+        return true
+    }
+
+    private static func direction(of travel: CGSize, threshold: CGFloat) -> IslandSwipeDirection? {
+        if abs(travel.height) >= abs(travel.width) {
+            guard abs(travel.height) >= threshold else { return nil }
+            return travel.height > 0 ? .down : .up
+        }
+
+        guard abs(travel.width) >= threshold else { return nil }
+        return travel.width > 0 ? .right : .left
     }
 
     private func updateMouseInteraction() {

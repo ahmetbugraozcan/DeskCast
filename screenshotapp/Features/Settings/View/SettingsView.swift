@@ -151,6 +151,12 @@ struct SettingsView: View {
         .onAppear {
             clampNumericSettings()
             availableVideoMicrophones = ScreenRecordingSourceService().availableMicrophones()
+
+            #if DEBUG
+            if let section = UserDefaults.standard.string(forKey: "DeskCastDemoSettings").flatMap(SettingsSection.init(rawValue:)) {
+                selectedSection = section
+            }
+            #endif
         }
         .onChange(of: maxStackCount) { _, newValue in
             maxStackCount = ScreenshotShelfSettings.clampedMaxStackCount(newValue)

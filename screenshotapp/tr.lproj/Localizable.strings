@@ -418,3 +418,29 @@
 "island.audio.muteApp" = "Sessize al";
 "island.audio.unmuteApp" = "Sesi aç";
 "island.audio.resetApp" = "%100'e sıfırla";
+
+/* Dynamic Island settings */
+"island.settings.opening" = "Açılış";
+"island.settings.open.click" = "Tıklayarak aç";
+"island.settings.open.hover" = "Üzerine gelince genişlet";
+"island.settings.open.hiddenUntilHover" = "Üzerine gelene kadar gizle";
+"island.settings.hoverDelay" = "Etkinleştirme süresi: %.2f sn";
+"island.settings.gestures" = "Ada hareketleri";
+"island.settings.gesturesHint" = "Açmak için adanın üzerinde aşağı kaydırın, kapatmak için üst satırda yukarı kaydırın; parçayı değiştirmek için müziğin üzerinde yana kaydırın. Listeler kendi kaydırmasını korur.";
+"island.settings.haptics" = "Dokunsal geri bildirim";
+"island.settings.reopen" = "Yeniden açıldığında";
+"island.settings.reopen.lastPanel" = "Son panel";
+"island.settings.reopen.launcher" = "Panel ızgarası";
+"island.settings.whileIdle" = "Beklerken";
+"island.settings.idle.nothing" = "Hiçbir şey";
+"island.settings.idle.battery" = "Pil";
+"island.settings.idle.music" = "Müzik";
+"island.settings.panels" = "Paneller";
+"island.settings.panelsHint" = "Panel ızgarasını sıralamak için sürükleyin. Bir paneli adada gizlemek için işaretini kaldırın; kısayolu da kapanır.";
+"island.settings.display" = "Ekran";
+"island.settings.display.automatic" = "Otomatik";
+"island.settings.display.builtIn" = "Yerleşik ekran";
+"island.settings.display.main" = "Ana ekran";
+"island.settings.hideInFullScreen" = "Tam ekranda gizle";
+"island.settings.showInCaptures" = "Ekran görüntülerinde ve videolarda göster";
+"island.settings.outline" = "Kenarlığı göster";
