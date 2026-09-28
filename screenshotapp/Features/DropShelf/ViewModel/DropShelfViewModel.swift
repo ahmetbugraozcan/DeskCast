@@ -93,7 +93,9 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         }
     }
 
-    func addItems(from pasteboard: NSPasteboard) -> Bool {
+    /// `revealsShelf: false` keeps the floating shelf hidden, for drops the
+    /// Dynamic Island's Files panel already shows.
+    func addItems(from pasteboard: NSPasteboard, revealsShelf: Bool = true) -> Bool {
         guard settings.isToolEnabled(.dropShelf) else {
             return false
         }
@@ -112,7 +114,9 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         let settings = settings.dropShelfSettings()
         items.append(contentsOf: newItems)
         trimToMaxItemCount(settings.maxItemCount)
-        isShelfVisible = true
+        if revealsShelf {
+            isShelfVisible = true
+        }
         isDropTargeted = false
         presenter?.refresh()
         showToast(
@@ -144,6 +148,12 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     }
 
     func addFile(_ url: URL) {
+        addFiles([url])
+    }
+
+    func addFiles(_ urls: [URL], revealsShelf: Bool = true) {
+        guard !urls.isEmpty else { return }
+
         guard settings.isToolEnabled(.dropShelf) else {
             NSSound.beep()
             showToast(
@@ -153,17 +163,25 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
             return
         }
 
-        let item = DropShelfItem(
-            kind: .file,
-            displayName: url.lastPathComponent,
-            fileURL: url
-        )
+        let newItems = urls.map { url in
+            DropShelfItem(
+                kind: .file,
+                displayName: url.lastPathComponent,
+                fileURL: url
+            )
+        }
         let settings = settings.dropShelfSettings()
-        items.append(item)
+        items.append(contentsOf: newItems)
         trimToMaxItemCount(settings.maxItemCount)
-        isShelfVisible = true
+        if revealsShelf {
+            isShelfVisible = true
+        }
         presenter?.refresh()
-        showToast(AppLocalization.formatted("Added %ld item", 1))
+        showToast(
+            newItems.count == 1
+                ? AppLocalization.formatted("Added %ld item", newItems.count)
+                : AppLocalization.formatted("Added %ld items", newItems.count)
+        )
     }
 
     func setDropTargeted(_ isTargeted: Bool) {

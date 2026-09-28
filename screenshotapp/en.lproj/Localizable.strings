@@ -285,7 +285,6 @@
 "Now Playing" = "Now Playing";
 "Show the playing song" = "Show the playing song";
 "Announce track changes" = "Announce track changes";
-"Supported players: Music and Spotify. macOS asks once for permission to control them." = "Supported players: Music and Spotify. macOS asks once for permission to control them.";
 "Notifications" = "Notifications";
 "Show DeskCast notifications in the island" = "Show DeskCast notifications in the island";
 "Show charging and low battery alerts" = "Show charging and low battery alerts";
@@ -362,7 +361,7 @@
 "island.captures.reveal" = "Show in Finder";
 "island.captures.remove" = "Remove";
 "island.files.empty" = "Drop Shelf is empty";
-"island.files.emptyMessage" = "Drag files onto the Drop Shelf to collect them here.";
+"island.files.emptyMessage" = "Drag files onto the island or the Drop Shelf to collect them here.";
 "island.calendar.accessTitle" = "See your upcoming events";
 "island.calendar.accessMessage" = "DeskCast reads your calendars to list today's and tomorrow's events.";
 "island.calendar.allow" = "Allow Calendar Access";
@@ -445,3 +444,8 @@
 "island.settings.showInCaptures" = "Show in screenshots and recordings";
 "island.settings.outline" = "Show outline";
 "island.ai.remaining" = "%@ left";
+
+"island.nowPlaying.emptyMessage" = "Play something in Music, Spotify, a browser or any app that shows up in Control Center.";
+"island.nowPlaying.playerVolume" = "%@ volume";
+"island.files.add" = "Add Files…";
+"island.files.addPrompt" = "Add";

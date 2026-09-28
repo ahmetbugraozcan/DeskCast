@@ -31,6 +31,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// Opened by a click or shortcut; closes on an outside click, or when the
     /// pointer leaves after having entered.
     @Published private(set) var isForcedOpen = false
+    /// A window started from the island (e.g. an open panel) is up; closing
+    /// the island underneath it would lose the user's context.
+    @Published private(set) var isHeldOpen = false
     @Published private(set) var expandedContent: IslandExpandedContent
     @Published private(set) var notificationHistory: [DynamicIslandNotification] = []
     @Published private(set) var geometry = DynamicIslandGeometry.fallback
@@ -129,7 +132,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     // MARK: - Derived state
 
     var mode: DynamicIslandMode {
-        if isPinned || isForcedOpen {
+        if isPinned || isForcedOpen || isHeldOpen {
             return .expanded
         }
 
@@ -366,6 +369,30 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         }
     }
 
+    /// A file drag reached the island: show the Files panel so it can land there.
+    /// It closes again once the pointer leaves, like a click-open.
+    func beginFileDrag() {
+        guard preferences.visiblePanels.contains(.files) else { return }
+
+        select(.files)
+        isForcedOpen = true
+        pointerEnteredSinceForcedOpen = true
+    }
+
+    /// Runs `body` (typically a modal open panel) with the island kept open.
+    func holdingOpen<T>(_ body: () -> T) -> T {
+        isHeldOpen = true
+        defer {
+            isHeldOpen = false
+            // Back to a click-open island: stays until an outside click or
+            // the pointer enters and leaves.
+            isForcedOpen = true
+            pointerEnteredSinceForcedOpen = isHovering
+        }
+
+        return body()
+    }
+
     func togglePin() {
         isPinned.toggle()
 
@@ -412,25 +439,44 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     func togglePlayPause() {
         guard let nowPlaying else { return }
-        nowPlayingService.send(.togglePlayPause, to: nowPlaying.player)
+        nowPlayingService.send(.togglePlayPause, to: nowPlaying.source)
         // Optimistic flip; the next player notification confirms it.
         self.nowPlaying = nowPlaying.togglingPlayback()
     }
 
     func nextTrack() {
         guard let nowPlaying else { return }
-        nowPlayingService.send(.nextTrack, to: nowPlaying.player)
+        nowPlayingService.send(.nextTrack, to: nowPlaying.source)
     }
 
     func previousTrack() {
         guard let nowPlaying else { return }
-        nowPlayingService.send(.previousTrack, to: nowPlaying.player)
+        nowPlayingService.send(.previousTrack, to: nowPlaying.source)
+    }
+
+    func seek(to seconds: TimeInterval) {
+        guard let nowPlaying else { return }
+        nowPlayingService.seek(to: seconds, in: nowPlaying.source)
+        self.nowPlaying = nowPlaying.seeking(to: seconds)
+    }
+
+    /// Sets the playing player's own volume; only scripted players have one.
+    func setPlayerVolume(_ volume: Double) {
+        guard var nowPlaying, let player = nowPlaying.player else { return }
+
+        let clamped = min(max(volume, 0), 1)
+        // Players take whole percents; skip drag steps that change nothing.
+        guard Int((clamped * 100).rounded()) != nowPlaying.volume.map({ Int(($0 * 100).rounded()) }) else { return }
+
+        nowPlayingService.setVolume(clamped, for: player)
+        nowPlaying.volume = clamped
+        self.nowPlaying = nowPlaying
     }
 
     func openPlayer(_ player: MediaPlayerApp? = nil) {
         guard
-            let player = player ?? nowPlaying?.player,
-            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: player.bundleIdentifier)
+            let bundleIdentifier = player?.bundleIdentifier ?? nowPlaying?.source.bundleIdentifier,
+            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier)
         else {
             return
         }
@@ -562,7 +608,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         }
 
         var banner = DynamicIslandNotification(
-            title: info.title.isEmpty ? info.player.displayName : info.title,
+            title: info.title.isEmpty ? info.source.displayName : info.title,
             message: info.artist.isEmpty ? info.album : info.artist,
             systemImage: "music.note",
             style: .media,

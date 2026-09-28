@@ -63,7 +63,7 @@ struct IslandExpandedView: View {
                         }
                     }
                 } label: {
-                    Text(nowPlaying.player.displayName)
+                    Text(nowPlaying.source.displayName)
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .menuStyle(.borderlessButton)
@@ -100,7 +100,7 @@ struct IslandExpandedView: View {
         case .captures:
             CapturesPanelView(shelf: panels.screenshots, actions: panels.actions)
         case .files:
-            FilesPanelView(dropShelf: panels.dropShelf, actions: panels.actions)
+            FilesPanelView(store: store, dropShelf: panels.dropShelf, actions: panels.actions)
         case .system:
             SystemPanelView(model: panels.system)
         case .tools:

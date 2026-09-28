@@ -1,23 +1,28 @@
 import AppKit
 
-/// Reads the playing track from supported players and sends transport commands.
-/// Injected into `DynamicIslandViewModel` so the view model never talks to
-/// AppleScript or notification centers directly.
+/// Reads the playing track and sends transport commands. Injected into
+/// `DynamicIslandViewModel` so the view model never talks to AppleScript, the
+/// system session bridge or notification centers directly.
 @MainActor
 protocol NowPlayingProviding: AnyObject {
     var onChange: ((NowPlayingInfo?) -> Void)? { get set }
     func start()
     func stop()
     func refresh()
-    func send(_ command: MediaCommand, to player: MediaPlayerApp)
+    func send(_ command: MediaCommand, to source: NowPlayingSource)
+    func seek(to seconds: TimeInterval, in source: NowPlayingSource)
+    /// Sets a scripted player's own volume (0...1).
+    func setVolume(_ volume: Double, for player: MediaPlayerApp)
     /// Shows this player's track when several players have one loaded.
     func prefer(_ player: MediaPlayerApp)
 }
 
-/// macOS has no public API for the system "Now Playing" session (MediaRemote is
-/// entitlement-gated for third-party apps), so this service drives Music and
-/// Spotify directly: their distributed playback notifications trigger a refresh,
-/// and AppleScript reads track details / artwork and sends play-pause/next/previous.
+/// Combines two sources:
+/// - the system now playing session (`SystemNowPlayingBridge`), which covers
+///   every app that reports to Control Center — browsers/YouTube included;
+/// - Music and Spotify through AppleScript, which adds what the system session
+///   lacks (the player's own volume, Spotify track ids for "Up Next") and keeps
+///   working if the bridge can't run.
 /// Scripts only run while the player is already running so nothing gets launched.
 @MainActor
 final class MediaPlayerNowPlayingService: NowPlayingProviding {
@@ -27,12 +32,15 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
         label: "com.ahmetbugraozcan.screenshotapp.nowplaying.scripts",
         qos: .userInitiated
     )
+    private let systemBridge: SystemNowPlayingBridge
     private var distributedObservers: [NSObjectProtocol] = []
     private var workspaceObservers: [NSObjectProtocol] = []
     private var pollTimer: Timer?
     private var pendingRefresh: DispatchWorkItem?
     private var refreshGeneration = 0
     private var current: NowPlayingInfo?
+    private var scriptedSnapshots: [MediaPlayerTrackSnapshot] = []
+    private var systemSnapshot: MediaPlayerTrackSnapshot?
     private var lastActivePlayer: MediaPlayerApp?
     /// Picked in the Now Playing source menu; wins over "whichever is playing".
     private var preferredPlayer: MediaPlayerApp?
@@ -46,6 +54,22 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
     /// position drift (seeking) and players that post nothing.
     private static let pollInterval: TimeInterval = 6
     private static let artworkCacheLimit = 24
+
+    init(systemBridge: SystemNowPlayingBridge? = nil) {
+        let systemBridge = systemBridge ?? SystemNowPlayingBridge()
+        self.systemBridge = systemBridge
+        systemBridge.onChange = { [weak self] snapshot in
+            guard let self else { return }
+
+            // Playback starting elsewhere overrides a manual pick.
+            if let snapshot, snapshot.isPlaying, snapshot.source.player != preferredPlayer {
+                preferredPlayer = nil
+            }
+
+            systemSnapshot = snapshot
+            chooseAndPublish()
+        }
+    }
 
     func start() {
         guard !isStarted else { return }
@@ -99,6 +123,7 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
         RunLoop.main.add(timer, forMode: .common)
         pollTimer = timer
 
+        systemBridge.start()
         refresh()
     }
 
@@ -116,6 +141,9 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
         pendingRefresh = nil
         // Invalidate in-flight reads so a late result can't republish.
         refreshGeneration += 1
+        systemBridge.stop()
+        scriptedSnapshots = []
+        systemSnapshot = nil
         current = nil
     }
 
@@ -128,7 +156,8 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
         let players = MediaPlayerApp.allCases.filter(\.isRunning)
 
         guard !players.isEmpty else {
-            publish(nil)
+            scriptedSnapshots = []
+            chooseAndPublish()
             return
         }
 
@@ -144,17 +173,40 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
         }
     }
 
-    func send(_ command: MediaCommand, to player: MediaPlayerApp) {
+    func send(_ command: MediaCommand, to source: NowPlayingSource) {
+        guard let player = source.player, player.isRunning else {
+            systemBridge.send(command)
+            return
+        }
+
+        lastActivePlayer = player
+        runScript(Self.commandScript(command, for: player))
+    }
+
+    func seek(to seconds: TimeInterval, in source: NowPlayingSource) {
+        guard let player = source.player, player.isRunning else {
+            systemBridge.seek(to: seconds)
+            return
+        }
+
+        // Spotify and Music both take the position in seconds.
+        let position = String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), max(seconds, 0))
+        runScript("tell application id \"\(player.bundleIdentifier)\" to set player position to \(position)")
+    }
+
+    func setVolume(_ volume: Double, for player: MediaPlayerApp) {
         guard player.isRunning else { return }
 
-        let source = Self.commandScript(command, for: player)
-        lastActivePlayer = player
+        let percent = Int((min(max(volume, 0), 1) * 100).rounded())
+        runScript("tell application id \"\(player.bundleIdentifier)\" to set sound volume to \(percent)", refreshDelay: 0.6)
+    }
 
+    private func runScript(_ source: String, refreshDelay: TimeInterval = 0.3) {
         scriptQueue.async { [weak self] in
             _ = Self.run(source)
 
             Task { @MainActor in
-                self?.scheduleRefresh(after: 0.3)
+                self?.scheduleRefresh(after: refreshDelay)
             }
         }
     }
@@ -180,15 +232,20 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
     private func apply(_ snapshots: [MediaPlayerTrackSnapshot], generation: Int) {
         guard isStarted, generation == refreshGeneration else { return }
 
-        // Prefer whatever is audibly playing, then the player that last changed,
-        // then the one already on screen.
-        let chosen = snapshots.first(where: { $0.player == preferredPlayer })
-            ?? snapshots.first(where: \.isPlaying)
-            ?? snapshots.first(where: { $0.player == lastActivePlayer })
-            ?? snapshots.first(where: { $0.player == current?.player })
-            ?? snapshots.first
+        scriptedSnapshots = snapshots
+        chooseAndPublish()
+    }
 
-        guard let chosen else {
+    private func chooseAndPublish() {
+        guard isStarted else { return }
+
+        guard let chosen = Self.choose(
+            scripted: scriptedSnapshots,
+            system: systemSnapshot,
+            preferred: preferredPlayer,
+            lastActive: lastActivePlayer,
+            current: current?.source
+        ) else {
             publish(nil)
             return
         }
@@ -211,12 +268,47 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
         }
     }
 
+    /// Picks the session to show. The system session is what Control Center
+    /// shows, so it wins over a paused scripted player; a scripted snapshot of
+    /// the same app replaces it, since it also carries the player volume.
+    nonisolated static func choose(
+        scripted: [MediaPlayerTrackSnapshot],
+        system: MediaPlayerTrackSnapshot?,
+        preferred: MediaPlayerApp?,
+        lastActive: MediaPlayerApp?,
+        current: NowPlayingSource?
+    ) -> MediaPlayerTrackSnapshot? {
+        if let preferred, let pick = scripted.first(where: { $0.source.player == preferred }) {
+            return pick
+        }
+
+        if let system {
+            let scriptedTwin = scripted.first { $0.source == system.source }
+
+            if system.isPlaying || !scripted.contains(where: \.isPlaying) {
+                return scriptedTwin ?? system
+            }
+        }
+
+        // No system session (or it is paused while a scripted player plays):
+        // prefer what is audible, then the player that last changed.
+        return scripted.first(where: \.isPlaying)
+            ?? scripted.first(where: { $0.source.player == lastActive })
+            ?? scripted.first(where: { $0.source == current })
+            ?? scripted.first
+    }
+
     private func publish(_ info: NowPlayingInfo?) {
         current = info
         onChange?(info)
     }
 
     private func loadArtwork(for snapshot: MediaPlayerTrackSnapshot, key: String) {
+        if let data = snapshot.artworkData {
+            storeArtwork(data, key: key)
+            return
+        }
+
         guard !artworkLoadingKeys.contains(key), !artworkUnavailableKeys.contains(key) else { return }
         artworkLoadingKeys.insert(key)
 
@@ -228,23 +320,32 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
 
             self.artworkLoadingKeys.remove(key)
 
-            guard let data, let image = NSImage(data: data) else {
+            guard let data else {
                 self.artworkUnavailableKeys.insert(key)
                 return
             }
 
-            if self.artworkCache.count >= Self.artworkCacheLimit {
-                self.artworkCache.removeAll()
-                self.artworkUnavailableKeys.removeAll()
-            }
-            let tint = image.islandTintColor
-            self.artworkCache[key] = (image, tint)
-
-            guard self.isStarted, var current = self.current, current.cacheKey == key else { return }
-            current.artwork = image
-            current.artworkTint = tint
-            self.publish(current)
+            self.storeArtwork(data, key: key)
         }
+    }
+
+    private func storeArtwork(_ data: Data, key: String) {
+        guard let image = NSImage(data: data) else {
+            artworkUnavailableKeys.insert(key)
+            return
+        }
+
+        if artworkCache.count >= Self.artworkCacheLimit {
+            artworkCache.removeAll()
+            artworkUnavailableKeys.removeAll()
+        }
+        let tint = image.islandTintColor
+        artworkCache[key] = (image, tint)
+
+        guard isStarted, var current, current.cacheKey == key else { return }
+        current.artwork = image
+        current.artworkTint = tint
+        publish(current)
     }
 
     // MARK: - Scripting (runs on `scriptQueue`)
@@ -257,7 +358,7 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
             return try? await URLSession.shared.data(from: url).0
         }
 
-        guard snapshot.player == .music else { return nil }
+        guard snapshot.source.player == .music else { return nil }
 
         return await withCheckedContinuation { continuation in
             queue.async {
@@ -270,7 +371,7 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
     nonisolated private static func readTrack(from player: MediaPlayerApp) -> MediaPlayerTrackSnapshot? {
         // Reads a list instead of a joined string so numbers never go through a
         // locale-dependent text coercion (e.g. "3,5" in Turkish).
-        guard let list = run(trackScript(for: player)), list.numberOfItems >= 8 else {
+        guard let list = run(trackScript(for: player)), list.numberOfItems >= 9 else {
             return nil
         }
 
@@ -300,7 +401,8 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
             duration: number(6),
             elapsed: number(7),
             isPlaying: list.atIndex(1)?.booleanValue ?? false,
-            artworkURL: artworkURLString.isEmpty ? nil : URL(string: artworkURLString)
+            artworkURL: artworkURLString.isEmpty ? nil : URL(string: artworkURLString),
+            volume: number(9) / 100
         )
     }
 
@@ -312,7 +414,7 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
         return errorInfo == nil ? result : nil
     }
 
-    /// Returns `{isPlaying, id, title, artist, album, durationSeconds, positionSeconds, artworkURL}`
+    /// Returns `{isPlaying, id, title, artist, album, durationSeconds, positionSeconds, artworkURL, volume}`
     /// or `{}` when nothing is loaded.
     nonisolated private static func trackScript(for player: MediaPlayerApp) -> String {
         switch player {
@@ -329,7 +431,7 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
                     end try
                     set trackID to persistent ID of trackRef
                     set trackInfo to {name of trackRef, artist of trackRef, album of trackRef}
-                    return {isPlaying, trackID} & trackInfo & {duration of trackRef, trackPosition, ""}
+                    return {isPlaying, trackID} & trackInfo & {duration of trackRef, trackPosition, "", sound volume}
                 on error
                     return {}
                 end try
@@ -348,7 +450,7 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
                     end try
                     set trackInfo to {name of trackRef, artist of trackRef, album of trackRef}
                     set trackDuration to (duration of trackRef) / 1000
-                    return {isPlaying, id of trackRef} & trackInfo & {trackDuration, player position, artURL}
+                    return {isPlaying, id of trackRef} & trackInfo & {trackDuration, player position, artURL, sound volume}
                 on error
                     return {}
                 end try

@@ -109,6 +109,7 @@
 				120AAC7B2FA603A2004E3432 /* Sources */,
 				120AAC7C2FA603A2004E3432 /* Frameworks */,
 				120AAC7D2FA603A2004E3432 /* Resources */,
+				5A1E0C0D2FB0000100DE5C01 /* Build Now Playing Adapter */,
 			);
 			buildRules = (
 			);
@@ -244,6 +245,32 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		5A1E0C0D2FB0000100DE5C01 /* Build Now Playing Adapter */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 0;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/NowPlayingAdapter/DeskCastNowPlaying.m",
+				"$(SRCROOT)/NowPlayingAdapter/build-adapter.sh",
+			);
+			name = "Build Now Playing Adapter";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/libDeskCastNowPlaying.dylib",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/libDeskCastNowPlaying.dylib.cstemp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/NowPlayingAdapter/build-adapter.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		120AAC7B2FA603A2004E3432 /* Sources */ = {

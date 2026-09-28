@@ -399,11 +399,15 @@ struct CompactMediaView: View {
 
 struct PlaybackProgressView: View {
     let nowPlaying: NowPlayingInfo
+    /// Enables scrubbing; called with the target position when the drag ends.
+    var onSeek: ((TimeInterval) -> Void)?
+
+    @State private var scrubFraction: Double?
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            let elapsed = nowPlaying.elapsed(at: context.date)
-            let progress = nowPlaying.progress(at: context.date)
+            let progress = scrubFraction ?? nowPlaying.progress(at: context.date)
+            let elapsed = scrubFraction.map { $0 * nowPlaying.duration } ?? nowPlaying.elapsed(at: context.date)
 
             HStack(spacing: 10) {
                 Text(Self.format(elapsed))
@@ -417,10 +421,15 @@ struct PlaybackProgressView: View {
                         Capsule()
                             .fill(nowPlaying.tintColor)
                             .frame(width: max(proxy.size.width * progress, 4))
-                            .animation(.linear(duration: 1), value: progress)
+                            .animation(scrubFraction == nil ? .linear(duration: 1) : nil, value: progress)
                     }
+                    .frame(height: scrubFraction == nil ? 4 : 6)
+                    .frame(maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .gesture(scrubGesture(width: proxy.size.width), including: canSeek ? .all : .none)
                 }
-                .frame(height: 4)
+                .frame(height: 12)
+                .animation(.easeOut(duration: 0.15), value: scrubFraction == nil)
 
                 Text(nowPlaying.duration > 0 ? "-" + Self.format(nowPlaying.duration - elapsed) : "--:--")
                     .frame(width: 42, alignment: .trailing)
@@ -428,6 +437,23 @@ struct PlaybackProgressView: View {
             .font(.system(size: 10, weight: .medium).monospacedDigit())
             .foregroundStyle(.white.opacity(0.5))
         }
+    }
+
+    private var canSeek: Bool {
+        onSeek != nil && nowPlaying.duration > 0
+    }
+
+    private func scrubGesture(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { gesture in
+                scrubFraction = min(max(gesture.location.x / max(width, 1), 0), 1)
+            }
+            .onEnded { _ in
+                if let scrubFraction {
+                    onSeek?(scrubFraction * nowPlaying.duration)
+                }
+                scrubFraction = nil
+            }
     }
 
     private static func format(_ interval: TimeInterval) -> String {

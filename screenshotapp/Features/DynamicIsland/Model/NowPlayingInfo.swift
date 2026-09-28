@@ -1,8 +1,8 @@
 import AppKit
 
-/// Media players DeskCast can read and control. macOS offers no public API for
-/// the system-wide "Now Playing" session, so each supported player is driven
-/// through its own scripting dictionary and playback notifications.
+/// Media players DeskCast drives through their scripting dictionaries (track
+/// details, artwork, the player's own volume). Everything else — browsers,
+/// Podcasts, … — comes from the system now playing session instead.
 enum MediaPlayerApp: String, CaseIterable, Identifiable, Sendable {
     case music
     case spotify
@@ -32,10 +32,54 @@ enum MediaPlayerApp: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    nonisolated init?(bundleIdentifier: String) {
+        guard let player = Self.allCases.first(where: { $0.bundleIdentifier == bundleIdentifier }) else {
+            return nil
+        }
+        self = player
+    }
+
     var isRunning: Bool {
         !NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty
     }
 
+    var appIcon: NSImage? {
+        NowPlayingSource(player: self).appIcon
+    }
+}
+
+/// The app that owns a now playing session: a scripted player, or any app the
+/// system now playing session reports (Safari, Chrome, Podcasts, …).
+nonisolated struct NowPlayingSource: Hashable, Sendable {
+    let bundleIdentifier: String
+
+    init(bundleIdentifier: String) {
+        self.bundleIdentifier = bundleIdentifier
+    }
+
+    init(player: MediaPlayerApp) {
+        bundleIdentifier = player.bundleIdentifier
+    }
+
+    /// Set when DeskCast can script this app directly.
+    var player: MediaPlayerApp? {
+        MediaPlayerApp(bundleIdentifier: bundleIdentifier)
+    }
+
+    @MainActor
+    var displayName: String {
+        if let player {
+            return player.displayName
+        }
+
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
+            return bundleIdentifier
+        }
+
+        return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+    }
+
+    @MainActor
     var appIcon: NSImage? {
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
             return nil
@@ -51,9 +95,10 @@ enum MediaCommand: Sendable {
     case previousTrack
 }
 
-/// Raw track state read from a player script; produced off the main actor.
+/// Raw track state read from a player script or the system session; produced
+/// off the main actor.
 nonisolated struct MediaPlayerTrackSnapshot: Sendable {
-    let player: MediaPlayerApp
+    let source: NowPlayingSource
     let trackID: String
     let title: String
     let artist: String
@@ -62,10 +107,78 @@ nonisolated struct MediaPlayerTrackSnapshot: Sendable {
     let elapsed: TimeInterval
     let isPlaying: Bool
     let artworkURL: URL?
+    /// Cover bytes delivered with the state (system session only).
+    let artworkData: Data?
+    /// The player's own volume (0...1), when it exposes one.
+    let volume: Double?
+    /// What the session accepts; a single web video has no next/previous.
+    let capabilities: NowPlayingCapabilities
+
+    init(
+        source: NowPlayingSource,
+        trackID: String,
+        title: String,
+        artist: String,
+        album: String,
+        duration: TimeInterval,
+        elapsed: TimeInterval,
+        isPlaying: Bool,
+        artworkURL: URL?,
+        artworkData: Data? = nil,
+        volume: Double? = nil,
+        capabilities: NowPlayingCapabilities = .all
+    ) {
+        self.source = source
+        self.trackID = trackID
+        self.title = title
+        self.artist = artist
+        self.album = album
+        self.duration = duration
+        self.elapsed = elapsed
+        self.isPlaying = isPlaying
+        self.artworkURL = artworkURL
+        self.artworkData = artworkData
+        self.volume = volume
+        self.capabilities = capabilities
+    }
+
+    init(
+        player: MediaPlayerApp,
+        trackID: String,
+        title: String,
+        artist: String,
+        album: String,
+        duration: TimeInterval,
+        elapsed: TimeInterval,
+        isPlaying: Bool,
+        artworkURL: URL?,
+        volume: Double? = nil
+    ) {
+        self.init(
+            source: NowPlayingSource(player: player),
+            trackID: trackID,
+            title: title,
+            artist: artist,
+            album: album,
+            duration: duration,
+            elapsed: elapsed,
+            isPlaying: isPlaying,
+            artworkURL: artworkURL,
+            volume: volume
+        )
+    }
+}
+
+nonisolated struct NowPlayingCapabilities: Equatable, Sendable {
+    var canSkip: Bool
+    var canGoBack: Bool
+    var canSeek: Bool
+
+    static let all = NowPlayingCapabilities(canSkip: true, canGoBack: true, canSeek: true)
 }
 
 struct NowPlayingInfo {
-    let player: MediaPlayerApp
+    let source: NowPlayingSource
     let trackID: String
     let title: String
     let artist: String
@@ -75,6 +188,9 @@ struct NowPlayingInfo {
     /// When `elapsed` was read, so the UI can extrapolate the position while playing.
     let capturedAt: Date
     let isPlaying: Bool
+    /// The player's own volume (0...1); `nil` when only the system volume applies.
+    var volume: Double?
+    let capabilities: NowPlayingCapabilities
     var artwork: NSImage?
     /// Dominant artwork color, used to tint the equalizer and progress bar.
     var artworkTint: NSColor?
@@ -85,7 +201,7 @@ struct NowPlayingInfo {
         artwork: NSImage? = nil,
         artworkTint: NSColor? = nil
     ) {
-        player = snapshot.player
+        source = snapshot.source
         trackID = snapshot.trackID
         title = snapshot.title
         artist = snapshot.artist
@@ -94,15 +210,20 @@ struct NowPlayingInfo {
         elapsed = max(snapshot.elapsed, 0)
         self.capturedAt = capturedAt
         isPlaying = snapshot.isPlaying
+        volume = snapshot.volume.map { min(max($0, 0), 1) }
+        capabilities = snapshot.capabilities
         self.artwork = artwork
         self.artworkTint = artworkTint
     }
 
-    var cacheKey: String { "\(player.rawValue)|\(trackID)" }
+    /// Scripted player, when DeskCast can control this source directly.
+    var player: MediaPlayerApp? { source.player }
+
+    var cacheKey: String { "\(source.bundleIdentifier)|\(trackID)" }
 
     func isSameTrack(as other: NowPlayingInfo?) -> Bool {
         guard let other else { return false }
-        return other.player == player && other.trackID == trackID
+        return other.source == source && other.trackID == trackID
     }
 
     func elapsed(at date: Date) -> TimeInterval {
@@ -115,11 +236,29 @@ struct NowPlayingInfo {
         return min(max(elapsed(at: date) / duration, 0), 1)
     }
 
+    /// Returns a copy positioned at `seconds`, shown until the player confirms.
+    func seeking(to seconds: TimeInterval, at date: Date = Date()) -> NowPlayingInfo {
+        let snapshot = MediaPlayerTrackSnapshot(
+            source: source,
+            trackID: trackID,
+            title: title,
+            artist: artist,
+            album: album,
+            duration: duration,
+            elapsed: duration > 0 ? min(max(seconds, 0), duration) : max(seconds, 0),
+            isPlaying: isPlaying,
+            artworkURL: nil,
+            volume: volume,
+            capabilities: capabilities
+        )
+        return NowPlayingInfo(snapshot: snapshot, capturedAt: date, artwork: artwork, artworkTint: artworkTint)
+    }
+
     /// Returns a copy with the playing flag flipped immediately, so controls feel
     /// responsive before the player confirms the change.
     func togglingPlayback(at date: Date = Date()) -> NowPlayingInfo {
         let snapshot = MediaPlayerTrackSnapshot(
-            player: player,
+            source: source,
             trackID: trackID,
             title: title,
             artist: artist,
@@ -127,7 +266,9 @@ struct NowPlayingInfo {
             duration: duration,
             elapsed: elapsed(at: date),
             isPlaying: !isPlaying,
-            artworkURL: nil
+            artworkURL: nil,
+            volume: volume,
+            capabilities: capabilities
         )
         return NowPlayingInfo(snapshot: snapshot, capturedAt: date, artwork: artwork, artworkTint: artworkTint)
     }

@@ -8,14 +8,16 @@ import Testing
 private final class FakeNowPlayingService: NowPlayingProviding {
     var onChange: ((NowPlayingInfo?) -> Void)?
     private(set) var isStarted = false
-    private(set) var sentCommands: [(MediaCommand, MediaPlayerApp)] = []
+    private(set) var sentCommands: [(MediaCommand, NowPlayingSource)] = []
 
     func start() { isStarted = true }
     func stop() { isStarted = false }
     func refresh() {}
-    func send(_ command: MediaCommand, to player: MediaPlayerApp) {
-        sentCommands.append((command, player))
+    func send(_ command: MediaCommand, to source: NowPlayingSource) {
+        sentCommands.append((command, source))
     }
+    func seek(to seconds: TimeInterval, in source: NowPlayingSource) {}
+    func setVolume(_ volume: Double, for player: MediaPlayerApp) {}
     func prefer(_ player: MediaPlayerApp) {}
 
     func emit(_ info: NowPlayingInfo?) {
@@ -494,5 +496,77 @@ struct ClaudePlanUsageTests {
     @Test func rejectsMalformedHistory() {
         #expect(AIUsageService.claudePlanUsage(from: Data("{}".utf8), now: now) == nil)
         #expect(AIUsageService.claudePlanUsage(from: history([]), now: now) == nil)
+    }
+}
+
+struct NowPlayingSourceSelectionTests {
+    private func snapshot(_ bundle: String, playing: Bool, volume: Double? = nil) -> MediaPlayerTrackSnapshot {
+        MediaPlayerTrackSnapshot(
+            source: NowPlayingSource(bundleIdentifier: bundle),
+            trackID: bundle,
+            title: "Title",
+            artist: "Artist",
+            album: "",
+            duration: 100,
+            elapsed: 1,
+            isPlaying: playing,
+            artworkURL: nil,
+            volume: volume
+        )
+    }
+
+    private func choose(
+        scripted: [MediaPlayerTrackSnapshot],
+        system: MediaPlayerTrackSnapshot?,
+        preferred: MediaPlayerApp? = nil
+    ) -> String? {
+        MediaPlayerNowPlayingService.choose(
+            scripted: scripted,
+            system: system,
+            preferred: preferred,
+            lastActive: nil,
+            current: nil
+        )?.source.bundleIdentifier
+    }
+
+    @Test func playingBrowserBeatsPausedSpotify() {
+        let spotify = snapshot("com.spotify.client", playing: false)
+        #expect(choose(scripted: [spotify], system: snapshot("com.google.Chrome", playing: true)) == "com.google.Chrome")
+    }
+
+    @Test func pausedSystemSessionBeatsPausedSpotify() {
+        let spotify = snapshot("com.spotify.client", playing: false)
+        #expect(choose(scripted: [spotify], system: snapshot("com.google.Chrome", playing: false)) == "com.google.Chrome")
+    }
+
+    @Test func playingSpotifyBeatsPausedBrowser() {
+        let spotify = snapshot("com.spotify.client", playing: true)
+        #expect(choose(scripted: [spotify], system: snapshot("com.google.Chrome", playing: false)) == "com.spotify.client")
+    }
+
+    @Test func scriptedTwinKeepsPlayerVolume() {
+        let spotify = snapshot("com.spotify.client", playing: true, volume: 0.4)
+        let system = snapshot("com.spotify.client", playing: true)
+        let chosen = MediaPlayerNowPlayingService.choose(
+            scripted: [spotify],
+            system: system,
+            preferred: nil,
+            lastActive: nil,
+            current: nil
+        )
+        #expect(chosen?.volume == 0.4)
+    }
+
+    @Test func manualPickWins() {
+        let music = snapshot("com.apple.Music", playing: false)
+        let system = snapshot("com.google.Chrome", playing: true)
+        #expect(choose(scripted: [music], system: system, preferred: .music) == "com.apple.Music")
+    }
+
+    @Test func fallsBackToScriptedPlayersWithoutSystemSession() {
+        let music = snapshot("com.apple.Music", playing: false)
+        let spotify = snapshot("com.spotify.client", playing: true)
+        #expect(choose(scripted: [music, spotify], system: nil) == "com.spotify.client")
+        #expect(choose(scripted: [], system: nil) == nil)
     }
 }

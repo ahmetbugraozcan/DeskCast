@@ -72,15 +72,7 @@ struct NowPlayingPanelView: View {
             .frame(height: 118)
 
             HStack(spacing: 8) {
-                Image(systemName: audio.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.8))
-                    .frame(width: 18)
-                    .onTapGesture { audio.toggleMute() }
-
-                IslandSlider(value: audio.isMuted ? 0 : audio.volume) { audio.setVolume($0) }
-                    .frame(height: 20)
-                    .disabled(!audio.hasVolumeControl)
+                volumeControl(nowPlaying)
 
                 OutputDeviceMenu(audio: audio)
 
@@ -103,6 +95,33 @@ struct NowPlayingPanelView: View {
         }
     }
 
+    /// Scripted players (Music, Spotify) get their own volume, so the slider
+    /// doesn't change every other sound; other sources use the system volume.
+    @ViewBuilder
+    private func volumeControl(_ nowPlaying: NowPlayingInfo) -> some View {
+        if let playerVolume = nowPlaying.volume {
+            Image(systemName: playerVolume == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.8))
+                .frame(width: 18)
+                .help(AppLocalization.formatted("island.nowPlaying.playerVolume", nowPlaying.source.displayName))
+
+            IslandSlider(value: playerVolume) { store.setPlayerVolume($0) }
+                .frame(height: 20)
+                .help(AppLocalization.formatted("island.nowPlaying.playerVolume", nowPlaying.source.displayName))
+        } else {
+            Image(systemName: audio.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.8))
+                .frame(width: 18)
+                .onTapGesture { audio.toggleMute() }
+
+            IslandSlider(value: audio.isMuted ? 0 : audio.volume) { audio.setVolume($0) }
+                .frame(height: 20)
+                .disabled(!audio.hasVolumeControl)
+        }
+    }
+
     private func fullPlayer(_ nowPlaying: NowPlayingInfo) -> some View {
         HStack(alignment: .top, spacing: 16) {
             Button {
@@ -114,7 +133,7 @@ struct NowPlayingPanelView: View {
                     .shadow(color: nowPlaying.tintColor.opacity(0.35), radius: 14, y: 4)
             }
             .buttonStyle(IslandScaleButtonStyle())
-            .help(AppLocalization.formatted("Open %@", nowPlaying.player.displayName))
+            .help(AppLocalization.formatted("Open %@", nowPlaying.source.displayName))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(nowPlaying.title)
@@ -130,7 +149,7 @@ struct NowPlayingPanelView: View {
 
                 Spacer(minLength: 6)
 
-                PlaybackProgressView(nowPlaying: nowPlaying)
+                PlaybackProgressView(nowPlaying: nowPlaying, onSeek: nowPlaying.capabilities.canSeek ? { store.seek(to: $0) } : nil)
 
                 transportControls(nowPlaying, playSize: 44, skipSize: 17, spacing: 30)
                     .frame(maxWidth: .infinity)
@@ -159,7 +178,7 @@ struct NowPlayingPanelView: View {
                 }
             }
 
-            PlaybackProgressView(nowPlaying: nowPlaying)
+            PlaybackProgressView(nowPlaying: nowPlaying, onSeek: nowPlaying.capabilities.canSeek ? { store.seek(to: $0) } : nil)
 
             transportControls(nowPlaying, playSize: 32, skipSize: 13, spacing: 16)
                 .frame(maxWidth: .infinity)
@@ -171,6 +190,8 @@ struct NowPlayingPanelView: View {
             MediaControlButton(systemImage: "backward.end.fill", size: skipSize) {
                 store.previousTrack()
             }
+            .disabled(!nowPlaying.capabilities.canGoBack)
+            .opacity(nowPlaying.capabilities.canGoBack ? 1 : 0.3)
             .help(AppLocalization.string("Previous Track"))
 
             Button {
@@ -190,6 +211,8 @@ struct NowPlayingPanelView: View {
             MediaControlButton(systemImage: "forward.end.fill", size: skipSize) {
                 store.nextTrack()
             }
+            .disabled(!nowPlaying.capabilities.canSkip)
+            .opacity(nowPlaying.capabilities.canSkip ? 1 : 0.3)
             .help(AppLocalization.string("Next Track"))
         }
     }
@@ -199,7 +222,7 @@ struct NowPlayingPanelView: View {
             IslandEmptyState(
                 systemImage: "music.note",
                 title: AppLocalization.string("Nothing playing"),
-                message: AppLocalization.string("Supported players: Music and Spotify. macOS asks once for permission to control them.")
+                message: AppLocalization.string("island.nowPlaying.emptyMessage")
             )
 
             HStack(spacing: 10) {

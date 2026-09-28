@@ -285,7 +285,6 @@
 "Now Playing" = "Şimdi Çalıyor";
 "Show the playing song" = "Çalan şarkıyı göster";
 "Announce track changes" = "Parça değişimlerini bildir";
-"Supported players: Music and Spotify. macOS asks once for permission to control them." = "Desteklenen oynatıcılar: Müzik ve Spotify. macOS bunları kontrol etmek için bir kez izin ister.";
 "Notifications" = "Bildirimler";
 "Show DeskCast notifications in the island" = "DeskCast bildirimlerini adada göster";
 "Show charging and low battery alerts" = "Şarj ve düşük pil uyarılarını göster";
@@ -362,7 +361,7 @@
 "island.captures.reveal" = "Finder'da Göster";
 "island.captures.remove" = "Kaldır";
 "island.files.empty" = "Bırakma Rafı boş";
-"island.files.emptyMessage" = "Dosyaları burada toplamak için Bırakma Rafı'na sürükleyin.";
+"island.files.emptyMessage" = "Dosyaları burada toplamak için adaya ya da Bırakma Rafı'na sürükleyin.";
 "island.calendar.accessTitle" = "Yaklaşan etkinliklerinizi görün";
 "island.calendar.accessMessage" = "DeskCast, bugünün ve yarının etkinliklerini listelemek için takvimlerinizi okur.";
 "island.calendar.allow" = "Takvim Erişimine İzin Ver";
@@ -445,3 +444,8 @@
 "island.settings.showInCaptures" = "Ekran görüntülerinde ve videolarda göster";
 "island.settings.outline" = "Kenarlığı göster";
 "island.ai.remaining" = "%@ kaldı";
+
+"island.nowPlaying.emptyMessage" = "Müzik, Spotify, bir tarayıcı ya da Denetim Merkezi'nde görünen herhangi bir uygulamada bir şey çal.";
+"island.nowPlaying.playerVolume" = "%@ ses düzeyi";
+"island.files.add" = "Dosya Ekle…";
+"island.files.addPrompt" = "Ekle";

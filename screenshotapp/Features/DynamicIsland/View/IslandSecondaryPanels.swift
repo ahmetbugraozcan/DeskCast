@@ -168,6 +168,7 @@ struct CapturesPanelView: View {
 // MARK: - Files (Drop Shelf)
 
 struct FilesPanelView: View {
+    @ObservedObject var store: DynamicIslandViewModel
     @ObservedObject var dropShelf: DropShelfViewModel
     let actions: IslandToolActions
 
@@ -191,6 +192,10 @@ struct FilesPanelView: View {
             }
 
             HStack(spacing: 8) {
+                IslandChipButton(title: AppLocalization.string("island.files.add"), systemImage: "plus") {
+                    chooseFiles()
+                }
+
                 IslandChipButton(
                     title: AppLocalization.string(dropShelf.isShelfVisible ? "Hide Drop Shelf" : "Show Drop Shelf"),
                     systemImage: "tray.and.arrow.down",
@@ -210,6 +215,21 @@ struct FilesPanelView: View {
                 Spacer()
             }
         }
+    }
+
+    /// The island stays open behind the open panel so the new files show up in it.
+    private func chooseFiles() {
+        let urls = store.holdingOpen { () -> [URL] in
+            let panel = NSOpenPanel()
+            panel.canChooseFiles = true
+            panel.canChooseDirectories = true
+            panel.allowsMultipleSelection = true
+            panel.prompt = AppLocalization.string("island.files.addPrompt")
+            NSApp.activate()
+            return panel.runModal() == .OK ? panel.urls : []
+        }
+
+        dropShelf.addFiles(urls, revealsShelf: false)
     }
 
     private func fileTile(_ item: DropShelfItem) -> some View {

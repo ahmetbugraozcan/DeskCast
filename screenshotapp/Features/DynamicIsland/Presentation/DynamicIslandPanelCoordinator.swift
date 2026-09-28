@@ -193,6 +193,15 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
 
         let hostingView = DynamicIslandHostingView(rootView: DynamicIslandView(store: store, panels: panels))
         hostingView.sizingOptions = []
+        hostingView.registerForDraggedTypes(DropShelfPasteboardReader.supportedPasteboardTypes)
+        hostingView.onDragEntered = { [weak self] in
+            guard let self, self.store.preferences.visiblePanels.contains(.files) else { return false }
+            self.store.beginFileDrag()
+            return true
+        }
+        hostingView.onDrop = { [weak self] pasteboard in
+            self?.panels.dropShelf.addItems(from: pasteboard, revealsShelf: false) ?? false
+        }
         panel.contentView = hostingView
 
         panel.backgroundColor = .clear
@@ -474,8 +483,24 @@ private final class DynamicIslandPanel: NSPanel {
 }
 
 private final class DynamicIslandHostingView<Content: View>: NSHostingView<Content> {
+    /// Returns whether the island takes the drag (it then opens the Files panel).
+    var onDragEntered: (() -> Bool)?
+    var onDrop: ((NSPasteboard) -> Bool)?
+
     // The panel never becomes key, so the first click must reach the controls.
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
         true
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        onDragEntered?() == true ? .copy : []
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        onDrop == nil ? [] : .copy
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        onDrop?(sender.draggingPasteboard) ?? false
     }
 }
