@@ -12,6 +12,7 @@ A macOS menu-bar utility toolbox. It bundles several small productivity tools be
 - **Copy Finder Path** — copy the front Finder window's path via AppleScript.
 - **Search Images** — index and search local images by filename + recognized text.
 - **Drop Shelf** — a floating shelf that collects dragged files/folders/links/text/images to send together.
+- **Dynamic Island** — a notch-anchored panel showing the playing song (Music/Spotify), media controls, DeskCast toasts, and battery alerts; expands on hover.
 
 ### Naming (important)
 
@@ -32,7 +33,7 @@ The Xcode target uses `PBXFileSystemSynchronizedRootGroup`, so moving/adding `.s
 
 - `App/` — `@main DeskCastApp`, `AppDelegate`, and `AppEnvironment` (the composition root that builds view models, injects dependencies, and owns the presentation coordinators — no singletons).
 - `Core/` — cross-cutting: `Localization/` (`AppLocalization`, `AppLanguage`), `UI/` (`ToastPanelController`), `Support/` (`AppConstants`, `TemporaryPNGWriter`, extensions), and `ShelfCollecting` (cross-feature protocol).
-- `Features/<Feature>/` — one folder per feature (`ScreenshotShelf`, `ScreenRecording`, `DropShelf`, `ImageSearch`, `Permissions`, `Settings`, `Toolbox`), each split into the relevant `Model/`, `ViewModel/`, `View/`, `Service/`, and `Presentation/` layers.
+- `Features/<Feature>/` — one folder per feature (`ScreenshotShelf`, `ScreenRecording`, `DropShelf`, `ImageSearch`, `Permissions`, `Settings`, `Toolbox`), plus `DynamicIsland`, each split into the relevant `Model/`, `ViewModel/`, `View/`, `Service/`, and `Presentation/` layers.
 - `en.lproj/` + `tr.lproj/` — `Localizable.strings`.
 
 ## MVVM roles
@@ -50,7 +51,7 @@ Each feature threads a value through **all** of these; when you add or change a 
 3. `@AppStorage` use sites (menu in `DeskCastApp.swift`, `SettingsView`).
 4. Menu-visibility logic — a tool shows only when `enabled && showInMenu` (see the `shouldShow*InMenu` computed vars). Disabled tools must never remain visible via `showInMenu`; `resetTools` enforces `enabled && showInMenu`.
 
-There are four settings namespaces: `ToolboxSettings` (which tools/layout/language), `ScreenshotShelfSettings`, `ScreenRecordingSettings`, and `DropShelfSettings`. Defaults are registered at launch in `AppEnvironment` and again inside the relevant view models.
+There are five settings namespaces: `ToolboxSettings` (which tools/layout/language), `ScreenshotShelfSettings`, `ScreenRecordingSettings`, `DropShelfSettings`, and `DynamicIslandSettings`. Defaults are registered at launch in `AppEnvironment` and again inside the relevant view models.
 
 ## Localization
 
@@ -75,6 +76,12 @@ Entitlements grant Apple Events (`com.apple.security.automation.apple-events`) a
 - `ScreenCaptureRecordingService` owns `SCStream` + `SCRecordingOutput`; keep DeskCast excluded from its own capture and keep output `.mov`.
 - `ScreenshotShelfViewModel` is the common media shelf. Video items use Quick Look thumbnails, open in the default player, and are copied/dragged as file URLs. Do not introduce a second video-only shelf.
 - The macOS recording privacy indicator is system-owned and cannot be hidden; do not confuse it with DeskCast's custom recorder UI.
+
+## Dynamic Island architecture
+
+- macOS has no public "Now Playing" API (MediaRemote is entitlement-gated), so `MediaPlayerNowPlayingService` drives **Music and Spotify** only: their distributed playback notifications trigger a refresh, AppleScript (on a serial background queue) reads track/artwork and sends play-pause/next/previous. Scripts only run for players that are already running, so nothing is launched.
+- Other apps' Notification Center banners cannot be read; the island shows DeskCast's own toasts (routed from `ToastPresenter.islandRouter`), track changes, and IOKit battery events (`BatteryMonitorService`).
+- `DynamicIslandPanelCoordinator` keeps a fixed-size transparent panel above the menu bar and toggles `ignoresMouseEvents` from global/local mouse-move monitors, so only the island shape takes clicks. Island sizes come from static metrics on `DynamicIslandView`; keep the coordinator's hover rect and the view in sync.
 
 ## Build & test
 

@@ -8,12 +8,14 @@ final class AppEnvironment: ObservableObject {
     let dropShelf: DropShelfViewModel
     let screenRecorder: ScreenRecordingViewModel
     let screenshotShelf: ScreenshotShelfViewModel
+    let dynamicIsland: DynamicIslandViewModel
     let appUpdate: AppUpdateService
 
     // Retained for the app's lifetime; the view models reference them weakly.
     private let dropShelfCoordinator: DropShelfPanelCoordinator
     private let screenRecordingCoordinator: ScreenRecordingPanelCoordinator
     private let screenshotShelfCoordinator: ScreenshotShelfPanelCoordinator
+    private let dynamicIslandCoordinator: DynamicIslandPanelCoordinator
 
     let settings: SettingsProviding
 
@@ -50,17 +52,34 @@ final class AppEnvironment: ObservableObject {
             screenRecording: ScreenRecordingPermissionService()
         )
 
+        let dynamicIsland = DynamicIslandViewModel(
+            nowPlayingService: MediaPlayerNowPlayingService(),
+            batteryMonitor: BatteryMonitorService(),
+            settings: settings
+        )
+
         self.dropShelf = dropShelf
         self.screenRecorder = screenRecorder
         self.screenshotShelf = screenshotShelf
+        self.dynamicIsland = dynamicIsland
         appUpdate = AppUpdateService()
 
         // Wire presentation coordinators and hand them to the view models.
         dropShelfCoordinator = DropShelfPanelCoordinator(store: dropShelf)
         screenRecordingCoordinator = ScreenRecordingPanelCoordinator(store: screenRecorder)
         screenshotShelfCoordinator = ScreenshotShelfPanelCoordinator(store: screenshotShelf)
+        dynamicIslandCoordinator = DynamicIslandPanelCoordinator(store: dynamicIsland)
         dropShelf.presenter = dropShelfCoordinator
         screenRecorder.presenter = screenRecordingCoordinator
         screenshotShelf.presenter = screenshotShelfCoordinator
+        dynamicIsland.presenter = dynamicIslandCoordinator
+
+        // Route DeskCast's own toasts into the island while it is showing.
+        toastPresenter.islandRouter = dynamicIsland
+        // The island panel is shown immediately (unlike the on-demand shelves),
+        // so defer it to the next main-actor turn, after launch has finished.
+        Task { @MainActor in
+            dynamicIsland.start()
+        }
     }
 }

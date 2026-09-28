@@ -193,6 +193,8 @@ struct SettingsView: View {
             dropShelfPane
         case .finderPath:
             finderPathPane
+        case .dynamicIsland:
+            DynamicIslandSettingsPane()
         case .shortcuts:
             shortcutsPane
         case .about:
@@ -768,13 +770,14 @@ private enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
     case videoRecording
     case dropShelf
     case finderPath
+    case dynamicIsland
     case shortcuts
     case about
 
     var id: Self { self }
 
     static let appSections: [Self] = [.menuBar, .shortcuts, .about]
-    static let featureSections: [Self] = [.screenshots, .videoRecording, .dropShelf, .finderPath]
+    static let featureSections: [Self] = [.screenshots, .videoRecording, .dropShelf, .finderPath, .dynamicIsland]
 
     var title: String {
         switch self {
@@ -783,6 +786,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
         case .videoRecording: AppLocalization.string("Video Recording")
         case .dropShelf: AppLocalization.string("Drop Shelf")
         case .finderPath: AppLocalization.string("Finder Path")
+        case .dynamicIsland: AppLocalization.string("Dynamic Island")
         case .shortcuts: AppLocalization.string("Shortcuts")
         case .about: AppLocalization.string("About DeskCast")
         }
@@ -795,6 +799,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
         case .videoRecording: "record.circle"
         case .dropShelf: "tray.and.arrow.down"
         case .finderPath: "folder"
+        case .dynamicIsland: ToolboxToolID.dynamicIsland.systemImage
         case .shortcuts: "keyboard"
         case .about: "info.circle"
         }
@@ -939,7 +944,7 @@ private struct LaunchAtLoginSection: View {
     }
 }
 
-private struct ToolCategorySection: View {
+struct ToolCategorySection: View {
     let title: String
     let tools: [ToolboxToolID]
 

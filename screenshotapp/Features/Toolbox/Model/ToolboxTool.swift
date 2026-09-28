@@ -10,12 +10,14 @@ enum ToolboxMenuLayout: String, CaseIterable, Identifiable {
 enum ToolCategory {
     case screenshots
     case files
+    case media
 
     /// Localization key (not the resolved string) so the model stays language-agnostic.
     var titleKey: String {
         switch self {
         case .screenshots: "Screenshots"
         case .files: "Files"
+        case .media: "Media"
         }
     }
 }
@@ -29,6 +31,7 @@ enum ToolboxToolID: String, CaseIterable, Identifiable {
     case copyFinderPath
     case imageSearch
     case dropShelf
+    case dynamicIsland
 
     var id: String { rawValue }
 
@@ -109,6 +112,15 @@ enum ToolboxCatalog {
             category: .files,
             defaultEnabled: true,
             defaultShowInMenu: true
+        ),
+        ToolboxTool(
+            id: .dynamicIsland,
+            titleKey: "Dynamic Island",
+            subtitleKey: "Show the playing song, media controls, and notifications around the notch.",
+            systemImage: "capsule.fill",
+            category: .media,
+            defaultEnabled: true,
+            defaultShowInMenu: true
         )
     ]
 
@@ -133,6 +145,8 @@ enum ToolboxSettings {
         static let imageSearchShowInMenu = ToolboxToolID.imageSearch.showInMenuKey
         static let dropShelfEnabled = ToolboxToolID.dropShelf.enabledKey
         static let dropShelfShowInMenu = ToolboxToolID.dropShelf.showInMenuKey
+        static let dynamicIslandEnabled = ToolboxToolID.dynamicIsland.enabledKey
+        static let dynamicIslandShowInMenu = ToolboxToolID.dynamicIsland.showInMenuKey
     }
 
     static let defaultMenuLayout = ToolboxMenuLayout.expanded
@@ -149,6 +163,8 @@ enum ToolboxSettings {
     static let defaultImageSearchShowInMenu = ToolboxToolID.imageSearch.defaultShowInMenu
     static let defaultDropShelfEnabled = ToolboxToolID.dropShelf.defaultEnabled
     static let defaultDropShelfShowInMenu = ToolboxToolID.dropShelf.defaultShowInMenu
+    static let defaultDynamicIslandEnabled = ToolboxToolID.dynamicIsland.defaultEnabled
+    static let defaultDynamicIslandShowInMenu = ToolboxToolID.dynamicIsland.defaultShowInMenu
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
         defaults.register(defaults: defaultValues)

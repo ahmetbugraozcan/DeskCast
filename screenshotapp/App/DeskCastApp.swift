@@ -17,6 +17,7 @@ struct DeskCastApp: App {
     @StateObject private var screenRecorderStore: ScreenRecordingViewModel
     @StateObject private var screenshotStore: ScreenshotShelfViewModel
     @StateObject private var dropShelfStore: DropShelfViewModel
+    @StateObject private var dynamicIslandStore: DynamicIslandViewModel
     @AppStorage(ToolboxSettings.Keys.menuLayout)
     private var menuLayoutRaw = ToolboxSettings.defaultMenuLayout.rawValue
     @AppStorage(ToolboxSettings.Keys.language)
@@ -45,6 +46,10 @@ struct DeskCastApp: App {
     private var dropShelfEnabled = ToolboxSettings.defaultDropShelfEnabled
     @AppStorage(ToolboxSettings.Keys.dropShelfShowInMenu)
     private var dropShelfShowInMenu = ToolboxSettings.defaultDropShelfShowInMenu
+    @AppStorage(ToolboxSettings.Keys.dynamicIslandEnabled)
+    private var dynamicIslandEnabled = ToolboxSettings.defaultDynamicIslandEnabled
+    @AppStorage(ToolboxSettings.Keys.dynamicIslandShowInMenu)
+    private var dynamicIslandShowInMenu = ToolboxSettings.defaultDynamicIslandShowInMenu
 
     init() {
         // Composition root wires the view models and their dependencies (and
@@ -54,6 +59,7 @@ struct DeskCastApp: App {
         _screenRecorderStore = StateObject(wrappedValue: environment.screenRecorder)
         _screenshotStore = StateObject(wrappedValue: environment.screenshotShelf)
         _dropShelfStore = StateObject(wrappedValue: environment.dropShelf)
+        _dynamicIslandStore = StateObject(wrappedValue: environment.dynamicIsland)
     }
 
     var body: some Scene {
@@ -102,6 +108,12 @@ struct DeskCastApp: App {
             fileToolButtons
             Divider()
         }
+
+        if shouldShowDynamicIslandInMenu {
+            menuSectionHeader(AppLocalization.string("Media"))
+            mediaControlButtons
+            Divider()
+        }
     }
 
     @ViewBuilder
@@ -127,6 +139,16 @@ struct DeskCastApp: App {
                 fileToolButtons
             } label: {
                 Label(AppLocalization.string("Files"), systemImage: "folder")
+            }
+
+            Divider()
+        }
+
+        if shouldShowDynamicIslandInMenu {
+            Menu {
+                mediaControlButtons
+            } label: {
+                Label(AppLocalization.string("Media"), systemImage: "music.note")
             }
 
             Divider()
@@ -247,6 +269,42 @@ struct DeskCastApp: App {
     }
 
     @ViewBuilder
+    private var mediaControlButtons: some View {
+        if let nowPlaying = dynamicIslandStore.nowPlaying {
+            Text(
+                nowPlaying.artist.isEmpty
+                    ? nowPlaying.title
+                    : "\(nowPlaying.title) – \(nowPlaying.artist)"
+            )
+            .disabled(true)
+        }
+
+        Button {
+            dynamicIslandStore.togglePlayPause()
+        } label: {
+            Label(
+                "Play / Pause",
+                systemImage: dynamicIslandStore.nowPlaying?.isPlaying == true ? "pause.fill" : "play.fill"
+            )
+        }
+        .disabled(dynamicIslandStore.nowPlaying == nil)
+
+        Button {
+            dynamicIslandStore.previousTrack()
+        } label: {
+            Label("Previous Track", systemImage: "backward.fill")
+        }
+        .disabled(dynamicIslandStore.nowPlaying == nil)
+
+        Button {
+            dynamicIslandStore.nextTrack()
+        } label: {
+            Label("Next Track", systemImage: "forward.fill")
+        }
+        .disabled(dynamicIslandStore.nowPlaying == nil)
+    }
+
+    @ViewBuilder
     private var appMenuFooter: some View {
         Button {
             NSApp.activate(ignoringOtherApps: true)
@@ -312,6 +370,10 @@ struct DeskCastApp: App {
 
     private var shouldShowDropShelfInMenu: Bool {
         dropShelfEnabled && dropShelfShowInMenu
+    }
+
+    private var shouldShowDynamicIslandInMenu: Bool {
+        dynamicIslandEnabled && dynamicIslandShowInMenu
     }
 
     private var shouldShowFileActionsInMenu: Bool {

@@ -268,3 +268,27 @@
 "Required by Capture Selected Area, Video Recording, and Capture OCR." = "Seçili Alan Yakalama, Video Kaydı ve OCR Yakalama için gereklidir.";
 "Required only when microphone recording is enabled." = "Yalnızca mikrofon kaydı etkinleştirildiğinde gereklidir.";
 "Record a full display or a resizable selected area with audio options." = "Tüm ekranı veya boyutlandırılabilir seçili alanı ses seçenekleriyle kaydedin.";
+
+/* Dynamic Island */
+"Media" = "Medya";
+"Dynamic Island" = "Dynamic Island";
+"Show the playing song, media controls, and notifications around the notch." = "Çalan şarkıyı, medya kontrollerini ve bildirimleri çentik çevresinde gösterin.";
+"Nothing playing" = "Çalan bir şey yok";
+"Open %@" = "%@ uygulamasını aç";
+"Previous Track" = "Önceki Parça";
+"Next Track" = "Sonraki Parça";
+"Play / Pause" = "Oynat / Duraklat";
+"Charging" = "Şarj Oluyor";
+"On Battery" = "Pil Gücünde";
+"Low Battery" = "Pil Zayıf";
+"Battery at %ld%%" = "Pil %%%ld";
+"Now Playing" = "Şimdi Çalıyor";
+"Show the playing song" = "Çalan şarkıyı göster";
+"Announce track changes" = "Parça değişimlerini bildir";
+"Supported players: Music and Spotify. macOS asks once for permission to control them." = "Desteklenen oynatıcılar: Müzik ve Spotify. macOS bunları kontrol etmek için bir kez izin ister.";
+"Notifications" = "Bildirimler";
+"Show DeskCast notifications in the island" = "DeskCast bildirimlerini adada göster";
+"Show charging and low battery alerts" = "Şarj ve düşük pil uyarılarını göster";
+"Notification duration: %ld s" = "Bildirim süresi: %ld sn";
+"Behavior" = "Davranış";
+"Expand on hover" = "Üzerine gelince büyüt";

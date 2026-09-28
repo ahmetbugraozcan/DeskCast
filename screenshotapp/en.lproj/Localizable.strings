@@ -268,3 +268,27 @@
 "Required by Capture Selected Area, Video Recording, and Capture OCR." = "Required by Capture Selected Area, Video Recording, and Capture OCR.";
 "Required only when microphone recording is enabled." = "Required only when microphone recording is enabled.";
 "Record a full display or a resizable selected area with audio options." = "Record a full display or a resizable selected area with audio options.";
+
+/* Dynamic Island */
+"Media" = "Media";
+"Dynamic Island" = "Dynamic Island";
+"Show the playing song, media controls, and notifications around the notch." = "Show the playing song, media controls, and notifications around the notch.";
+"Nothing playing" = "Nothing playing";
+"Open %@" = "Open %@";
+"Previous Track" = "Previous Track";
+"Next Track" = "Next Track";
+"Play / Pause" = "Play / Pause";
+"Charging" = "Charging";
+"On Battery" = "On Battery";
+"Low Battery" = "Low Battery";
+"Battery at %ld%%" = "Battery at %ld%%";
+"Now Playing" = "Now Playing";
+"Show the playing song" = "Show the playing song";
+"Announce track changes" = "Announce track changes";
+"Supported players: Music and Spotify. macOS asks once for permission to control them." = "Supported players: Music and Spotify. macOS asks once for permission to control them.";
+"Notifications" = "Notifications";
+"Show DeskCast notifications in the island" = "Show DeskCast notifications in the island";
+"Show charging and low battery alerts" = "Show charging and low battery alerts";
+"Notification duration: %ld s" = "Notification duration: %ld s";
+"Behavior" = "Behavior";
+"Expand on hover" = "Expand on hover";

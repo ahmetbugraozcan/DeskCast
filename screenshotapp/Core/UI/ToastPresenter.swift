@@ -51,12 +51,22 @@ extension ToastPresenting {
 @MainActor
 final class ToastPresenter: ToastPresenting {
     private let controller = ToastPanelController()
+    /// When set and accepting, toasts appear in the Dynamic Island instead of
+    /// the corner panel.
+    weak var islandRouter: DynamicIslandNotificationPosting?
 
     func show(_ message: String, systemImage: String) {
+        let style = ToastStyle.inferred(from: systemImage)
+
+        if islandRouter?.postToast(message, systemImage: systemImage, style: style) == true {
+            controller.hide()
+            return
+        }
+
         controller.show(
             message: message,
             systemImage: systemImage,
-            style: .inferred(from: systemImage)
+            style: style
         )
     }
 }

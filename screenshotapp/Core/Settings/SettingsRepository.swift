@@ -20,6 +20,10 @@ protocol ScreenRecordingSettingsReading {
     func screenRecordingSettings() -> ScreenRecordingSettingsSnapshot
 }
 
+protocol DynamicIslandSettingsReading {
+    func dynamicIslandSettings() -> DynamicIslandSettingsSnapshot
+}
+
 protocol ToolboxSettingsReading {
     func isToolEnabled(_ tool: ToolboxToolID) -> Bool
 }
@@ -29,6 +33,7 @@ protocol SettingsProviding: SettingsRegistering,
     ScreenshotShelfSettingsReading,
     DropShelfSettingsReading,
     ScreenRecordingSettingsReading,
+    DynamicIslandSettingsReading,
     ToolboxSettingsReading {}
 
 struct SettingsRepository: SettingsProviding {
@@ -42,6 +47,7 @@ struct SettingsRepository: SettingsProviding {
         ScreenshotShelfSettings.registerDefaults(in: defaults)
         DropShelfSettings.registerDefaults(in: defaults)
         ScreenRecordingSettings.registerDefaults(in: defaults)
+        DynamicIslandSettings.registerDefaults(in: defaults)
         ToolboxSettings.registerDefaults(in: defaults)
     }
 
@@ -55,6 +61,10 @@ struct SettingsRepository: SettingsProviding {
 
     func screenRecordingSettings() -> ScreenRecordingSettingsSnapshot {
         ScreenRecordingSettings.snapshot(from: defaults)
+    }
+
+    func dynamicIslandSettings() -> DynamicIslandSettingsSnapshot {
+        DynamicIslandSettings.snapshot(from: defaults)
     }
 
     func isToolEnabled(_ tool: ToolboxToolID) -> Bool {
