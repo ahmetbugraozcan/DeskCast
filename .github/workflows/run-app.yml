@@ -1,0 +1,72 @@
+name: Run app (screenshots)
+
+# Launches the Debug build on a macOS runner in several Dynamic Island states
+# (via Debug-only -DeskCastDemo* launch arguments) and uploads screenshots of
+# the top of the screen, so UI changes can be checked without a Mac.
+on:
+  push:
+    branches: ['claude/**']
+  workflow_dispatch:
+
+concurrency:
+  group: run-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build (Debug, unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project screenshotapp.xcodeproj \
+            -scheme screenshotapp \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | grep -E "error:|\*\* BUILD" || true
+          test -x build/DerivedData/Build/Products/Debug/DeskCast.app/Contents/MacOS/DeskCast
+
+      - name: Launch and capture
+        run: |
+          set -u
+          APP="$PWD/build/DerivedData/Build/Products/Debug/DeskCast.app/Contents/MacOS/DeskCast"
+          mkdir -p shots
+          system_profiler SPDisplaysDataType | grep -E "Resolution|Retina" || true
+
+          capture() {
+            local name=$1; shift
+            "$APP" -app.language tr -DeskCastAllowsIslandCapture YES "$@" > "shots/$name.log" 2>&1 &
+            local pid=$!
+            sleep 7
+            screencapture -x "shots/$name-full.png" || echo "screencapture failed for $name"
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo "::warning::DeskCast exited early for $name"; tail -20 "shots/$name.log"
+            fi
+            kill "$pid" 2>/dev/null; sleep 1
+            # Keep the top-center band where the island lives.
+            if [ -f "shots/$name-full.png" ]; then
+              width=$(sips -g pixelWidth "shots/$name-full.png" | awk '/pixelWidth/{print $2}')
+              cropw=$(( width < 1500 ? width : 1500 ))
+              sips -c 760 "$cropw" --cropOffset 0 $(( (width - cropw) / 2 )) "shots/$name-full.png" --out "shots/$name.png" >/dev/null
+            fi
+          }
+
+          capture compact-media -DeskCastDemoTrack YES
+          capture notification -DeskCastDemoTrack YES -DeskCastDemoNotification "Akşam yemeğine geliyor musun?"
+          capture compact-timer -DeskCastDemoTimer 25
+          for panel in launcher nowPlaying system volume controls aiAgents timer calendar notifications tools downloads scratchpad; do
+            capture "panel-$panel" -DeskCastDemoTrack YES -DeskCastDemoTimer 25 -DeskCastDemoPanel "$panel"
+          done
+          ls -la shots
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: island-screenshots
+          path: shots/

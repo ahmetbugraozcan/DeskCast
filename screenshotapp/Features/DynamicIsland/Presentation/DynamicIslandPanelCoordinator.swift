@@ -110,6 +110,12 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
         // Keep the island out of DeskCast's own screenshots and other captures.
         panel.sharingType = .none
+        #if DEBUG
+        // CI screenshots (`-DeskCastAllowsIslandCapture YES`) need the island visible.
+        if UserDefaults.standard.bool(forKey: "DeskCastAllowsIslandCapture") {
+            panel.sharingType = .readOnly
+        }
+        #endif
 
         return panel
     }

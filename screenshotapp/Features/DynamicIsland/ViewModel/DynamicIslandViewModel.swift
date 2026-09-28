@@ -117,6 +117,10 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// Called once the presenter is wired so the first refresh can show the panel.
     func start() {
         applySettingsChange(force: true)
+
+        #if DEBUG
+        applyDemoLaunchOptions()
+        #endif
     }
 
     // MARK: - Derived state
@@ -622,3 +626,61 @@ private extension DynamicIslandNotificationStyle {
         }
     }
 }
+
+#if DEBUG
+// MARK: - Demo launch options (Debug builds only)
+
+extension DynamicIslandViewModel {
+    /// Puts the island in a given state from launch arguments so CI can take
+    /// screenshots without media players, notifications or a pointer, e.g.
+    /// `-DeskCastDemoPanel system -DeskCastDemoTrack YES -DeskCastDemoTimer 5`.
+    func applyDemoLaunchOptions() {
+        let defaults = UserDefaults.standard
+
+        if defaults.bool(forKey: "DeskCastDemoTrack") {
+            // Keep the real service from replacing the demo track.
+            nowPlayingService.stop()
+            let snapshot = MediaPlayerTrackSnapshot(
+                player: .spotify,
+                trackID: "demo",
+                title: "I Was Made For Lovin' You",
+                artist: "KISS",
+                album: "Dynasty",
+                duration: 271,
+                elapsed: 208,
+                isPlaying: true,
+                artworkURL: nil
+            )
+            nowPlaying = NowPlayingInfo(snapshot: snapshot)
+            hasReceivedNowPlaying = true
+        }
+
+        let timerMinutes = defaults.integer(forKey: "DeskCastDemoTimer")
+        if timerMinutes > 0 {
+            timer.start(minutes: timerMinutes)
+        }
+
+        if let message = defaults.string(forKey: "DeskCastDemoNotification") {
+            post(
+                DynamicIslandNotification(
+                    caption: "Messages",
+                    title: "Ayşe",
+                    message: message,
+                    systemImage: "message.fill",
+                    style: .system
+                )
+            )
+        }
+
+        if let rawPanel = defaults.string(forKey: "DeskCastDemoPanel") {
+            if rawPanel == "launcher" {
+                expandedContent = .launcher
+            } else if let panel = IslandPanel(rawValue: rawPanel) {
+                select(panel)
+            }
+
+            isPinned = true
+        }
+    }
+}
+#endif
