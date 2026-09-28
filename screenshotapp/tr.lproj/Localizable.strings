@@ -340,8 +340,9 @@
 "island.ai.loading" = "Yükleniyor…";
 "island.ai.notInstalled" = "%@ bu Mac'te kurulu değil.";
 "island.ai.signedOut" = "Limitleri görmek için %@ hesabına giriş yapın.";
-"island.ai.tokenExpired" = "Oturumu yenilemek için %@ uygulamasını bir kez açın.";
-"island.ai.requestFailed" = "Limitler şu an yüklenemedi.";
+"island.ai.claudeAppMissing" = "Plan limitleri Claude uygulamasından okunur. Uygulamayı kurup menü çubuğu simgesini açın.";
+"island.ai.claudeAppStale" = "Claude uygulaması limitlerinizi son zamanlarda kontrol etmedi. Claude ayarlarından menü çubuğu simgesini açın.";
+"island.ai.limitsUpdated" = "Claude uygulaması · %@";
 "island.controls.darkMode" = "Karanlık Mod";
 "island.controls.keepAwake" = "Uyanık Tut";
 "island.controls.mute" = "Sessiz";

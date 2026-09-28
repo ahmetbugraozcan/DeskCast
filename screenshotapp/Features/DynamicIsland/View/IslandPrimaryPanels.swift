@@ -900,6 +900,13 @@ private struct AgentLimitsCard: View {
                             .padding(.horizontal, 7)
                             .padding(.vertical, 2)
                             .background(Capsule().fill(tint.opacity(0.18)))
+                    } else if let updatedAt = usage.limitsUpdatedAt {
+                        TimelineView(.periodic(from: .now, by: 30)) { context in
+                            Text(IslandFormat.relative(updatedAt, now: context.date))
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(IslandPalette.tertiaryText)
+                        }
+                        .help(AppLocalization.formatted("island.ai.limitsUpdated", IslandFormat.relative(updatedAt)))
                     }
                 }
 
@@ -935,13 +942,14 @@ private struct AgentLimitsCard: View {
     private var unavailableText: String {
         switch usage.unavailableReason {
         case .notInstalled: AppLocalization.formatted("island.ai.notInstalled", name)
-        case .tokenExpired: AppLocalization.formatted("island.ai.tokenExpired", name)
-        case .requestFailed: AppLocalization.string("island.ai.requestFailed")
+        case .claudeAppMissing: AppLocalization.string("island.ai.claudeAppMissing")
+        case .claudeAppStale: AppLocalization.string("island.ai.claudeAppStale")
         case .signedOut, .none: AppLocalization.formatted("island.ai.signedOut", name)
         }
     }
 
     private func limitRow(_ title: String, _ window: AIUsageWindow?, windowLength: TimeInterval, now: Date) -> some View {
+        let window = window?.current(at: now)
         let used = window?.usedFraction ?? 0
         // Marker: how far through the window we are, to compare pace vs. usage.
         let elapsed: Double? = window?.resetsAt.map { resetsAt in

@@ -340,8 +340,9 @@
 "island.ai.loading" = "Loading…";
 "island.ai.notInstalled" = "%@ isn't set up on this Mac.";
 "island.ai.signedOut" = "Sign in to %@ to see limits.";
-"island.ai.tokenExpired" = "Open %@ once to refresh its sign-in.";
-"island.ai.requestFailed" = "Couldn't load limits right now.";
+"island.ai.claudeAppMissing" = "Plan limits come from the Claude app. Install it and turn on its menu bar icon.";
+"island.ai.claudeAppStale" = "The Claude app hasn't checked your limits lately. Turn on its menu bar icon in Claude's settings.";
+"island.ai.limitsUpdated" = "Claude app · %@";
 "island.controls.darkMode" = "Dark Mode";
 "island.controls.keepAwake" = "Keep Awake";
 "island.controls.mute" = "Mute";

@@ -403,3 +403,48 @@ struct AppAudioTapRenderTests {
         #expect(out == [[0.5, 1, 0, 0, 0, 0]])
     }
 }
+
+struct ClaudePlanUsageTests {
+    private let now = Date(timeIntervalSince1970: 1_790_631_200)
+
+    private struct Sample {
+        let age: TimeInterval
+        let session: Int
+        let week: Int
+    }
+
+    private func history(_ samples: [Sample]) -> Data {
+        let items = samples.map { sample in
+            let time = (now.timeIntervalSince1970 - sample.age) * 1000
+            return "{\"t\":\(time),\"org\":\"o\",\"u\":{\"fh\":\(sample.session),\"sd\":\(sample.week)}}"
+        }
+        return Data("{\"version\":2,\"samples\":[\(items.joined(separator: ","))]}".utf8)
+    }
+
+    @Test func readsNewestSample() throws {
+        let data = history([Sample(age: 600, session: 68, week: 14), Sample(age: 3600, session: 41, week: 10)])
+        let usage = try #require(AIUsageService.claudePlanUsage(from: data, now: now))
+        #expect(usage.session?.usedFraction == 0.68)
+        #expect(usage.weekly?.usedFraction == 0.14)
+        #expect(usage.updatedAt == now.addingTimeInterval(-600))
+    }
+
+    @Test func dropsSessionOlderThanFiveHours() throws {
+        let usage = try #require(AIUsageService.claudePlanUsage(from: history([Sample(age: 6 * 3600, session: 90, week: 30)]), now: now))
+        #expect(usage.session == nil)
+        #expect(usage.weekly?.usedFraction == 0.3)
+    }
+
+    @Test func windowPastItsResetStartsEmpty() {
+        let window = AIUsageWindow(usedFraction: 0.16, resetsAt: now.addingTimeInterval(-60))
+        #expect(window.current(at: now) == AIUsageWindow(usedFraction: 0, resetsAt: nil))
+
+        let live = AIUsageWindow(usedFraction: 0.16, resetsAt: now.addingTimeInterval(60))
+        #expect(live.current(at: now) == live)
+    }
+
+    @Test func rejectsMalformedHistory() {
+        #expect(AIUsageService.claudePlanUsage(from: Data("{}".utf8), now: now) == nil)
+        #expect(AIUsageService.claudePlanUsage(from: history([]), now: now) == nil)
+    }
+}

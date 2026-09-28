@@ -1,10 +1,16 @@
 import Foundation
-import Security
 
 nonisolated struct AIUsageWindow: Equatable, Sendable {
     /// 0...1 share of the plan limit used in this window.
     let usedFraction: Double
     let resetsAt: Date?
+
+    /// Once the reset time has passed, the recorded usage belongs to an old
+    /// window; the current one starts empty.
+    func current(at now: Date) -> AIUsageWindow {
+        guard let resetsAt, resetsAt <= now else { return self }
+        return AIUsageWindow(usedFraction: 0, resetsAt: nil)
+    }
 }
 
 nonisolated struct AIAgentUsage: Equatable, Sendable {
@@ -12,6 +18,8 @@ nonisolated struct AIAgentUsage: Equatable, Sendable {
     var session: AIUsageWindow?
     var weekly: AIUsageWindow?
     var lastActivity: Date?
+    /// When the limits were last read by their source (the Claude app).
+    var limitsUpdatedAt: Date?
     /// Why limits are missing (e.g. not signed in), for the panel to explain.
     var unavailableReason: AIUsageUnavailableReason?
 }
@@ -19,8 +27,10 @@ nonisolated struct AIAgentUsage: Equatable, Sendable {
 nonisolated enum AIUsageUnavailableReason: Equatable, Sendable {
     case notInstalled
     case signedOut
-    case tokenExpired
-    case requestFailed
+    /// Claude plan limits come from the Claude desktop app, which isn't here.
+    case claudeAppMissing
+    /// The Claude app hasn't recorded limits recently (its menu bar icon is off).
+    case claudeAppStale
 }
 
 nonisolated struct AIDailySpend: Equatable, Sendable, Identifiable {
@@ -40,11 +50,9 @@ nonisolated struct AIUsageReport: Equatable, Sendable {
 }
 
 /// Reads Claude Code and Codex usage from their local state:
-/// - Claude plan limits: the OAuth usage endpoint, authorized with the token
-///   Claude Code keeps in the login keychain ("Claude Code-credentials").
-///   macOS asks once before DeskCast may read that item. The token is never
-///   refreshed here (that would sign Claude Code out); an expired token just
-///   hides the limits until Claude Code runs again.
+/// - Claude plan limits: the percentages the Claude desktop app records in
+///   `~/Library/Application Support/Claude/plan-usage-history.json` while its
+///   menu bar icon is on. No sign-in, keychain item or network request is used.
 /// - Claude spend: token usage in `~/.claude/projects/**/*.jsonl`, priced at
 ///   API list rates (an estimate of "API value", not a bill).
 /// - Codex limits: the latest `rate_limits` event in `~/.codex/sessions`.
@@ -69,102 +77,82 @@ nonisolated final class AIUsageService: @unchecked Sendable {
 
     // MARK: - Claude limits
 
-    private struct ClaudeCredentials {
-        let accessToken: String
-        let expiresAt: Date?
-        let subscriptionType: String?
+    /// Latest reading in the Claude app's plan usage history.
+    struct ClaudePlanUsage: Equatable {
+        let session: AIUsageWindow?
+        let weekly: AIUsageWindow?
+        let updatedAt: Date
     }
+
+    private static let sessionLength: TimeInterval = 5 * 3600
+    private static let weekLength: TimeInterval = 7 * 86_400
 
     private func claudeUsage() async -> AIAgentUsage {
         var usage = AIAgentUsage()
         let projectsURL = homeURL.appendingPathComponent(".claude/projects")
         usage.lastActivity = newestModificationDate(in: projectsURL, extensions: ["jsonl"], maxDepth: 2)
 
-        guard fileManager.fileExists(atPath: homeURL.appendingPathComponent(".claude").path) else {
-            usage.unavailableReason = .notInstalled
+        let historyURL = homeURL.appendingPathComponent("Library/Application Support/Claude/plan-usage-history.json")
+
+        guard let data = try? Data(contentsOf: historyURL) else {
+            let hasClaudeCode = fileManager.fileExists(atPath: homeURL.appendingPathComponent(".claude").path)
+            usage.unavailableReason = hasClaudeCode ? .claudeAppMissing : .notInstalled
             return usage
         }
 
-        guard let credentials = claudeCredentials() else {
-            usage.unavailableReason = .signedOut
+        guard let planUsage = Self.claudePlanUsage(from: data, now: Date()) else {
+            usage.unavailableReason = .claudeAppStale
             return usage
         }
 
-        usage.plan = credentials.subscriptionType?.capitalized
+        usage.session = planUsage.session
+        usage.weekly = planUsage.weekly
+        usage.limitsUpdatedAt = planUsage.updatedAt
 
-        if let expiresAt = credentials.expiresAt, expiresAt < Date() {
-            usage.unavailableReason = .tokenExpired
-            return usage
+        if usage.session == nil && usage.weekly == nil {
+            usage.unavailableReason = .claudeAppStale
         }
 
-        guard let url = URL(string: "https://api.anthropic.com/api/oauth/usage") else { return usage }
-
-        var request = URLRequest(url: url, timeoutInterval: 15)
-        request.setValue("Bearer \(credentials.accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        guard
-            let (data, response) = try? await URLSession.shared.data(for: request),
-            (response as? HTTPURLResponse)?.statusCode == 200,
-            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else {
-            usage.unavailableReason = .requestFailed
-            return usage
-        }
-
-        usage.session = Self.claudeWindow(json["five_hour"])
-        usage.weekly = Self.claudeWindow(json["seven_day"])
         return usage
     }
 
-    private static func claudeWindow(_ value: Any?) -> AIUsageWindow? {
-        guard let window = value as? [String: Any],
-              let utilization = (window["utilization"] as? NSNumber)?.doubleValue
-        else {
-            return nil
-        }
-
-        return AIUsageWindow(
-            usedFraction: min(max(utilization / 100, 0), 1),
-            resetsAt: (window["resets_at"] as? String).flatMap(parseISODate)
-        )
-    }
-
-    private func claudeCredentials() -> ClaudeCredentials? {
-        let data = keychainPassword(service: "Claude Code-credentials")
-            ?? (try? Data(contentsOf: homeURL.appendingPathComponent(".claude/.credentials.json")))
-
+    /// Parses `{"samples":[{"t":<ms>,"u":{"fh":<5h %>,"sd":<7d %>}}]}` and
+    /// returns the newest sample. A reading older than its window says nothing
+    /// about the current window, so it is dropped. Reset times aren't recorded.
+    static func claudePlanUsage(from data: Data, now: Date) -> ClaudePlanUsage? {
         guard
-            let data,
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let oauth = json["claudeAiOauth"] as? [String: Any],
-            let token = oauth["accessToken"] as? String,
-            !token.isEmpty
+            let samples = json["samples"] as? [[String: Any]]
         else {
             return nil
         }
 
-        let expiresAt = (oauth["expiresAt"] as? NSNumber).map { Date(timeIntervalSince1970: $0.doubleValue / 1000) }
+        let newest = samples
+            .compactMap { sample -> (date: Date, usage: [String: Any])? in
+                guard let time = (sample["t"] as? NSNumber)?.doubleValue,
+                      let usage = sample["u"] as? [String: Any]
+                else {
+                    return nil
+                }
 
-        return ClaudeCredentials(
-            accessToken: token,
-            expiresAt: expiresAt,
-            subscriptionType: oauth["subscriptionType"] as? String
+                return (Date(timeIntervalSince1970: time / 1000), usage)
+            }
+            .max { $0.date < $1.date }
+
+        guard let newest else { return nil }
+
+        let age = now.timeIntervalSince(newest.date)
+
+        func window(_ key: String, length: TimeInterval) -> AIUsageWindow? {
+            guard age < length, let percent = (newest.usage[key] as? NSNumber)?.doubleValue else { return nil }
+            return AIUsageWindow(usedFraction: min(max(percent / 100, 0), 1), resetsAt: nil)
+        }
+
+        return ClaudePlanUsage(
+            session: window("fh", length: sessionLength),
+            weekly: window("sd", length: weekLength),
+            updatedAt: newest.date
         )
-    }
-
-    private func keychainPassword(service: String) -> Data? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var result: CFTypeRef?
-
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess else { return nil }
-        return result as? Data
     }
 
     // MARK: - Claude spend
