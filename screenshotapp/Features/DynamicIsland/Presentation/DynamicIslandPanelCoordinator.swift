@@ -237,11 +237,14 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
 
         return layout.interactiveFrames.map { frame in
             // SwiftUI frames are top-left based; screen space is bottom-left.
+            // With the pointer pushed against the top of the screen its y is the
+            // screen's maxY, which `contains` excludes; reach 1 pt past the top.
+            let touchesTop = frame.minY <= 0
             let rect = NSRect(
                 x: panelFrame.minX + frame.minX,
                 y: panelFrame.maxY - frame.maxY,
                 width: frame.width,
-                height: frame.height
+                height: frame.height + (touchesTop ? 1 : 0)
             )
 
             guard !isExpanded else { return rect }
