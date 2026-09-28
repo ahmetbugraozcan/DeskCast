@@ -1,0 +1,76 @@
+name: Build
+
+# Unsigned Debug build + unit tests on a macOS runner, so every pushed branch
+# gets a real compile check (the release workflow signs and publishes instead).
+on:
+  push:
+    branches-ignore: [release]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    env:
+      PROJECT: screenshotapp.xcodeproj
+      SCHEME: screenshotapp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build app and tests
+        run: |
+          set +e
+          xcodebuild build-for-testing \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" > build.log 2>&1
+          status=$?
+          echo "::group::Errors"
+          grep -E "error:" build.log | sort -u | head -150
+          echo "::endgroup::"
+          tail -30 build.log
+          exit $status
+
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/DerivedData \
+            -only-testing:screenshotappTests \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee test.log | grep -E "error|failed|passed|Test Suite|\*\* TEST" | tail -120
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            build.log
+            test.log
+          if-no-files-found: ignore
+
+  swiftlint:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: SwiftLint (strict)
+        run: swiftlint lint --strict
