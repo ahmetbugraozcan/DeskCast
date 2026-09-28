@@ -44,10 +44,7 @@ struct DynamicIslandSettingsPane: View {
     @State private var panelListID = UUID()
 
     var body: some View {
-        SettingsPage(
-            title: AppLocalization.string("Dynamic Island"),
-            systemImage: ToolboxToolID.dynamicIsland.systemImage
-        ) {
+        SettingsPage(section: .dynamicIsland) {
             ToolCategorySection(
                 title: AppLocalization.string("Tool"),
                 tools: [.dynamicIsland]

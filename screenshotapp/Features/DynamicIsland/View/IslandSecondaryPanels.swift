@@ -577,7 +577,7 @@ struct TimerPanelView: View {
                     }
                     .buttonStyle(IslandScaleButtonStyle())
 
-                    IslandChipButton(title: "+1", systemImage: "plus") { timer.addMinute() }
+                    IslandChipButton(title: AppLocalization.string("island.timer.addMinute")) { timer.addMinute() }
 
                     if timer.isActive {
                         IslandChipButton(title: AppLocalization.string("island.timer.reset"), systemImage: "arrow.counterclockwise") {

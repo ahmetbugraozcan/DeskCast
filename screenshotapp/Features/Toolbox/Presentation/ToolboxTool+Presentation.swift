@@ -6,6 +6,7 @@ import Foundation
 extension ToolboxMenuLayout {
     var title: String {
         switch self {
+        case .panel: AppLocalization.string("menu.layout.panel")
         case .expanded: AppLocalization.string("Expanded")
         case .grouped: AppLocalization.string("Grouped")
         }
@@ -13,6 +14,7 @@ extension ToolboxMenuLayout {
 
     var description: String {
         switch self {
+        case .panel: AppLocalization.string("menu.layout.panel.description")
         case .expanded: AppLocalization.string("Show tools directly in the menu.")
         case .grouped: AppLocalization.string("Show module menus with nested actions.")
         }

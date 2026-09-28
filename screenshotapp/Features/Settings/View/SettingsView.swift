@@ -123,15 +123,13 @@ struct SettingsView: View {
             List(selection: $selectedSection) {
                 Section("App") {
                     ForEach(SettingsSection.appSections) { section in
-                        Label(section.title, systemImage: section.systemImage)
-                            .tag(section)
+                        sidebarRow(section)
                     }
                 }
 
                 Section("Features") {
                     ForEach(SettingsSection.featureSections) { section in
-                        Label(section.title, systemImage: section.systemImage)
-                            .tag(section)
+                        sidebarRow(section)
                     }
                 }
             }
@@ -187,6 +185,15 @@ struct SettingsView: View {
         }
     }
 
+    private func sidebarRow(_ section: SettingsSection) -> some View {
+        Label {
+            Text(section.title)
+        } icon: {
+            SettingsIconTile(systemImage: section.systemImage, tint: section.tint, size: 20)
+        }
+        .tag(section)
+    }
+
     @ViewBuilder
     private var selectedPane: some View {
         switch selectedSection ?? .screenshots {
@@ -210,7 +217,7 @@ struct SettingsView: View {
     }
 
     private var menuBarPane: some View {
-        SettingsPage(title: AppLocalization.string("Menu Bar"), systemImage: "menubar.rectangle") {
+        SettingsPage(section: .menuBar) {
             VStack(alignment: .leading, spacing: 24) {
                 LanguageSection(selection: $languageRaw)
                 MenuLayoutSection(selection: $menuLayoutRaw)
@@ -220,7 +227,7 @@ struct SettingsView: View {
     }
 
     private var screenshotsPane: some View {
-        SettingsPage(title: AppLocalization.string("Screenshots"), systemImage: "camera.viewfinder") {
+        SettingsPage(section: .screenshots) {
             ToolCategorySection(
                 title: AppLocalization.string("Tools"),
                 tools: [.captureSelectedArea, .captureOCR, .imageSearch]
@@ -420,7 +427,7 @@ struct SettingsView: View {
     }
 
     private var finderPathPane: some View {
-        SettingsPage(title: AppLocalization.string("Finder Path"), systemImage: "folder") {
+        SettingsPage(section: .finderPath) {
             ToolCategorySection(
                 title: AppLocalization.string("Tool"),
                 tools: [.copyFinderPath]
@@ -438,7 +445,7 @@ struct SettingsView: View {
     }
 
     private var dropShelfPane: some View {
-        SettingsPage(title: AppLocalization.string("Drop Shelf"), systemImage: "tray.and.arrow.down") {
+        SettingsPage(section: .dropShelf) {
             ToolCategorySection(
                 title: AppLocalization.string("Tool"),
                 tools: [.dropShelf]
@@ -508,7 +515,7 @@ struct SettingsView: View {
     }
 
     private var shortcutsPane: some View {
-        SettingsPage(title: AppLocalization.string("Shortcuts"), systemImage: "keyboard") {
+        SettingsPage(section: .shortcuts) {
             Form {
                 Section("Screenshots") {
                     KeyboardShortcuts.Recorder(
@@ -618,7 +625,7 @@ struct SettingsView: View {
 
 private extension SettingsView {
     var videoRecordingPane: some View {
-        SettingsPage(title: AppLocalization.string("Video Recording"), systemImage: "record.circle") {
+        SettingsPage(section: .videoRecording) {
             ToolCategorySection(
                 title: AppLocalization.string("Tool"),
                 tools: [.captureVideo]
@@ -767,82 +774,6 @@ private extension SettingsView {
             FeatureResetSection {
                 resetVideoRecordingSettings()
             }
-        }
-    }
-}
-
-private enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
-    case menuBar
-    case screenshots
-    case videoRecording
-    case dropShelf
-    case finderPath
-    case dynamicIsland
-    case shortcuts
-    case about
-
-    var id: Self { self }
-
-    static let appSections: [Self] = [.menuBar, .shortcuts, .about]
-    static let featureSections: [Self] = [.screenshots, .videoRecording, .dropShelf, .finderPath, .dynamicIsland]
-
-    var title: String {
-        switch self {
-        case .menuBar: AppLocalization.string("Menu Bar")
-        case .screenshots: AppLocalization.string("Screenshots")
-        case .videoRecording: AppLocalization.string("Video Recording")
-        case .dropShelf: AppLocalization.string("Drop Shelf")
-        case .finderPath: AppLocalization.string("Finder Path")
-        case .dynamicIsland: AppLocalization.string("Dynamic Island")
-        case .shortcuts: AppLocalization.string("Shortcuts")
-        case .about: AppLocalization.string("About DeskCast")
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .menuBar: "menubar.rectangle"
-        case .screenshots: "camera.viewfinder"
-        case .videoRecording: "record.circle"
-        case .dropShelf: "tray.and.arrow.down"
-        case .finderPath: "folder"
-        case .dynamicIsland: ToolboxToolID.dynamicIsland.systemImage
-        case .shortcuts: "keyboard"
-        case .about: "info.circle"
-        }
-    }
-}
-
-private struct SettingsPane<Content: View>: View {
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        ScrollView {
-            content
-                .formStyle(.grouped)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .padding(.horizontal, 28)
-                .padding(.vertical, 22)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-        }
-    }
-}
-
-struct SettingsPage<Content: View>: View {
-    let title: String
-    let systemImage: String
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        SettingsPane {
-            VStack(alignment: .leading, spacing: 18) {
-                Label(title, systemImage: systemImage)
-                    .font(.title2.weight(.semibold))
-                    .padding(.horizontal, 4)
-
-                content
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

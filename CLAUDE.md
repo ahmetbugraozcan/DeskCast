@@ -23,7 +23,7 @@ The app is **DeskCast**. A few names differ, don't "fix" them blindly:
 
 ## App shape
 
-- SwiftUI `App` + AppKit. Entry point [DeskCastApp.swift](screenshotapp/App/DeskCastApp.swift) declares the `MenuBarExtra`, a `Settings` scene, and an `"image-search"` `Window`.
+- SwiftUI `App` + AppKit. Entry point [DeskCastApp.swift](screenshotapp/App/DeskCastApp.swift) declares two `MenuBarExtra` scenes (only one inserted, by `toolbox.menuLayout`): the default `.window`-style `MenuBarPanelView` (tool tiles, now playing, recent captures, Drop Shelf) and the classic Expanded/Grouped `NSMenu`; plus a `Settings` scene and an `"image-search"` `Window`.
 - No `LSUIElement`; `AppDelegate` sets `.accessory` in `applicationWillFinishLaunching` — no Dock icon, still Spotlight/Raycast-searchable, keeps running with no windows open.
 - Only SPM dependency: `KeyboardShortcuts` 2.4.0 (do not change `Package.resolved` for non-dependency work).
 

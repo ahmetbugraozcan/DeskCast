@@ -1,6 +1,8 @@
 import Foundation
 
 enum ToolboxMenuLayout: String, CaseIterable, Identifiable {
+    /// Popover with tool tiles, the playing track and recent captures.
+    case panel
     case expanded
     case grouped
 
@@ -132,6 +134,8 @@ enum ToolboxCatalog {
 enum ToolboxSettings {
     enum Keys {
         static let menuLayout = "toolbox.menuLayout"
+        /// One-time switch of existing installs to the panel menu (not a setting).
+        static let menuPanelMigrated = "toolbox.menuPanelMigrated"
         static let language = "app.language"
         static let captureSelectedAreaEnabled = ToolboxToolID.captureSelectedArea.enabledKey
         static let captureSelectedAreaShowInMenu = ToolboxToolID.captureSelectedArea.showInMenuKey
@@ -149,7 +153,7 @@ enum ToolboxSettings {
         static let dynamicIslandShowInMenu = ToolboxToolID.dynamicIsland.showInMenuKey
     }
 
-    static let defaultMenuLayout = ToolboxMenuLayout.expanded
+    static let defaultMenuLayout = ToolboxMenuLayout.panel
     static let defaultLanguage = AppLanguage.english
     static let defaultCaptureSelectedAreaEnabled = ToolboxToolID.captureSelectedArea.defaultEnabled
     static let defaultCaptureSelectedAreaShowInMenu = ToolboxToolID.captureSelectedArea.defaultShowInMenu
@@ -168,6 +172,15 @@ enum ToolboxSettings {
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
         defaults.register(defaults: defaultValues)
+        migrateToPanelMenu(in: defaults)
+    }
+
+    /// The panel replaced the plain menu as the default; move existing
+    /// installs over once, after which a picked layout sticks.
+    static func migrateToPanelMenu(in defaults: UserDefaults) {
+        guard !defaults.bool(forKey: Keys.menuPanelMigrated) else { return }
+        defaults.set(true, forKey: Keys.menuPanelMigrated)
+        defaults.removeObject(forKey: Keys.menuLayout)
     }
 
     static func resetTools(_ tools: [ToolboxToolID], in defaults: UserDefaults = .standard) {

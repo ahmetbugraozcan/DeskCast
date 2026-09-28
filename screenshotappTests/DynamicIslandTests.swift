@@ -570,3 +570,18 @@ struct NowPlayingSourceSelectionTests {
         #expect(choose(scripted: [], system: nil) == nil)
     }
 }
+
+struct ToolboxMenuLayoutMigrationTests {
+    @Test func movesExistingInstallsToPanelOnce() throws {
+        let defaults = try #require(UserDefaults(suiteName: "menu-migration-\(UUID().uuidString)"))
+        defaults.set(ToolboxMenuLayout.expanded.rawValue, forKey: ToolboxSettings.Keys.menuLayout)
+
+        ToolboxSettings.registerDefaults(in: defaults)
+        #expect(defaults.string(forKey: ToolboxSettings.Keys.menuLayout) == ToolboxMenuLayout.panel.rawValue)
+
+        // A layout picked after the migration sticks.
+        defaults.set(ToolboxMenuLayout.grouped.rawValue, forKey: ToolboxSettings.Keys.menuLayout)
+        ToolboxSettings.registerDefaults(in: defaults)
+        #expect(defaults.string(forKey: ToolboxSettings.Keys.menuLayout) == ToolboxMenuLayout.grouped.rawValue)
+    }
+}

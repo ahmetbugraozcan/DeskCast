@@ -2,7 +2,7 @@ import SwiftUI
 
 extension SettingsView {
     var aboutPane: some View {
-        SettingsPage(title: AppLocalization.string("About DeskCast"), systemImage: "info.circle") {
+        SettingsPage(section: .about) {
             SettingsControlSection(title: AppLocalization.string("Application")) {
                 SettingsControlRow(title: AppLocalization.string("Version")) {
                     Text(AppVersion.displayString)

@@ -63,9 +63,30 @@ struct DeskCastApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra(AppConstants.displayName, systemImage: "camera.viewfinder") {
+        // The panel and the classic menus need different MenuBarExtra styles,
+        // so each layout has its own scene and only one is inserted.
+        MenuBarExtra(isInserted: menuLayoutBinding(isPanel: true)) {
+            MenuBarPanelView(
+                screenshots: screenshotStore,
+                recorder: screenRecorderStore,
+                dropShelf: dropShelfStore,
+                island: dynamicIslandStore,
+                visibility: menuPanelVisibility,
+                actions: menuPanelActions
+            )
+            .environment(\.locale, selectedLanguage.locale)
+        } label: {
+            Image(systemName: "camera.viewfinder")
+        }
+        .menuBarExtraStyle(.window)
+
+        MenuBarExtra(
+            AppConstants.displayName,
+            systemImage: "camera.viewfinder",
+            isInserted: menuLayoutBinding(isPanel: false)
+        ) {
             switch selectedMenuLayout {
-            case .expanded:
+            case .expanded, .panel:
                 expandedMenuContent
             case .grouped:
                 groupedMenuContent
@@ -318,6 +339,41 @@ struct DeskCastApp: App {
         Button(AppLocalization.formatted("Quit %@", AppConstants.displayName)) {
             NSApp.terminate(nil)
         }
+    }
+
+    /// Inserted state for the panel (`isPanel`) or classic menu scene. Removing
+    /// the icon from the menu bar isn't offered, so writes are ignored.
+    private func menuLayoutBinding(isPanel: Bool) -> Binding<Bool> {
+        Binding(
+            get: { (selectedMenuLayout == .panel) == isPanel },
+            set: { _ in }
+        )
+    }
+
+    private var menuPanelVisibility: MenuBarPanelVisibility {
+        MenuBarPanelVisibility(
+            captureSelectedArea: shouldShowCaptureSelectedAreaInMenu,
+            captureVideo: shouldShowCaptureVideoInMenu,
+            captureOCR: shouldShowCaptureOCRInMenu,
+            imageSearch: shouldShowImageSearchInMenu,
+            copyFinderPath: shouldShowCopyFinderPathInMenu,
+            dropShelf: shouldShowDropShelfInMenu,
+            dynamicIsland: shouldShowDynamicIslandInMenu
+        )
+    }
+
+    private var menuPanelActions: MenuBarPanelActions {
+        MenuBarPanelActions(
+            openImageSearch: {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "image-search")
+            },
+            openSettings: {
+                NSApp.activate(ignoringOtherApps: true)
+                openSettings()
+            },
+            quit: { NSApp.terminate(nil) }
+        )
     }
 
     private var selectedMenuLayout: ToolboxMenuLayout {
