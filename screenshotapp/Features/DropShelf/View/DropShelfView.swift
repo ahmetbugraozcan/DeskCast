@@ -462,7 +462,7 @@ private struct DropShelfItemCard: View {
 
                 item.previewImage
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .scaledToFill()
             } else {
                 item.kindTint.opacity(0.14)
 
@@ -747,7 +747,7 @@ private struct DropShelfListRow: View {
             if item.isImageBacked {
                 item.previewImage
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .scaledToFill()
             } else {
                 item.kindTint.opacity(0.16)
 

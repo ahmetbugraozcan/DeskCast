@@ -33,7 +33,19 @@ nonisolated struct SystemStatsSnapshot: Equatable, Sendable {
 /// needs a permission. Not thread-safe: call `sample()` from one serial queue.
 nonisolated final class SystemStatsService: @unchecked Sendable {
     private var previousCPUTicks: (busy: UInt64, total: UInt64)?
-    private var previousNetwork: (received: UInt64, sent: UInt64, date: Date)?
+    private struct NetworkSample {
+        let received: UInt64
+        let sent: UInt64
+        let date: Date
+    }
+
+    private struct BatteryState {
+        let level: Int
+        let isCharging: Bool
+        let isPluggedIn: Bool
+    }
+
+    private var previousNetwork: NetworkSample?
 
     /// Takes one sample. Rates (CPU, network) are measured against the
     /// previous call, so the first sample reports zero for them.
@@ -193,7 +205,7 @@ nonisolated final class SystemStatsService: @unchecked Sendable {
         }
 
         let now = Date()
-        defer { previousNetwork = (received, sent, now) }
+        defer { previousNetwork = NetworkSample(received: received, sent: sent, date: now) }
 
         guard let previous = previousNetwork else { return (0, 0) }
 
@@ -227,7 +239,7 @@ nonisolated final class SystemStatsService: @unchecked Sendable {
 
     // MARK: - Battery & power
 
-    private func batteryState() -> (level: Int, isCharging: Bool, isPluggedIn: Bool)? {
+    private func batteryState() -> BatteryState? {
         guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
               let sources = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef]
         else {
@@ -247,10 +259,10 @@ nonisolated final class SystemStatsService: @unchecked Sendable {
             let maximum = description[kIOPSMaxCapacityKey] as? Int ?? 100
             let level = maximum > 0 ? Int((Double(current) / Double(maximum) * 100).rounded()) : current
 
-            return (
-                min(max(level, 0), 100),
-                description[kIOPSIsChargingKey] as? Bool ?? false,
-                description[kIOPSPowerSourceStateKey] as? String == kIOPSACPowerValue
+            return BatteryState(
+                level: min(max(level, 0), 100),
+                isCharging: description[kIOPSIsChargingKey] as? Bool ?? false,
+                isPluggedIn: description[kIOPSPowerSourceStateKey] as? String == kIOPSACPowerValue
             )
         }
 

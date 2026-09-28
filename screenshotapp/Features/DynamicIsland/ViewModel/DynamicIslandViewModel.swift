@@ -65,10 +65,10 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         nowPlayingService: NowPlayingProviding,
         batteryMonitor: BatteryMonitoring,
         systemNotifications: SystemNotificationMonitoring,
-        timer: IslandTimerViewModel = IslandTimerViewModel(),
+        timer: IslandTimerViewModel? = nil,
         settings: DynamicIslandSettingsReading & ToolboxSettingsReading
     ) {
-        self.timer = timer
+        self.timer = timer ?? IslandTimerViewModel()
         self.nowPlayingService = nowPlayingService
         self.batteryMonitor = batteryMonitor
         self.systemNotifications = systemNotifications
@@ -88,10 +88,10 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         }
 
         // The compact island shows the running timer, so re-render with it.
-        timerObserver = timer.objectWillChange.sink { [weak self] _ in
+        timerObserver = self.timer.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
         }
-        timer.onFinish = { [weak self] in
+        self.timer.onFinish = { [weak self] in
             self?.post(
                 DynamicIslandNotification(
                     title: AppLocalization.string("island.timer.finished"),

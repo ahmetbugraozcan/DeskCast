@@ -56,26 +56,27 @@ struct DynamicIslandView: View {
     /// Content height below the notch for each expanded page.
     static func expandedContentHeight(for content: IslandExpandedContent) -> CGFloat {
         switch content {
-        case .launcher: return 276
-        case .panel(let panel):
-            switch panel {
-            case .controls: return 212
-            case .volume: return 262
-            case .nowPlaying: return 214
-            case .captures: return 196
-            case .files: return 208
-            case .system: return 258
-            case .tools: return 196
-            case .calendar: return 244
-            case .notifications: return 262
-            case .timer: return 214
-            case .camera: return 290
-            case .downloads: return 262
-            case .scratchpad: return 224
-            case .aiAgents: return 300
-            }
+        case .launcher: 276
+        case .panel(let panel): panelContentHeights[panel] ?? 260
         }
     }
+
+    private static let panelContentHeights: [IslandPanel: CGFloat] = [
+        .controls: 212,
+        .volume: 262,
+        .nowPlaying: 214,
+        .captures: 196,
+        .files: 208,
+        .system: 258,
+        .tools: 196,
+        .calendar: 244,
+        .notifications: 262,
+        .timer: 214,
+        .camera: 290,
+        .downloads: 262,
+        .scratchpad: 224,
+        .aiAgents: 300
+    ]
 
     private static var maxExpandedContentHeight: CGFloat {
         IslandPanel.allCases.map { expandedContentHeight(for: .panel($0)) }.max() ?? 300
@@ -483,7 +484,7 @@ struct NotificationBannerView: View {
         if let image = notification.image {
             Image(nsImage: image)
                 .resizable()
-                .aspectRatio(contentMode: .fill)
+                .scaledToFill()
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         } else {
             Image(systemName: notification.systemImage)
@@ -530,7 +531,7 @@ struct ArtworkView: View {
             if let artwork = nowPlaying.artwork {
                 Image(nsImage: artwork)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .scaledToFill()
                     .transition(.opacity)
             } else {
                 LinearGradient(

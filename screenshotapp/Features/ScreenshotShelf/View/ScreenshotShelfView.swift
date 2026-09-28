@@ -379,7 +379,7 @@ private struct ScreenshotThumbnailView: View {
         ZStack {
             Image(nsImage: item.image)
                 .resizable()
-                .aspectRatio(contentMode: .fill)
+                .scaledToFill()
                 .frame(width: thumbnailSize.width, height: thumbnailSize.height)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
 

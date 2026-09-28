@@ -306,7 +306,7 @@ private struct ImageSearchThumbnail: View {
                 if let image {
                     Image(nsImage: image)
                         .resizable()
-                        .aspectRatio(contentMode: .fill)
+                        .scaledToFill()
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .clipped()
                 } else {

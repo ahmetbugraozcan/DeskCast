@@ -40,7 +40,7 @@ final class AppVolumeService {
             $0.activationPolicy == .regular && $0.bundleIdentifier != nil
         }
 
-        var grouped: [String: (app: NSRunningApplication, objects: [AudioObjectID], playing: Bool)] = [:]
+        var grouped: [String: SourceGroup] = [:]
 
         for object in processObjects {
             guard let bundleID = Self.bundleID(of: object), bundleID != Self.ownBundleID else { continue }
@@ -55,7 +55,7 @@ final class AppVolumeService {
                 continue
             }
 
-            var entry = grouped[appID] ?? (app, [], false)
+            var entry = grouped[appID] ?? SourceGroup(app: app)
             entry.objects.append(object)
             entry.playing = entry.playing || Self.isRunningOutput(object)
             grouped[appID] = entry
@@ -75,6 +75,12 @@ final class AppVolumeService {
             .sorted { lhs, rhs in
                 lhs.isPlaying != rhs.isPlaying ? lhs.isPlaying : lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
+    }
+
+    private struct SourceGroup {
+        let app: NSRunningApplication
+        var objects: [AudioObjectID] = []
+        var playing = false
     }
 
     // MARK: - Volume

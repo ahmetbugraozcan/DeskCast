@@ -333,7 +333,7 @@ nonisolated final class SpotifyService: @unchecked Sendable {
     private static func randomURLSafeString(length: Int) -> String {
         let characters = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
         var generator = SystemRandomNumberGenerator()
-        return String((0..<length).map { _ in characters.randomElement(using: &generator)! })
+        return String((0..<length).map { _ in characters[Int.random(in: 0..<characters.count, using: &generator)] })
     }
 
     private static func loadTokens() -> SpotifyTokens? {

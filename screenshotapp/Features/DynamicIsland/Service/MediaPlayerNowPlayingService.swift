@@ -327,7 +327,9 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
                     try
                         set trackPosition to player position
                     end try
-                    return {isPlaying, persistent ID of trackRef, name of trackRef, artist of trackRef, album of trackRef, duration of trackRef, trackPosition, ""}
+                    set trackID to persistent ID of trackRef
+                    set trackInfo to {name of trackRef, artist of trackRef, album of trackRef}
+                    return {isPlaying, trackID} & trackInfo & {duration of trackRef, trackPosition, ""}
                 on error
                     return {}
                 end try
@@ -344,7 +346,9 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
                     try
                         set artURL to artwork url of trackRef
                     end try
-                    return {isPlaying, id of trackRef, name of trackRef, artist of trackRef, album of trackRef, (duration of trackRef) / 1000, player position, artURL}
+                    set trackInfo to {name of trackRef, artist of trackRef, album of trackRef}
+                    set trackDuration to (duration of trackRef) / 1000
+                    return {isPlaying, id of trackRef} & trackInfo & {trackDuration, player position, artURL}
                 on error
                     return {}
                 end try

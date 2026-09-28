@@ -42,10 +42,9 @@ struct IslandExpandedView: View {
                 title: AppLocalization.string(panel.titleKey),
                 isPinned: store.isPinned,
                 onPin: { store.togglePin() },
-                onCollapse: { store.collapse() }
-            ) {
-                headerAccessory(for: panel)
-            }
+                onCollapse: { store.collapse() },
+                trailing: { headerAccessory(for: panel) }
+            )
 
             panelContent(panel)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

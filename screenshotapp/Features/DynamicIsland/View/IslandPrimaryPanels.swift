@@ -365,7 +365,7 @@ private struct QueueView: View {
                 .frame(width: 14)
 
             AsyncImage(url: item.artworkURL) { image in
-                image.resizable().aspectRatio(contentMode: .fill)
+                image.resizable().scaledToFill()
             } placeholder: {
                 Color.white.opacity(0.08)
             }

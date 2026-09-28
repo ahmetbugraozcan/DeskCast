@@ -79,9 +79,9 @@ final class AudioViewModel: ObservableObject, IslandPanelActivating {
     /// Input level to restore when the microphone is un-muted by volume.
     private var savedInputVolume: Double?
 
-    init(service: AudioOutputService = AudioOutputService(), appVolume: AppVolumeService = AppVolumeService()) {
-        self.service = service
-        self.appVolume = appVolume
+    init(service: AudioOutputService? = nil, appVolume: AppVolumeService? = nil) {
+        self.service = service ?? AudioOutputService()
+        self.appVolume = appVolume ?? AppVolumeService()
     }
 
     var currentDeviceName: String {
@@ -311,7 +311,8 @@ final class CalendarViewModel: ObservableObject, IslandPanelActivating {
 
     private let service: CalendarService
 
-    init(service: CalendarService = CalendarService()) {
+    init(service: CalendarService? = nil) {
+        let service = service ?? CalendarService()
         self.service = service
         accessState = service.accessState
     }
@@ -500,7 +501,8 @@ final class ControlsViewModel: ObservableObject, IslandPanelActivating {
 
     private let service: SystemControlsService
 
-    init(service: SystemControlsService = SystemControlsService()) {
+    init(service: SystemControlsService? = nil) {
+        let service = service ?? SystemControlsService()
         self.service = service
         isDarkMode = service.isDarkMode
     }

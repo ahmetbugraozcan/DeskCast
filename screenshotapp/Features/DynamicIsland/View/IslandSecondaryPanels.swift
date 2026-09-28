@@ -130,7 +130,7 @@ struct CapturesPanelView: View {
             ZStack(alignment: .bottomTrailing) {
                 Image(nsImage: item.image)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .scaledToFill()
                     .frame(width: 150, height: 132)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
@@ -219,9 +219,9 @@ struct FilesPanelView: View {
             VStack(spacing: 6) {
                 Group {
                     if let image = item.image {
-                        Image(nsImage: image).resizable().aspectRatio(contentMode: .fill)
+                        Image(nsImage: image).resizable().scaledToFill()
                     } else if let url = item.fileURL {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().aspectRatio(contentMode: .fit)
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().scaledToFit()
                     } else {
                         Image(systemName: item.url != nil ? "link" : "text.alignleft")
                             .font(.system(size: 24))
@@ -403,9 +403,10 @@ struct CalendarPanelView: View {
                     if event.isAllDay {
                         Text(AppLocalization.string("island.calendar.allDay"))
                     } else {
-                        Text(verbatim: event.start.formatted(.dateTime.weekday(.abbreviated).hour().minute().locale(AppLocalization.currentLocale))
-                            + " – "
-                            + event.end.formatted(.dateTime.hour().minute().locale(AppLocalization.currentLocale)))
+                        let locale = AppLocalization.currentLocale
+                        let start = event.start.formatted(.dateTime.weekday(.abbreviated).hour().minute().locale(locale))
+                        let end = event.end.formatted(.dateTime.hour().minute().locale(locale))
+                        Text(verbatim: "\(start) – \(end)")
                     }
                 }
                 .font(.system(size: 10.5, weight: .medium))
@@ -454,7 +455,7 @@ struct NotificationsPanelView: View {
             HStack(spacing: 10) {
                 Group {
                     if let image = notification.image {
-                        Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
+                        Image(nsImage: image).resizable().scaledToFit()
                     } else {
                         Image(systemName: notification.systemImage)
                             .font(.system(size: 14, weight: .semibold))

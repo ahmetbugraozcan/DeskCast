@@ -363,7 +363,13 @@ nonisolated final class AIUsageService: @unchecked Sendable {
         return usage
     }
 
-    private func latestCodexRateLimits(in url: URL) -> (primary: AIUsageWindow?, secondary: AIUsageWindow?, plan: String?)? {
+    private struct CodexRateLimits {
+        let primary: AIUsageWindow?
+        let secondary: AIUsageWindow?
+        let plan: String?
+    }
+
+    private func latestCodexRateLimits(in url: URL) -> CodexRateLimits? {
         guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return nil }
 
         let marker = Data("\"rate_limits\"".utf8)
@@ -402,7 +408,7 @@ nonisolated final class AIUsageService: @unchecked Sendable {
 
             guard primary != nil || secondary != nil else { continue }
 
-            return (primary, secondary, (limits["plan_type"] as? String)?.capitalized)
+            return CodexRateLimits(primary: primary, secondary: secondary, plan: (limits["plan_type"] as? String)?.capitalized)
         }
 
         return nil
