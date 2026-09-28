@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var updateService: AppUpdateService
+    let spotifyAccount: SpotifyAccountViewModel
 
     @AppStorage(ScreenshotShelfSettings.Keys.previewPosition)
     private var previewPositionRaw = ScreenshotShelfSettings.defaultPreviewPosition.rawValue
@@ -194,7 +195,7 @@ struct SettingsView: View {
         case .finderPath:
             finderPathPane
         case .dynamicIsland:
-            DynamicIslandSettingsPane()
+            DynamicIslandSettingsPane(spotifyAccount: spotifyAccount)
         case .shortcuts:
             shortcutsPane
         case .about:

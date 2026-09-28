@@ -95,6 +95,25 @@ final class AudioOutputService {
         return value as String
     }
 
+    /// Persistent UID, needed to build aggregate devices on this output.
+    func deviceUID(_ id: AudioDeviceID) -> String? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceUID,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var uid: Unmanaged<CFString>?
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+
+        guard AudioObjectGetPropertyData(id, &address, 0, nil, &size, &uid) == noErr,
+              let value = uid?.takeRetainedValue()
+        else {
+            return nil
+        }
+
+        return value as String
+    }
+
     private func hasOutputStreams(_ id: AudioDeviceID) -> Bool {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyStreams,

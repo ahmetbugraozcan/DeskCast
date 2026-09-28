@@ -23,6 +23,8 @@ enum DynamicIslandSettings {
         static let panelShortcutsEnabled = "dynamicIsland.panelShortcutsEnabled"
         static let showsSideButtons = "dynamicIsland.showsSideButtons"
         static let scratchpadText = "dynamicIsland.scratchpadText"
+        /// The user's own Spotify app Client ID (public with PKCE; not a secret).
+        static let spotifyClientID = "dynamicIsland.spotifyClientID"
         static let notificationDurationSeconds = "dynamicIsland.notificationDurationSeconds"
     }
 
@@ -39,8 +41,11 @@ enum DynamicIslandSettings {
     static let defaultNotificationDurationSeconds = 4
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
-        // Scratchpad text is user content, so it's registered but never reset.
-        defaults.register(defaults: defaultValues.merging([Keys.scratchpadText: ""]) { current, _ in current })
+        // Scratchpad text and the Spotify Client ID are user content, so they're
+        // registered but never reset.
+        defaults.register(
+            defaults: defaultValues.merging([Keys.scratchpadText: "", Keys.spotifyClientID: ""]) { current, _ in current }
+        )
     }
 
     static func resetToDefaults(in defaults: UserDefaults = .standard) {

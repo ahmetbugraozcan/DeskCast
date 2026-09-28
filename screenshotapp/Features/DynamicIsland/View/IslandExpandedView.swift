@@ -91,7 +91,13 @@ struct IslandExpandedView: View {
         case .volume:
             VolumePanelView(audio: panels.audio)
         case .nowPlaying:
-            NowPlayingPanelView(store: store, audio: panels.audio, namespace: namespace)
+            NowPlayingPanelView(
+                store: store,
+                audio: panels.audio,
+                extras: panels.extras,
+                actions: panels.actions,
+                namespace: namespace
+            )
         case .captures:
             CapturesPanelView(shelf: panels.screenshots, actions: panels.actions)
         case .files:

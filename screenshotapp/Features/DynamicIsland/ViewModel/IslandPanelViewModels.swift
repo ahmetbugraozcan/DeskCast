@@ -65,15 +65,23 @@ final class AudioViewModel: ObservableObject, IslandPanelActivating {
     @Published private(set) var currentDeviceID: AudioDeviceID?
     @Published private(set) var inputVolume: Double?
     @Published private(set) var isMicrophoneMuted = false
+    @Published private(set) var appSources: [AppAudioSource] = []
+    @Published private(set) var appVolumes: [String: Double] = [:]
 
     private let service: AudioOutputService
+    private let appVolume: AppVolumeService
     private var timer: Timer?
+    /// Keeps adjusted apps' taps current (new helper processes, quit apps,
+    /// output changes) while the panel is closed.
+    private var tapMaintenanceTimer: Timer?
+    private var tick = 0
     private var activeCount = 0
     /// Input level to restore when the microphone is un-muted by volume.
     private var savedInputVolume: Double?
 
-    init(service: AudioOutputService = AudioOutputService()) {
+    init(service: AudioOutputService = AudioOutputService(), appVolume: AppVolumeService = AppVolumeService()) {
         self.service = service
+        self.appVolume = appVolume
     }
 
     var currentDeviceName: String {
@@ -110,6 +118,58 @@ final class AudioViewModel: ObservableObject, IslandPanelActivating {
         let input = service.volume(input: true)
         setIfChanged(\.inputVolume, input)
         setIfChanged(\.isMicrophoneMuted, service.isMuted(input: true) || input == 0)
+
+        // Listing audio processes is heavier; once a second is plenty.
+        tick += 1
+        if tick % 2 == 1 {
+            refreshAppSources()
+        }
+    }
+
+    // MARK: - Per-app volume
+
+    func volume(for source: AppAudioSource) -> Double {
+        appVolumes[source.id] ?? 1
+    }
+
+    func setVolume(_ value: Double, for source: AppAudioSource) {
+        appVolume.setVolume(value, for: source)
+        appVolumes[source.id] = value >= 0.995 ? nil : value
+        updateTapMaintenance()
+    }
+
+    func toggleMute(_ source: AppAudioSource) {
+        setVolume(volume(for: source) > 0 ? 0 : 1, for: source)
+    }
+
+    private func refreshAppSources() {
+        let sources = appVolume.audioSources()
+        let outputUID = service.defaultDevice().flatMap(service.deviceUID)
+        appVolume.sync(sources: sources, outputUID: outputUID)
+        setIfChanged(\.appSources, sources)
+
+        let volumes = Dictionary(uniqueKeysWithValues: sources.compactMap { source -> (String, Double)? in
+            let value = appVolume.volume(for: source.id)
+            return value < 0.995 ? (source.id, value) : nil
+        })
+        setIfChanged(\.appVolumes, volumes)
+        updateTapMaintenance()
+    }
+
+    private func updateTapMaintenance() {
+        if appVolumes.isEmpty {
+            tapMaintenanceTimer?.invalidate()
+            tapMaintenanceTimer = nil
+        } else if tapMaintenanceTimer == nil {
+            let timer = Timer(timeInterval: 3, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, self.activeCount == 0 else { return }
+                    self.refreshAppSources()
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            tapMaintenanceTimer = timer
+        }
     }
 
     func setVolume(_ value: Double) {
@@ -528,17 +588,22 @@ final class IslandPanelModels {
     let timer: IslandTimerViewModel
     let controls = ControlsViewModel()
     let camera = CameraMirrorViewModel()
+    let spotify: SpotifyAccountViewModel
+    let extras: NowPlayingExtrasViewModel
     let screenshots: ScreenshotShelfViewModel
     let dropShelf: DropShelfViewModel
     let actions: IslandToolActions
 
     init(
         timer: IslandTimerViewModel,
+        spotify: SpotifyAccountViewModel,
         screenshots: ScreenshotShelfViewModel,
         dropShelf: DropShelfViewModel,
         actions: IslandToolActions
     ) {
         self.timer = timer
+        self.spotify = spotify
+        extras = NowPlayingExtrasViewModel(account: spotify)
         self.screenshots = screenshots
         self.dropShelf = dropShelf
         self.actions = actions

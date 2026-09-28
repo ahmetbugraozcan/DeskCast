@@ -388,3 +388,32 @@
 "island.settings.sideButtons" = "Yan düğmeleri göster";
 "island.settings.panelShortcuts" = "Panel kısayolları (⌥⌘ + harf)";
 "island.settings.panelShortcutsHint" = "Bir paneli her yerden açar; örneğin Şu An Çalıyor için ⌥⌘M. Bu açıkken ⌥⌘D, sistemin Dock gizleme kısayolunun yerini alır.";
+
+/* Dynamic Island: lyrics, queue, Spotify, per-app volume */
+"island.nowPlaying.lyrics" = "Şarkı sözleri";
+"island.nowPlaying.upNext" = "Sıradaki";
+"island.lyrics.none" = "Bu şarkı için söz bulunamadı";
+"island.queue.spotifyOnly" = "Sıradaki listesi Spotify için var. Apple Music sırasını paylaşmıyor.";
+"island.queue.setupTitle" = "Sıradakini görmek için Spotify'ı bağlayın";
+"island.queue.setupMessage" = "Ayarlar → Dynamic Island bölümüne Spotify uygulamanızın Client ID'sini girin.";
+"island.queue.openSettings" = "Ayarları Aç";
+"island.queue.connectTitle" = "Sıradakini görmek için Spotify'a giriş yapın";
+"island.queue.empty" = "Sırada şarkı yok";
+"island.queue.failed" = "Sıra yüklenemedi";
+"island.queue.retry" = "Tekrar Dene";
+"island.spotify.title" = "Spotify (Sıradaki)";
+"island.spotify.clientID" = "Client ID";
+"island.spotify.connect" = "Spotify'ı Bağla";
+"island.spotify.connecting" = "Tarayıcı bekleniyor…";
+"island.spotify.disconnect" = "Bağlantıyı Kes";
+"island.spotify.connected" = "Bağlı";
+"island.spotify.notConnected" = "Bağlı değil";
+"island.spotify.setupSteps" = "1. developer.spotify.com/dashboard adresini açıp bir uygulama oluşturun (Web API). 2. Aşağıdaki yönlendirme adresini ekleyin. 3. Uygulamanın Client ID'sini buraya yapıştırıp bağlanın.";
+"island.spotify.redirectHint" = "Yönlendirme adresi (Redirect URI): %@";
+"island.spotify.error.clientID" = "Önce Spotify Client ID'nizi girin.";
+"island.spotify.error.connect" = "Spotify girişi tamamlanmadı. Client ID'yi ve yönlendirme adresini kontrol edip tekrar deneyin.";
+"island.audio.noApps" = "Ses çalan uygulama yok";
+"island.audio.noAppsMessage" = "Uygulamalar ses çalarken burada görünür. Bir uygulamanın sesini değiştirdiğinizde bir kez Sistem Sesi Kaydı izni istenir.";
+"island.audio.muteApp" = "Sessize al";
+"island.audio.unmuteApp" = "Sesi aç";
+"island.audio.resetApp" = "%100'e sıfırla";

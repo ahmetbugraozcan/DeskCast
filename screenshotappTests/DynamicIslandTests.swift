@@ -317,3 +317,31 @@ struct NowPlayingInfoTests {
         defaults.removePersistentDomain(forName: suiteName)
     }
 }
+
+struct LyricsParsingTests {
+    @Test func parsesSyncedLinesInTimeOrder() throws {
+        let source = """
+        [00:12.50] Second line
+        [00:03.00][00:30.00] Chorus
+        [ar:Someone]
+        """
+
+        let lyrics = try #require(LyricsService.parseLRC(source))
+
+        #expect(lyrics.isSynced)
+        #expect(lyrics.lines.map(\.text) == ["Chorus", "Second line", "Chorus"])
+        #expect(lyrics.lines.first?.time == 3)
+    }
+
+    @Test func currentLineFollowsElapsedTime() throws {
+        let lyrics = try #require(LyricsService.parseLRC("[00:01.00] a\n[00:05.00] b\n[00:09.00] c"))
+
+        #expect(lyrics.currentLineIndex(at: 0) == nil)
+        #expect(lyrics.currentLineIndex(at: 6) == 1)
+        #expect(lyrics.currentLineIndex(at: 60) == 2)
+    }
+
+    @Test func textWithoutTimestampsIsNotSyncedLyrics() {
+        #expect(LyricsService.parseLRC("just words\nno tags") == nil)
+    }
+}

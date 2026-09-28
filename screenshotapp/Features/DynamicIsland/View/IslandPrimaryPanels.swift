@@ -7,80 +7,71 @@ import SwiftUI
 struct NowPlayingPanelView: View {
     @ObservedObject var store: DynamicIslandViewModel
     @ObservedObject var audio: AudioViewModel
+    @ObservedObject var extras: NowPlayingExtrasViewModel
+    let actions: IslandToolActions
     let namespace: Namespace.ID
+
+    private enum Detail {
+        case none
+        case lyrics
+        case queue
+    }
+
+    @State private var detail: Detail = .none
 
     var body: some View {
         Group {
             if store.hasMedia, let nowPlaying = store.nowPlaying {
                 content(nowPlaying)
+                    .onChange(of: nowPlaying.cacheKey, initial: true) { _, _ in
+                        loadDetail(for: nowPlaying)
+                    }
+                    .onChange(of: detail) { _, _ in
+                        loadDetail(for: nowPlaying)
+                    }
             } else {
                 emptyState
             }
         }
         .activatesIslandPanel(audio)
+        .animation(.spring(response: 0.38, dampingFraction: 0.85), value: detail)
+    }
+
+    private func loadDetail(for nowPlaying: NowPlayingInfo) {
+        switch detail {
+        case .lyrics: extras.loadLyrics(for: nowPlaying)
+        case .queue: extras.loadQueue(for: nowPlaying)
+        case .none: break
+        }
     }
 
     private func content(_ nowPlaying: NowPlayingInfo) -> some View {
         VStack(spacing: 10) {
-            HStack(alignment: .top, spacing: 16) {
-                Button {
-                    store.openPlayer()
-                } label: {
-                    ArtworkView(nowPlaying: nowPlaying, cornerRadius: 16)
-                        .frame(width: 118, height: 118)
-                        .matchedGeometryEffect(id: "artwork", in: namespace)
-                        .shadow(color: nowPlaying.tintColor.opacity(0.35), radius: 14, y: 4)
-                }
-                .buttonStyle(IslandScaleButtonStyle())
-                .help(AppLocalization.formatted("Open %@", nowPlaying.player.displayName))
+            Group {
+                if detail == .none {
+                    fullPlayer(nowPlaying)
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                } else {
+                    HStack(alignment: .top, spacing: 14) {
+                        compactPlayer(nowPlaying)
+                            .frame(width: 150)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(nowPlaying.title)
-                        .font(.system(size: 19, weight: .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .contentTransition(.opacity)
-
-                    Text(nowPlaying.artist.isEmpty ? nowPlaying.album : nowPlaying.artist)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(IslandPalette.secondaryText)
-                        .lineLimit(1)
-
-                    Spacer(minLength: 6)
-
-                    PlaybackProgressView(nowPlaying: nowPlaying)
-
-                    HStack(spacing: 30) {
-                        MediaControlButton(systemImage: "backward.end.fill", size: 17) {
-                            store.previousTrack()
+                        Group {
+                            if detail == .lyrics {
+                                LyricsView(extras: extras, nowPlaying: nowPlaying)
+                            } else {
+                                QueueView(extras: extras, actions: actions, nowPlaying: nowPlaying)
+                            }
                         }
-                        .help(AppLocalization.string("Previous Track"))
-
-                        Button {
-                            store.togglePlayPause()
-                        } label: {
-                            Image(systemName: nowPlaying.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.system(size: 19, weight: .bold))
-                                .foregroundStyle(.black)
-                                .contentTransition(.symbolEffect(.replace))
-                                .frame(width: 44, height: 44)
-                                .background(Circle().fill(.white))
-                                .contentShape(Circle())
-                        }
-                        .buttonStyle(IslandScaleButtonStyle())
-                        .help(AppLocalization.string("Play / Pause"))
-
-                        MediaControlButton(systemImage: "forward.end.fill", size: 17) {
-                            store.nextTrack()
-                        }
-                        .help(AppLocalization.string("Next Track"))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
                     }
-                    .frame(maxWidth: .infinity)
+                    .transition(.opacity)
                 }
-                .frame(height: 118)
             }
+            .frame(height: 118)
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: audio.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.8))
@@ -94,12 +85,112 @@ struct NowPlayingPanelView: View {
                 OutputDeviceMenu(audio: audio)
 
                 IslandChipButton(
-                    title: AppLocalization.formatted("Open %@", nowPlaying.player.displayName),
-                    systemImage: "arrow.up.forward.app"
+                    title: AppLocalization.string("island.nowPlaying.lyrics"),
+                    systemImage: "quote.bubble",
+                    isOn: detail == .lyrics
                 ) {
-                    store.openPlayer()
+                    detail = detail == .lyrics ? .none : .lyrics
+                }
+
+                IslandChipButton(
+                    title: AppLocalization.string("island.nowPlaying.upNext"),
+                    systemImage: "list.bullet",
+                    isOn: detail == .queue
+                ) {
+                    detail = detail == .queue ? .none : .queue
                 }
             }
+        }
+    }
+
+    private func fullPlayer(_ nowPlaying: NowPlayingInfo) -> some View {
+        HStack(alignment: .top, spacing: 16) {
+            Button {
+                store.openPlayer()
+            } label: {
+                ArtworkView(nowPlaying: nowPlaying, cornerRadius: 16)
+                    .frame(width: 118, height: 118)
+                    .matchedGeometryEffect(id: "artwork", in: namespace)
+                    .shadow(color: nowPlaying.tintColor.opacity(0.35), radius: 14, y: 4)
+            }
+            .buttonStyle(IslandScaleButtonStyle())
+            .help(AppLocalization.formatted("Open %@", nowPlaying.player.displayName))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(nowPlaying.title)
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .contentTransition(.opacity)
+
+                Text(nowPlaying.artist.isEmpty ? nowPlaying.album : nowPlaying.artist)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(IslandPalette.secondaryText)
+                    .lineLimit(1)
+
+                Spacer(minLength: 6)
+
+                PlaybackProgressView(nowPlaying: nowPlaying)
+
+                transportControls(nowPlaying, playSize: 44, skipSize: 17, spacing: 30)
+                    .frame(maxWidth: .infinity)
+            }
+            .frame(height: 118)
+        }
+    }
+
+    /// Artwork + title + controls squeezed into a column beside lyrics/queue.
+    private func compactPlayer(_ nowPlaying: NowPlayingInfo) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                ArtworkView(nowPlaying: nowPlaying, cornerRadius: 9)
+                    .frame(width: 44, height: 44)
+                    .matchedGeometryEffect(id: "artwork", in: namespace)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(nowPlaying.title)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text(nowPlaying.artist)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(IslandPalette.secondaryText)
+                        .lineLimit(1)
+                }
+            }
+
+            PlaybackProgressView(nowPlaying: nowPlaying)
+
+            transportControls(nowPlaying, playSize: 32, skipSize: 13, spacing: 16)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func transportControls(_ nowPlaying: NowPlayingInfo, playSize: CGFloat, skipSize: CGFloat, spacing: CGFloat) -> some View {
+        HStack(spacing: spacing) {
+            MediaControlButton(systemImage: "backward.end.fill", size: skipSize) {
+                store.previousTrack()
+            }
+            .help(AppLocalization.string("Previous Track"))
+
+            Button {
+                store.togglePlayPause()
+            } label: {
+                Image(systemName: nowPlaying.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: playSize * 0.43, weight: .bold))
+                    .foregroundStyle(.black)
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(width: playSize, height: playSize)
+                    .background(Circle().fill(.white))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(IslandScaleButtonStyle())
+            .help(AppLocalization.string("Play / Pause"))
+
+            MediaControlButton(systemImage: "forward.end.fill", size: skipSize) {
+                store.nextTrack()
+            }
+            .help(AppLocalization.string("Next Track"))
         }
     }
 
@@ -127,6 +218,179 @@ struct NowPlayingPanelView: View {
                 }
             }
         }
+    }
+}
+
+/// Time-synced lyrics that follow playback: the current line is bright and
+/// scrolled to the middle; unsynced lyrics just scroll.
+private struct LyricsView: View {
+    @ObservedObject var extras: NowPlayingExtrasViewModel
+    let nowPlaying: NowPlayingInfo
+
+    var body: some View {
+        switch extras.lyricsState {
+        case .loading, .idle:
+            ProgressView()
+                .controlSize(.small)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .unavailable:
+            IslandEmptyState(systemImage: "quote.bubble", title: AppLocalization.string("island.lyrics.none"))
+        case .loaded:
+            if let lyrics = extras.lyrics {
+                TimelineView(.periodic(from: .now, by: 0.3)) { context in
+                    lyricsList(lyrics, current: lyrics.currentLineIndex(at: nowPlaying.elapsed(at: context.date)))
+                }
+            }
+        }
+    }
+
+    private func lyricsList(_ lyrics: Lyrics, current: Int?) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(lyrics.lines) { line in
+                        let isCurrent = line.id == current
+                        let isPast = current.map { line.id < $0 } ?? false
+
+                        Text(line.text.isEmpty ? "♪" : line.text)
+                            .font(.system(size: isCurrent ? 15 : 13, weight: isCurrent ? .bold : .semibold))
+                            .foregroundStyle(.white.opacity(lyrics.isSynced ? (isCurrent ? 1 : (isPast ? 0.3 : 0.45)) : 0.85))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .id(line.id)
+                            .animation(.easeOut(duration: 0.25), value: isCurrent)
+                    }
+                }
+                .padding(.vertical, 40)
+            }
+            .mask(
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.18),
+                        .init(color: .black, location: 0.82),
+                        .init(color: .clear, location: 1)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .onChange(of: current, initial: true) { _, newValue in
+                guard let newValue else { return }
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) {
+                    proxy.scrollTo(newValue, anchor: .center)
+                }
+            }
+        }
+    }
+}
+
+/// Spotify's "Up Next" queue via the Web API.
+private struct QueueView: View {
+    @ObservedObject var extras: NowPlayingExtrasViewModel
+    @ObservedObject var account: SpotifyAccountViewModel
+    let actions: IslandToolActions
+    let nowPlaying: NowPlayingInfo
+
+    init(extras: NowPlayingExtrasViewModel, actions: IslandToolActions, nowPlaying: NowPlayingInfo) {
+        self.extras = extras
+        account = extras.account
+        self.actions = actions
+        self.nowPlaying = nowPlaying
+    }
+
+    var body: some View {
+        Group {
+            if !extras.queue.isEmpty {
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: 4) {
+                        ForEach(Array(extras.queue.enumerated()), id: \.offset) { index, item in
+                            row(item, position: index + 1)
+                        }
+                    }
+                }
+            } else if extras.queueState == .loading {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                issueView
+            }
+        }
+        .onChange(of: account.isConnected) { _, _ in
+            extras.loadQueue(for: nowPlaying)
+        }
+    }
+
+    @ViewBuilder
+    private var issueView: some View {
+        switch extras.queueIssue {
+        case .notSpotify:
+            IslandEmptyState(
+                systemImage: "list.bullet",
+                title: AppLocalization.string("island.queue.spotifyOnly")
+            )
+        case .needsClientID:
+            IslandEmptyState(
+                systemImage: "key",
+                title: AppLocalization.string("island.queue.setupTitle"),
+                message: AppLocalization.string("island.queue.setupMessage"),
+                actionTitle: AppLocalization.string("island.queue.openSettings"),
+                action: { actions.openSettings() }
+            )
+        case .notConnected:
+            IslandEmptyState(
+                systemImage: "link",
+                title: AppLocalization.string("island.queue.connectTitle"),
+                actionTitle: AppLocalization.string(account.isConnecting ? "island.spotify.connecting" : "island.spotify.connect"),
+                action: { account.connect() }
+            )
+        case .nothingPlaying:
+            IslandEmptyState(systemImage: "list.bullet", title: AppLocalization.string("island.queue.empty"))
+        case .failed, .none:
+            IslandEmptyState(
+                systemImage: "exclamationmark.triangle",
+                title: AppLocalization.string("island.queue.failed"),
+                actionTitle: AppLocalization.string("island.queue.retry"),
+                action: { extras.loadQueue(for: nowPlaying) }
+            )
+        }
+    }
+
+    private func row(_ item: SpotifyQueueItem, position: Int) -> some View {
+        HStack(spacing: 9) {
+            Text("\(position)")
+                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                .foregroundStyle(IslandPalette.tertiaryText)
+                .frame(width: 14)
+
+            AsyncImage(url: item.artworkURL) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Color.white.opacity(0.08)
+            }
+            .frame(width: 30, height: 30)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item.title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text(item.subtitle)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(IslandPalette.secondaryText)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            Text(IslandFormat.clock(item.duration))
+                .font(.system(size: 10).monospacedDigit())
+                .foregroundStyle(IslandPalette.tertiaryText)
+        }
+        .padding(.horizontal, 6)
+        .frame(height: 36)
     }
 }
 
@@ -360,23 +624,75 @@ struct VolumePanelView: View {
                     .frame(width: 1)
                     .padding(.vertical, 6)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(AppLocalization.string("island.audio.outputs"))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(IslandPalette.secondaryText)
-
-                    ScrollView {
-                        VStack(spacing: 4) {
-                            ForEach(audio.devices) { device in
-                                deviceRow(device)
+                if audio.appSources.isEmpty {
+                    IslandEmptyState(
+                        systemImage: "speaker.wave.2",
+                        title: AppLocalization.string("island.audio.noApps"),
+                        message: AppLocalization.string("island.audio.noAppsMessage")
+                    )
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: 18) {
+                            ForEach(audio.appSources) { source in
+                                appColumn(source)
+                                    .transition(.scale(scale: 0.85).combined(with: .opacity))
                             }
                         }
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: audio.appSources.map(\.id))
                     }
                 }
-                .frame(maxWidth: .infinity)
             }
         }
         .activatesIslandPanel(audio)
+    }
+
+    /// One app's slider: icon + options on top, level and mute below.
+    private func appColumn(_ source: AppAudioSource) -> some View {
+        let value = audio.volume(for: source)
+
+        return VStack(spacing: 8) {
+            HStack(spacing: 2) {
+                Group {
+                    if let icon = source.icon {
+                        Image(nsImage: icon).resizable()
+                    } else {
+                        Image(systemName: "app.fill").foregroundStyle(.white)
+                    }
+                }
+                .frame(width: 22, height: 22)
+                .opacity(source.isPlaying ? 1 : 0.5)
+                .help(source.name)
+
+                Menu {
+                    Button(AppLocalization.string(value == 0 ? "island.audio.unmuteApp" : "island.audio.muteApp")) {
+                        audio.toggleMute(source)
+                    }
+                    Button(AppLocalization.string("island.audio.resetApp")) {
+                        audio.setVolume(1, for: source)
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+            }
+            .frame(height: 22)
+
+            IslandVerticalSlider(value: value) { audio.setVolume($0, for: source) }
+                .frame(width: 44)
+
+            HStack(spacing: 4) {
+                IslandRollingText(text: IslandFormat.percent(value), value: (value * 100).rounded(), size: 12, weight: .medium)
+                Image(systemName: value == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill")
+                    .font(.system(size: 9))
+                    .foregroundStyle(IslandPalette.secondaryText)
+                    .contentTransition(.symbolEffect(.replace))
+                    .onTapGesture { audio.toggleMute(source) }
+            }
+        }
+        .frame(width: 64)
     }
 
     private func mixerColumn(
@@ -403,42 +719,6 @@ struct VolumePanelView: View {
 
             IslandRollingText(text: IslandFormat.percent(value), value: (value * 100).rounded(), size: 12, weight: .medium)
         }
-    }
-
-    private func deviceRow(_ device: AudioDevice) -> some View {
-        let isCurrent = device.id == audio.currentDeviceID
-
-        return Button {
-            audio.selectDevice(device.id)
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: isCurrent ? "speaker.wave.2.circle.fill" : "speaker.circle")
-                    .font(.system(size: 15))
-                    .foregroundStyle(isCurrent ? .white : IslandPalette.secondaryText)
-
-                Text(device.name)
-                    .font(.system(size: 12, weight: isCurrent ? .semibold : .medium))
-                    .foregroundStyle(isCurrent ? .white : IslandPalette.secondaryText)
-                    .lineLimit(1)
-
-                Spacer()
-
-                if isCurrent {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 30)
-            .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(isCurrent ? Color(white: 0.17) : Color.clear)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .animation(.easeOut(duration: 0.15), value: isCurrent)
     }
 }
 
