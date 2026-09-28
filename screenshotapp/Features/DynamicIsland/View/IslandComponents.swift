@@ -154,14 +154,16 @@ struct IslandIconButton: View {
 /// Rounded pill button ("Şarkı sözleri"-style) used for secondary actions.
 struct IslandChipButton: View {
     let title: String
-    let systemImage: String
+    var systemImage: String?
     var isOn = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
+            label
                 .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+                .fixedSize()
                 .foregroundStyle(isOn ? .black : .white.opacity(0.85))
                 .padding(.horizontal, 11)
                 .frame(height: 26)
@@ -172,6 +174,15 @@ struct IslandChipButton: View {
         }
         .buttonStyle(.plain)
         .animation(.easeOut(duration: 0.15), value: isOn)
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        if let systemImage {
+            Label(title, systemImage: systemImage)
+        } else {
+            Text(title)
+        }
     }
 }
 

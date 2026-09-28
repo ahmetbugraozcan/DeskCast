@@ -533,7 +533,6 @@ struct TimerPanelView: View {
                     ForEach(IslandTimerViewModel.presetMinutes, id: \.self) { minutes in
                         IslandChipButton(
                             title: AppLocalization.formatted("island.timer.minutes", minutes),
-                            systemImage: "timer",
                             isOn: timer.isActive && Int(timer.totalDuration) == minutes * 60
                         ) {
                             timer.start(minutes: minutes)

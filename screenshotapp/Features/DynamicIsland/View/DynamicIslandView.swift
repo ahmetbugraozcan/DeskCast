@@ -56,7 +56,7 @@ struct DynamicIslandView: View {
     /// Content height below the notch for each expanded page.
     static func expandedContentHeight(for content: IslandExpandedContent) -> CGFloat {
         switch content {
-        case .launcher: 276
+        case .launcher: 286
         case .panel(let panel): panelContentHeights[panel] ?? 260
         }
     }
@@ -67,7 +67,7 @@ struct DynamicIslandView: View {
         .nowPlaying: 214,
         .captures: 196,
         .files: 208,
-        .system: 258,
+        .system: 300,
         .tools: 196,
         .calendar: 244,
         .notifications: 262,
