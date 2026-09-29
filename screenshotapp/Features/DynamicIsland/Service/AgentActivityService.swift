@@ -200,7 +200,7 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
         var buffer = transcript.partialLine + data
         var lines = buffer.split(separator: 0x0A, omittingEmptySubsequences: false)
         // The last piece has no newline yet; keep it for the next read.
-        buffer = lines.popLast().map(Data.init) ?? Data()
+        buffer = lines.popLast().map { Data($0) } ?? Data()
         transcript.partialLine = buffer.count <= AgentTranscriptState.maxParsedLineLength ? buffer : Data()
 
         if startsMidLine, !lines.isEmpty {
