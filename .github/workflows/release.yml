@@ -59,40 +59,51 @@ jobs:
           mkdir -p "$HOME/.private_keys"
           echo "$ASC_KEY_BASE64" | base64 --decode > "$HOME/.private_keys/AuthKey_${ASC_KEY_ID}.p8"
 
-      - name: Archive
+      # Signed manually with the imported Developer ID certificate and a
+      # manually managed Developer ID profile: automatic signing would create a
+      # new Apple Development certificate on every fresh runner until the
+      # account hits its certificate limit.
+      - name: Install Developer ID provisioning profile
+        id: profile
         env:
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
         run: |
           set -euo pipefail
           KEY_PATH="$HOME/.private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          NAME=$(python3 ci/install-developer-id-profile.py "$KEY_PATH" "$ASC_KEY_ID" "$ASC_ISSUER_ID")
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Archive
+        env:
+          PROFILE_NAME: ${{ steps.profile.outputs.name }}
+        run: |
+          set -euo pipefail
           xcodebuild clean archive \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=macOS' \
             -archivePath "$ARCHIVE_PATH" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM=2T78BG3872 \
+            DESKCAST_PROVISIONING_PROFILE="$PROFILE_NAME" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}"
 
       - name: Export (Developer ID)
         env:
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          PROFILE_NAME: ${{ steps.profile.outputs.name }}
         run: |
           set -euo pipefail
-          KEY_PATH="$HOME/.private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          OPTIONS="$RUNNER_TEMP/ExportOptions.plist"
+          cp ci/ExportOptions.plist "$OPTIONS"
+          plutil -replace signingStyle -string manual "$OPTIONS"
+          plutil -replace provisioningProfiles -json "{\"com.ahmetbugraozcan.screenshotapp\": \"$PROFILE_NAME\"}" "$OPTIONS"
           xcodebuild -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
-            -exportOptionsPlist ci/ExportOptions.plist \
-            -exportPath "$EXPORT_PATH" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -exportOptionsPlist "$OPTIONS" \
+            -exportPath "$EXPORT_PATH"
 
       - name: Notarize and staple the app
         env:

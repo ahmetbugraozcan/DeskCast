@@ -26,7 +26,7 @@ xcrun --sdk macosx clang -dynamiclib -fobjc-arc -O2 \
 # The app's own signature seals this file, so it must be signed first.
 # Archives are notarized, which needs a secure timestamp.
 TIMESTAMP="--timestamp=none"
-if [ "${ACTION:-}" = "install" ]; then
+if [ "${ACTION:-}" = "install" ] && [ "${EXPANDED_CODE_SIGN_IDENTITY:--}" != "-" ]; then
     TIMESTAMP="--timestamp"
 fi
 
