@@ -227,11 +227,13 @@ struct FilesPanelView: View {
                     chooseFiles()
                 }
 
-                IslandChipButton(
-                    title: AppLocalization.string(dropShelf.isShelfVisible ? "Hide Drop Shelf" : "Show Drop Shelf"),
-                    systemImage: "tray.and.arrow.down",
-                    isOn: dropShelf.isShelfVisible
-                ) { actions.toggleDropShelf() }
+                if dropShelf.isFloatingShelfEnabled {
+                    IslandChipButton(
+                        title: AppLocalization.string(dropShelf.isShelfVisible ? "Hide Drop Shelf" : "Show Drop Shelf"),
+                        systemImage: "tray.and.arrow.down",
+                        isOn: dropShelf.isShelfVisible
+                    ) { actions.toggleDropShelf() }
+                }
 
                 if !dropShelf.items.isEmpty {
                     IslandChipButton(title: AppLocalization.string("Send Shelf Items"), systemImage: "paperplane") {

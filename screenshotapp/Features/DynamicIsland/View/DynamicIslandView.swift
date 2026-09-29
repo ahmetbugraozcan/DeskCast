@@ -193,9 +193,9 @@ struct DynamicIslandView: View {
         let layout = Self.layout(for: store)
         let corners = Self.cornerMetrics(for: mode)
         let shape = DynamicIslandShape(topCornerRadius: corners.top, bottomCornerRadius: corners.bottom)
-        // On displays without a notch the idle island disappears; the hover
-        // region at the top center still reveals it.
-        let isShapeVisible = (mode != .idle || geometry.hasNotch) && !store.hidesCollapsedIsland
+        // "Hidden until hover" is the only mode that hides the closed island,
+        // also on displays without a notch.
+        let isShapeVisible = !store.hidesCollapsedIsland
         // The closed island swells slightly under the pointer before it opens.
         let growsOnHover = store.isHovering && !reduceMotion
             && [.idle, .compactMedia, .compactTimer, .compactBattery].contains(mode)

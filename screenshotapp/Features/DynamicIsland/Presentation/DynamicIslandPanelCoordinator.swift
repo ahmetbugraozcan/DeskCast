@@ -16,6 +16,10 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
     private var globalClickMonitor: Any?
     private var localKeyMonitor: Any?
     private var localScrollMonitor: Any?
+    private var globalDragMonitor: Any?
+    /// Drag pasteboard change count at the last mouse-down in another app;
+    /// a later change means that app started a drag session.
+    private var dragPasteboardCountAtMouseDown: Int?
     private var screenObserver: NSObjectProtocol?
     private var workspaceObservers: [NSObjectProtocol] = []
     private var storeObserver: AnyCancellable?
@@ -28,6 +32,10 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
 
     /// Extra slack around the collapsed island so it is easy to hit with the pointer.
     private static let collapsedHoverInset = CGSize(width: 10, height: 6)
+    /// How close (sideways, downward) a dragged item must come to the closed
+    /// island to open the Files drop zone, so the drop never needs the very
+    /// top screen edge (where macOS may switch to Mission Control).
+    private static let fileDragOpenReach = CGSize(width: 80, height: 90)
 
     init(store: DynamicIslandViewModel, panels: IslandPanelModels) {
         self.store = store
@@ -285,6 +293,14 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
             return event
         }
 
+        // Mouse down/up in other apps bracket a possible drag session.
+        globalDragMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { [weak self] event in
+            let isDown = event.type == .leftMouseDown
+            MainActor.assumeIsolated {
+                self?.dragPasteboardCountAtMouseDown = isDown ? NSPasteboard(name: .drag).changeCount : nil
+            }
+        }
+
         // Global click events only arrive for clicks outside DeskCast's windows,
         // i.e. outside the island, which closes a click/shortcut-opened island.
         globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -336,11 +352,17 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
             NSEvent.removeMonitor(localScrollMonitor)
         }
 
+        if let globalDragMonitor {
+            NSEvent.removeMonitor(globalDragMonitor)
+        }
+
         globalMouseMonitor = nil
         localMouseMonitor = nil
         globalClickMonitor = nil
         localKeyMonitor = nil
         localScrollMonitor = nil
+        globalDragMonitor = nil
+        dragPasteboardCountAtMouseDown = nil
     }
 
     // MARK: - Gestures
@@ -434,6 +456,8 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
         }
 
         let location = NSEvent.mouseLocation
+        openFilesForApproachingDrag(at: location, panelFrame: panel.frame)
+
         // While the scratchpad has keyboard focus, keep the island open even if
         // the pointer wanders off; clicking elsewhere resigns key and closes it.
         let isInside = hoverRects(in: panel.frame).contains { $0.contains(location) }
@@ -441,6 +465,32 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
 
         panel.ignoresMouseEvents = !isInside
         store.setHovering(isInside)
+    }
+
+    /// Opens the Files panel as soon as another app's drag nears the closed
+    /// island, so the (much larger) expanded island is the drop target.
+    private func openFilesForApproachingDrag(at location: NSPoint, panelFrame: NSRect) {
+        guard
+            store.mode != .expanded,
+            let countAtMouseDown = dragPasteboardCountAtMouseDown,
+            NSEvent.pressedMouseButtons & 1 != 0,
+            NSPasteboard(name: .drag).changeCount != countAtMouseDown
+        else {
+            return
+        }
+
+        let reach = Self.fileDragOpenReach
+        let island = DynamicIslandView.layout(for: store).islandFrame
+        let zone = NSRect(
+            x: panelFrame.minX + island.minX - reach.width,
+            y: panelFrame.maxY - island.maxY - reach.height,
+            width: island.width + reach.width * 2,
+            height: island.height + reach.height + 1
+        )
+
+        if zone.contains(location) {
+            store.beginFileDrag()
+        }
     }
 
     /// The island and its side buttons in screen coordinates, padded while

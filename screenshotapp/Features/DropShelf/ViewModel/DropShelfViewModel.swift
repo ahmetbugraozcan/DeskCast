@@ -70,8 +70,14 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         KeyboardShortcuts.removeHandler(for: .openDropShelf)
     }
 
+    /// The floating shelf is the Drop Shelf tool; the island's Files panel
+    /// keeps working with the same items while the tool is turned off.
+    var isFloatingShelfEnabled: Bool {
+        settings.isToolEnabled(.dropShelf)
+    }
+
     func showShelf() {
-        guard settings.isToolEnabled(.dropShelf) else { return }
+        guard isFloatingShelfEnabled else { return }
         isShelfVisible = true
         presenter?.refresh()
     }
@@ -94,9 +100,9 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     }
 
     /// `revealsShelf: false` keeps the floating shelf hidden, for drops the
-    /// Dynamic Island's Files panel already shows.
+    /// Dynamic Island's Files panel already shows (even with the tool off).
     func addItems(from pasteboard: NSPasteboard, revealsShelf: Bool = true) -> Bool {
-        guard settings.isToolEnabled(.dropShelf) else {
+        guard !revealsShelf || isFloatingShelfEnabled else {
             return false
         }
 
@@ -154,7 +160,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     func addFiles(_ urls: [URL], revealsShelf: Bool = true) {
         guard !urls.isEmpty else { return }
 
-        guard settings.isToolEnabled(.dropShelf) else {
+        guard !revealsShelf || isFloatingShelfEnabled else {
             NSSound.beep()
             showToast(
                 AppLocalization.string("Enable Drop Shelf first"),
