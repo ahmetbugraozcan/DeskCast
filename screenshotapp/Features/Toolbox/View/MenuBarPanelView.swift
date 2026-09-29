@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 import SwiftUI
 
 /// Which parts of the menu bar panel are visible; mirrors the menu's
@@ -108,14 +109,24 @@ struct MenuBarPanelView: View {
 
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columnCount), spacing: 8) {
             if visibility.captureSelectedArea {
-                MenuPanelTile(title: AppLocalization.string("menu.tile.screenshot"), systemImage: "camera.viewfinder", tint: .purple) {
+                MenuPanelTile(
+                    title: AppLocalization.string("menu.tile.screenshot"),
+                    systemImage: "camera.viewfinder",
+                    tint: .purple,
+                    shortcut: .captureSelectedArea
+                ) {
                     runAfterDismiss { screenshots.captureSelectedArea() }
                 }
                 .disabled(screenshots.isCapturing)
             }
 
             if visibility.captureVideo {
-                MenuPanelTile(title: AppLocalization.string("menu.tile.record"), systemImage: "record.circle", tint: .red) {
+                MenuPanelTile(
+                    title: AppLocalization.string("menu.tile.record"),
+                    systemImage: "record.circle",
+                    tint: .red,
+                    shortcut: .captureVideo
+                ) {
                     runAfterDismiss { recorder.captureSelectedAreaVideo() }
                 }
                 .disabled(recorder.isRecording)
@@ -146,6 +157,7 @@ struct MenuBarPanelView: View {
                     title: AppLocalization.string("menu.tile.dropShelf"),
                     systemImage: "tray.and.arrow.down",
                     tint: .orange,
+                    shortcut: .openDropShelf,
                     isOn: dropShelf.isShelfVisible
                 ) {
                     dropShelf.toggleShelf()
@@ -392,6 +404,8 @@ private struct MenuPanelTile: View {
     let title: String
     let systemImage: String
     let tint: Color
+    /// Global shortcut shown under the title when one is set.
+    var shortcut: KeyboardShortcuts.Name?
     var isOn = false
     let action: () -> Void
 
@@ -414,6 +428,16 @@ private struct MenuPanelTile: View {
                     .minimumScaleFactor(0.85)
             }
             .frame(maxWidth: .infinity, minHeight: 78)
+            // A corner badge keeps the icons of neighboring tiles aligned.
+            .overlay(alignment: .topTrailing) {
+                if let shortcut, let keys = KeyboardShortcuts.getShortcut(for: shortcut) {
+                    Text(keys.description)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 6)
+                        .padding(.trailing, 7)
+                }
+            }
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(isOn ? tint.opacity(0.22) : Color.primary.opacity(isHovered ? 0.1 : 0.05))
