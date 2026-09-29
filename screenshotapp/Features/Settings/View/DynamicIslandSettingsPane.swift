@@ -18,6 +18,12 @@ struct DynamicIslandSettingsPane: View {
     private var reopenTarget = DynamicIslandSettings.defaultReopenTarget
     @AppStorage(DynamicIslandSettings.Keys.opensToActivity)
     private var opensToActivity = DynamicIslandSettings.defaultOpensToActivity
+    @AppStorage(DynamicIslandSettings.Keys.showsAgentActivity)
+    private var showsAgentActivity = DynamicIslandSettings.defaultShowsAgentActivity
+    @AppStorage(DynamicIslandSettings.Keys.agentFinishAlerts)
+    private var agentFinishAlerts = DynamicIslandSettings.defaultAgentFinishAlerts
+    @AppStorage(DynamicIslandSettings.Keys.agentFinishMinimumMinutes)
+    private var agentFinishMinimumMinutes = DynamicIslandSettings.defaultAgentFinishMinimumMinutes
     @AppStorage(DynamicIslandSettings.Keys.idleContent)
     private var idleContent = DynamicIslandSettings.defaultIdleContent
     @AppStorage(DynamicIslandSettings.Keys.showsTrackChanges)
@@ -67,6 +73,7 @@ struct DynamicIslandSettingsPane: View {
                 idleSection
                 IslandWeatherSettingsSection()
                 IslandFocusSettingsSection()
+                agentsSection
                 notificationsSection
                 clipboardSection
 
@@ -201,6 +208,34 @@ struct DynamicIslandSettingsPane: View {
             )
 
             hint("Supported players: Music and Spotify. macOS asks once for permission to control them.")
+        }
+    }
+
+    private var agentsSection: some View {
+        SettingsControlSection(title: AppLocalization.string("island.settings.agents")) {
+            SettingsToggleRow(
+                title: AppLocalization.string("island.settings.agents.show"),
+                isOn: $showsAgentActivity
+            )
+
+            hint("island.settings.agents.showHint")
+
+            SettingsSectionDivider()
+
+            SettingsToggleRow(
+                title: AppLocalization.string("island.settings.agents.finishAlerts"),
+                isOn: $agentFinishAlerts
+            )
+
+            SettingsSectionDivider()
+
+            SettingsControlRow(
+                title: AppLocalization.formatted("island.settings.agents.finishMinimum", agentFinishMinimumMinutes)
+            ) {
+                Stepper("", value: $agentFinishMinimumMinutes, in: DynamicIslandSettings.agentFinishMinimumRange)
+                    .labelsHidden()
+            }
+            .disabled(!agentFinishAlerts)
         }
     }
 

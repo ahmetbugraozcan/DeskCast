@@ -160,6 +160,9 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     var weatherCity = ""
     var weatherUnit = DynamicIslandSettings.defaultWeatherUnit
     var showsFocusIndicator = DynamicIslandSettings.defaultShowsFocusIndicator
+    var showsAgentActivity = DynamicIslandSettings.defaultShowsAgentActivity
+    var agentFinishAlerts = DynamicIslandSettings.defaultAgentFinishAlerts
+    var agentFinishMinimumMinutes = DynamicIslandSettings.defaultAgentFinishMinimumMinutes
 
     /// Panels shown in the launcher, in the user's order.
     var visiblePanels: [IslandPanel] {
@@ -196,11 +199,15 @@ enum DynamicIslandSettings {
         static let weatherCity = "dynamicIsland.weatherCity"
         static let weatherUnit = "dynamicIsland.weatherUnit"
         static let showsFocusIndicator = "dynamicIsland.showsFocusIndicator"
+        static let showsAgentActivity = "dynamicIsland.showsAgentActivity"
+        static let agentFinishAlerts = "dynamicIsland.agentFinishAlerts"
+        static let agentFinishMinimumMinutes = "dynamicIsland.agentFinishMinimumMinutes"
     }
 
     static let notificationDurationRange = 2...10
     static let hoverDelayRange = 0.0...1.0
     static let closeDelayRange = 0.1...2.0
+    static let agentFinishMinimumRange = 1...30
 
     static let defaultIdleContent = IslandIdleContent.music
     static let defaultShowsTrackChanges = true
@@ -229,6 +236,11 @@ enum DynamicIslandSettings {
     static var defaultWeatherUnit: WeatherUnit { .localeDefault }
     /// Off by default: turning it on asks for Focus Status access.
     static let defaultShowsFocusIndicator = false
+    /// A Claude Code or Codex turn in progress shows in the closed island.
+    static let defaultShowsAgentActivity = true
+    static let defaultAgentFinishAlerts = true
+    /// Only turns at least this long announce that they finished.
+    static let defaultAgentFinishMinimumMinutes = 2
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
         // Scratchpad text and the weather city are user content, so they're
@@ -270,7 +282,10 @@ enum DynamicIslandSettings {
             Keys.hiddenPanels: [String](),
             Keys.notificationDurationSeconds: defaultNotificationDurationSeconds,
             Keys.weatherUnit: defaultWeatherUnit.rawValue,
-            Keys.showsFocusIndicator: defaultShowsFocusIndicator
+            Keys.showsFocusIndicator: defaultShowsFocusIndicator,
+            Keys.showsAgentActivity: defaultShowsAgentActivity,
+            Keys.agentFinishAlerts: defaultAgentFinishAlerts,
+            Keys.agentFinishMinimumMinutes: defaultAgentFinishMinimumMinutes
         ]
     }
 
@@ -303,12 +318,19 @@ enum DynamicIslandSettings {
             hiddenPanels: Set((defaults.stringArray(forKey: Keys.hiddenPanels) ?? []).compactMap(IslandPanel.init(rawValue:))),
             weatherCity: (defaults.string(forKey: Keys.weatherCity) ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
             weatherUnit: enumValue(defaults, Keys.weatherUnit, default: defaultWeatherUnit),
-            showsFocusIndicator: defaults.bool(forKey: Keys.showsFocusIndicator)
+            showsFocusIndicator: defaults.bool(forKey: Keys.showsFocusIndicator),
+            showsAgentActivity: defaults.bool(forKey: Keys.showsAgentActivity),
+            agentFinishAlerts: defaults.bool(forKey: Keys.agentFinishAlerts),
+            agentFinishMinimumMinutes: clampedAgentFinishMinimum(defaults.integer(forKey: Keys.agentFinishMinimumMinutes))
         )
     }
 
     static func clampedNotificationDuration(_ value: Int) -> Int {
         min(max(value, notificationDurationRange.lowerBound), notificationDurationRange.upperBound)
+    }
+
+    static func clampedAgentFinishMinimum(_ value: Int) -> Int {
+        min(max(value, agentFinishMinimumRange.lowerBound), agentFinishMinimumRange.upperBound)
     }
 
     static func clampedHoverDelay(_ value: Double) -> Double {

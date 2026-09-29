@@ -9,9 +9,10 @@ struct DynamicIslandLayout: Equatable {
     let panelSize: CGSize
     let islandFrame: CGRect
     let orbFrames: [DynamicIslandOrb: CGRect]
+    var chipFrames: [IslandActivityChip: CGRect] = [:]
 
     var interactiveFrames: [CGRect] {
-        [islandFrame] + orbFrames.values
+        [islandFrame] + orbFrames.values + chipFrames.values
     }
 }
 
@@ -50,6 +51,8 @@ struct DynamicIslandView: View {
     static let notificationMinimumWidth: CGFloat = 380
     static let orbSize: CGFloat = 40
     static let orbGap: CGFloat = 12
+    static let chipSize = CGSize(width: 104, height: 28)
+    static let chipGap: CGFloat = 8
 
     static let morphAnimation = Animation.spring(response: 0.42, dampingFraction: 0.78)
 
@@ -110,7 +113,7 @@ struct DynamicIslandView: View {
             content: store.expandedContent,
             geometry: geometry,
             hasMedia: store.hasMedia,
-            combinesTimer: store.timer.isActive
+            combinesTimer: store.showsTimerBeside
         )
         let islandFrame = CGRect(
             x: ((panelSize.width - size.width) / 2).rounded(),
@@ -120,6 +123,7 @@ struct DynamicIslandView: View {
         )
 
         var orbs: [DynamicIslandOrb: CGRect] = [:]
+        let chips = activityChipFrames(for: store, below: islandFrame)
 
         if mode == .expanded, store.preferences.showsSideButtons {
             let ears = cornerMetrics(for: .expanded).top
@@ -133,7 +137,8 @@ struct DynamicIslandView: View {
             orbs[.settings] = CGRect(x: rightX, y: firstY, width: orbSize, height: orbSize)
             orbs[.volume] = CGRect(x: rightX, y: secondY, width: orbSize, height: orbSize)
 
-            if store.expandedContent != .panel(.nowPlaying) {
+            // The activity chips take the spot under the island.
+            if store.expandedContent != .panel(.nowPlaying), chips.isEmpty {
                 orbs[.nowPlaying] = CGRect(
                     x: islandFrame.midX - orbSize / 2,
                     y: islandFrame.maxY + orbGap,
@@ -143,7 +148,30 @@ struct DynamicIslandView: View {
             }
         }
 
-        return DynamicIslandLayout(panelSize: panelSize, islandFrame: islandFrame, orbFrames: orbs)
+        return DynamicIslandLayout(panelSize: panelSize, islandFrame: islandFrame, orbFrames: orbs, chipFrames: chips)
+    }
+
+    /// A centered row of chips under the island: each activity going on,
+    /// then "automatic".
+    private static func activityChipFrames(for store: DynamicIslandViewModel, below islandFrame: CGRect) -> [IslandActivityChip: CGRect] {
+        guard store.showsActivityPicker else { return [:] }
+
+        let chips = store.availableActivities.map(IslandActivityChip.activity) + [.automatic]
+        let rowWidth = CGFloat(chips.count) * chipSize.width + CGFloat(chips.count - 1) * chipGap
+        // The hovered closed island swells a little, so leave it room.
+        let top = islandFrame.maxY + (store.mode == .expanded ? orbGap : islandFrame.height * (hoverGrowScale - 1) + chipGap)
+        var frames: [IslandActivityChip: CGRect] = [:]
+
+        for (index, chip) in chips.enumerated() {
+            frames[chip] = CGRect(
+                x: (islandFrame.midX - rowWidth / 2 + CGFloat(index) * (chipSize.width + chipGap)).rounded(),
+                y: top,
+                width: chipSize.width,
+                height: chipSize.height
+            )
+        }
+
+        return frames
     }
 
     /// Full island frame for a mode, including the flared top "ears".
@@ -160,7 +188,7 @@ struct DynamicIslandView: View {
         switch mode {
         case .idle:
             return CGSize(width: notch.width + ears, height: notch.height)
-        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus:
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent:
             // Music with a running timer shows the countdown on the right wing.
             let sideWidth = notch.height + (mode == .compactMedia && !combinesTimer ? 18 : 34)
             let centerWidth = geometry.hasNotch ? notch.width : max(notch.width, 220)
@@ -181,7 +209,7 @@ struct DynamicIslandView: View {
     static func cornerMetrics(for mode: DynamicIslandMode) -> (top: CGFloat, bottom: CGFloat) {
         switch mode {
         case .idle: return (top: 6, bottom: 9)
-        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus: return (top: 6, bottom: 13)
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent: return (top: 6, bottom: 13)
         case .notification: return (top: 12, bottom: 24)
         case .expanded: return (top: 14, bottom: 30)
         }
@@ -199,8 +227,7 @@ struct DynamicIslandView: View {
         // also on displays without a notch.
         let isShapeVisible = !store.hidesCollapsedIsland
         // The closed island swells slightly under the pointer before it opens.
-        let growsOnHover = store.isHovering && !reduceMotion
-            && [.idle, .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus].contains(mode)
+        let growsOnHover = store.isHovering && !reduceMotion && (mode == .idle || mode.isCompact)
 
         ZStack(alignment: .topLeading) {
             ZStack(alignment: .top) {
@@ -233,6 +260,15 @@ struct DynamicIslandView: View {
                     .frame(width: frame.width, height: frame.height)
                     .offset(x: frame.minX, y: frame.minY)
                     .transition(.scale(scale: 0.4).combined(with: .opacity))
+                }
+            }
+
+            ForEach(IslandActivityChip.allCases, id: \.self) { chip in
+                if let frame = layout.chipFrames[chip] {
+                    IslandActivityChipButton(chip: chip, store: store)
+                        .frame(width: frame.width, height: frame.height)
+                        .offset(x: frame.minX, y: frame.minY)
+                        .transition(.scale(scale: 0.6, anchor: .top).combined(with: .opacity))
                 }
             }
         }
@@ -274,6 +310,7 @@ struct DynamicIslandView: View {
                 CompactMediaView(
                     nowPlaying: nowPlaying,
                     timer: store.timer,
+                    showsTimer: store.showsTimerBeside,
                     showsFocus: store.isFocusActive,
                     geometry: geometry,
                     namespace: namespace
@@ -296,6 +333,15 @@ struct DynamicIslandView: View {
         case .compactFocus:
             CompactFocusView(geometry: geometry)
                 .transition(Self.contentTransition)
+        case .compactAgent:
+            CompactAgentView(
+                sessions: store.agentSessions,
+                timer: store.timer,
+                showsTimer: store.showsTimerBeside,
+                showsFocus: store.isFocusActive,
+                geometry: geometry
+            )
+            .transition(Self.contentTransition)
         case .notification:
             if let notification = store.activeNotification {
                 NotificationBannerView(notification: notification, geometry: geometry) { url in
@@ -393,6 +439,8 @@ struct DynamicIslandShape: Shape {
 struct CompactMediaView: View {
     let nowPlaying: NowPlayingInfo
     @ObservedObject var timer: IslandTimerViewModel
+    /// A running timer shares the right wing (automatic activities).
+    var showsTimer = false
     var showsFocus = false
     let geometry: DynamicIslandGeometry
     let namespace: Namespace.ID
@@ -416,7 +464,7 @@ struct CompactMediaView: View {
                     .frame(maxWidth: .infinity)
             }
 
-            if timer.isActive {
+            if showsTimer {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     Text(IslandFormat.clock(timer.remaining(at: context.date)))
                         .font(.system(size: 12, weight: .semibold, design: .rounded).monospacedDigit())

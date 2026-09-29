@@ -46,8 +46,17 @@ enum DynamicIslandMode: Equatable {
     case compactBattery
     case compactWeather
     case compactFocus
+    case compactAgent
     case notification
     case expanded
+
+    /// The closed island showing something beside the camera.
+    var isCompact: Bool {
+        switch self {
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent: true
+        case .idle, .notification, .expanded: false
+        }
+    }
 }
 
 /// Direction of a trackpad swipe (finger movement) over the island.

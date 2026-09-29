@@ -416,6 +416,17 @@
 "island.settings.reopen.launcher" = "Panel ızgarası";
 "island.settings.opensToActivity" = "Etkinliğin sayfasında aç";
 "island.settings.opensToActivityHint" = "Müzik, zamanlayıcı, çalışan bir yapay zekâ ajanı ya da bildirim varken ada doğrudan onun sayfasında açılır. Aksi hâlde yukarıda seçilen sayfada açılır.";
+"island.settings.agents" = "Yapay zekâ ajanları";
+"island.settings.agents.show" = "Çalışan ajanı kapalı adada göster";
+"island.settings.agents.showHint" = "Claude Code ve Codex'i bu Mac'te tuttukları kayıtlardan izler. Hiçbir şey Mac'inizden çıkmaz.";
+"island.settings.agents.finishAlerts" = "Uzun bir görev bitince haber ver";
+"island.settings.agents.finishMinimum" = "%ld dk'dan uzun görevler için";
+"island.agents.finished" = "%@ bitirdi";
+"island.agents.minutes" = "%ld dk";
+"island.agents.working" = "%@ çalışıyor";
+"island.activity.music" = "Müzik";
+"island.activity.together" = "Birlikte";
+"island.activity.automatic" = "Otomatik";
 "island.settings.whileIdle" = "Beklerken";
 "island.settings.idle.nothing" = "Hiçbir şey";
 "island.settings.idle.battery" = "Pil";

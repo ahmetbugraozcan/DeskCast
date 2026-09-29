@@ -46,6 +46,11 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     @Published private(set) var idleWeather: WeatherReport?
     /// A Focus is on and the Focus indicator setting is on.
     @Published private(set) var isFocusActive = false
+    /// Claude Code / Codex turns in progress, oldest first.
+    @Published private(set) var agentSessions: [AgentSession] = []
+    /// The activity the user picked for the closed island; `nil` shows them
+    /// automatically, with a running timer beside music or an agent.
+    @Published private(set) var activityChoice: IslandActivity?
 
     weak var presenter: DynamicIslandPresenting?
 
@@ -119,6 +124,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         // The compact island shows the running timer, so re-render with it.
         timerObserver = self.timer.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
+            // `objectWillChange` fires before the timer's state changes.
+            DispatchQueue.main.async { self?.pruneActivityChoice() }
         }
         self.timer.onFinish = { [weak self] in
             self?.post(
@@ -168,12 +175,11 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             return .expanded
         }
 
-        if hasMedia {
-            return .compactMedia
-        }
-
-        if timer.isActive {
-            return .compactTimer
+        switch primaryActivity {
+        case .media: return .compactMedia
+        case .agent: return .compactAgent
+        case .timer: return .compactTimer
+        case nil: break
         }
 
         if preferences.idleContent == .battery, batteryStatus != nil {
@@ -197,8 +203,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     /// "Hidden until hover": the collapsed island is invisible; banners still show.
     var hidesCollapsedIsland: Bool {
-        preferences.openMode == .hiddenUntilHover && (mode == .idle || mode == .compactMedia
-            || mode == .compactTimer || mode == .compactBattery || mode == .compactWeather || mode == .compactFocus)
+        preferences.openMode == .hiddenUntilHover && (mode == .idle || mode.isCompact)
     }
 
     var batteryStatus: BatteryStatus? {
@@ -580,6 +585,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     private func handleNowPlayingChange(_ info: NowPlayingInfo?) {
         let previous = nowPlaying
         nowPlaying = info
+        pruneActivityChoice()
 
         defer { hasReceivedNowPlaying = true }
 
@@ -773,6 +779,7 @@ extension DynamicIslandViewModel {
                 try? await Task.sleep(for: .seconds(Self.pausedMediaLinger))
                 guard !Task.isCancelled else { return }
                 self?.objectWillChange.send()
+                self?.pruneActivityChoice()
             }
         }
     }
@@ -940,12 +947,63 @@ extension DynamicIslandViewModel {
 
     /// The page of what the closed island is showing, if it is an activity.
     var activityPanel: IslandPanel? {
-        switch mode {
-        case .compactMedia: .nowPlaying
-        case .compactTimer: .timer
-        case .notification: .notifications
-        case .idle, .compactBattery, .compactWeather, .compactFocus, .expanded: nil
+        mode == .notification ? .notifications : (mode.isCompact ? primaryActivity?.panel : nil)
+    }
+
+    // MARK: Activities
+
+    /// Activities going on now, in the automatic order.
+    var availableActivities: [IslandActivity] {
+        IslandActivity.allCases.filter { activity in
+            switch activity {
+            case .media: hasMedia
+            case .agent: preferences.showsAgentActivity && !agentSessions.isEmpty
+            case .timer: timer.isActive
+            }
         }
+    }
+
+    /// What the closed island shows: the user's pick while it lasts,
+    /// otherwise music, then a working agent, then the timer.
+    var primaryActivity: IslandActivity? {
+        let available = availableActivities
+        if let activityChoice, available.contains(activityChoice) {
+            return activityChoice
+        }
+        return available.first
+    }
+
+    /// A running timer rides along on the right when the island shows
+    /// activities automatically.
+    var showsTimerBeside: Bool {
+        activityChoice == nil && timer.isActive && primaryActivity != .timer
+    }
+
+    /// The activity chips under the island, when there is a choice to make.
+    var showsActivityPicker: Bool {
+        availableActivities.count >= 2 && (mode == .expanded || (isHovering && mode.isCompact))
+    }
+
+    /// Picks what the closed island shows (`nil`: automatic). In the open
+    /// island it also shows that activity's page.
+    func chooseActivity(_ activity: IslandActivity?) {
+        activityChoice = activity
+        if mode == .expanded, let activity, preferences.visiblePanels.contains(activity.panel) {
+            select(activity.panel)
+        }
+    }
+
+    /// A pick lasts only while its activity does.
+    func pruneActivityChoice() {
+        if let activityChoice, !availableActivities.contains(activityChoice) {
+            self.activityChoice = nil
+        }
+    }
+
+    func updateAgentSessions(_ sessions: [AgentSession]) {
+        guard agentSessions != sessions else { return }
+        agentSessions = sessions
+        pruneActivityChoice()
     }
 
     func updateFocusActive(_ active: Bool) {

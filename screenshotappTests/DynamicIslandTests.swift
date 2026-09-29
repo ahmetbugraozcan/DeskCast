@@ -233,6 +233,84 @@ struct DynamicIslandViewModelTests {
         #expect(IslandReopenTarget(rawValue: "panel.nope") == nil)
     }
 
+    private func agentSession(_ kind: AgentKind = .claude, minutesAgo: Double = 3) -> AgentSession {
+        AgentSession(id: "/tmp/\(kind).jsonl", kind: kind, project: "deskcast", startedAt: Date().addingTimeInterval(-minutesAgo * 60))
+    }
+
+    @Test func workingAgentShowsInTheClosedIslandBelowMusic() {
+        let viewModel = makeViewModel()
+        viewModel.updateAgentSessions([agentSession()])
+        #expect(viewModel.mode == .compactAgent)
+        #expect(viewModel.activityPanel == .aiAgents)
+
+        nowPlaying.emit(track("a"))
+        #expect(viewModel.mode == .compactMedia)
+        #expect(viewModel.availableActivities == [.media, .agent])
+
+        let hidden = makeViewModel(settings: StubIslandSettings { $0.showsAgentActivity = false })
+        hidden.updateAgentSessions([agentSession()])
+        #expect(hidden.mode == .idle)
+    }
+
+    @Test func pickingAnActivityOverridesTheAutomaticOrderWhileItLasts() {
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.openMode = .click })
+        viewModel.updateAgentSessions([agentSession()])
+        viewModel.timer.start(minutes: 5)
+
+        // Automatic: the agent, with the timer beside it.
+        #expect(viewModel.mode == .compactAgent)
+        #expect(viewModel.showsTimerBeside)
+
+        viewModel.chooseActivity(.timer)
+        #expect(viewModel.mode == .compactTimer)
+        #expect(!viewModel.showsTimerBeside)
+
+        viewModel.chooseActivity(.agent)
+        #expect(viewModel.mode == .compactAgent)
+        #expect(!viewModel.showsTimerBeside)
+
+        // The pick ends with its activity.
+        viewModel.updateAgentSessions([])
+        #expect(viewModel.activityChoice == nil)
+        #expect(viewModel.mode == .compactTimer)
+    }
+
+    @Test func activityPickerShowsWithTwoActivitiesWhileHoveredOrOpen() {
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.openMode = .click })
+        viewModel.updateAgentSessions([agentSession()])
+        #expect(!viewModel.showsActivityPicker)
+
+        nowPlaying.emit(track("a"))
+        #expect(!viewModel.showsActivityPicker)
+        viewModel.setHovering(true)
+        #expect(viewModel.showsActivityPicker)
+
+        let layout = DynamicIslandView.layout(for: viewModel)
+        #expect(layout.chipFrames.count == 3)
+        #expect(layout.chipFrames.values.allSatisfy { $0.minY > layout.islandFrame.maxY })
+
+        // In the open island a chip also shows that activity's page.
+        viewModel.toggleExpanded()
+        viewModel.chooseActivity(.agent)
+        #expect(viewModel.expandedContent == .panel(.aiAgents))
+    }
+
+    @Test func agentMonitorAnnouncesOnlyLongFinishedTurns() {
+        let provider = FakeAgentActivity()
+        let viewModel = makeViewModel()
+        let monitor = AgentActivityMonitor(service: provider)
+        monitor.bind(to: viewModel)
+        #expect(provider.isStarted)
+
+        provider.emit([agentSession()])
+        #expect(viewModel.agentSessions.count == 1)
+
+        provider.finish(agentSession(), duration: 30)
+        #expect(viewModel.activeNotification == nil)
+        provider.finish(agentSession(), duration: 600)
+        #expect(viewModel.activeNotification?.message == AppLocalization.formatted("island.agents.minutes", 10))
+    }
+
     @Test func swipesOpenCloseAndSkipTracks() {
         let viewModel = makeViewModel(settings: StubIslandSettings { $0.openMode = .click })
         nowPlaying.emit(track("a"))
@@ -395,6 +473,24 @@ private func weatherReport(_ temperature: Double = 19) -> WeatherReport {
         hourly: [],
         fetchedAt: Date()
     )
+}
+
+@MainActor
+private final class FakeAgentActivity: AgentActivityProviding {
+    var onUpdate: (@MainActor @Sendable ([AgentSession]) -> Void)?
+    var onFinish: (@MainActor @Sendable (AgentSession, TimeInterval) -> Void)?
+    private(set) var isStarted = false
+
+    nonisolated func start() {
+        MainActor.assumeIsolated { isStarted = true }
+    }
+
+    nonisolated func stop() {
+        MainActor.assumeIsolated { isStarted = false }
+    }
+
+    func emit(_ sessions: [AgentSession]) { onUpdate?(sessions) }
+    func finish(_ session: AgentSession, duration: TimeInterval) { onFinish?(session, duration) }
 }
 
 @MainActor

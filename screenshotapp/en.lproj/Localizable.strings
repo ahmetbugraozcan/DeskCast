@@ -416,6 +416,17 @@
 "island.settings.reopen.launcher" = "Panel grid";
 "island.settings.opensToActivity" = "Open to the current activity";
 "island.settings.opensToActivityHint" = "Opening during music, a timer, a working AI agent or a notification goes straight to its page. Otherwise the island opens on the page chosen above.";
+"island.settings.agents" = "AI agents";
+"island.settings.agents.show" = "Show a working agent in the closed island";
+"island.settings.agents.showHint" = "Follows Claude Code and Codex from the transcripts they keep on this Mac. Nothing leaves your Mac.";
+"island.settings.agents.finishAlerts" = "Tell me when a long task finishes";
+"island.settings.agents.finishMinimum" = "For tasks longer than %ld min";
+"island.agents.finished" = "%@ finished";
+"island.agents.minutes" = "%ld min";
+"island.agents.working" = "%@ working";
+"island.activity.music" = "Music";
+"island.activity.together" = "Together";
+"island.activity.automatic" = "Automatic";
 "island.settings.whileIdle" = "While Idle";
 "island.settings.idle.nothing" = "Nothing";
 "island.settings.idle.battery" = "Battery";
