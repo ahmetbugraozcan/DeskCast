@@ -16,6 +16,7 @@ protocol ScreenshotShelfPresenting: AnyObject {
     func hide()
     func pinToScreen(_ item: ScreenshotItem)
     func showAnnotationEditor(for item: ScreenshotItem)
+    func showVideoEditor(for item: ScreenshotItem)
 }
 
 extension ScreenshotShelfPresenting {
@@ -31,6 +32,7 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
     private var anchoredScreen: ScreenshotShelfScreenAnchor?
     private let pinnedScreenshots = PinnedScreenshotPanels()
     private let annotationEditors = AnnotationEditorWindows()
+    private let videoEditors = VideoEditorWindows()
 
     private let screenMargin: CGFloat = 18
 
@@ -84,6 +86,19 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
             handlers: AnnotationEditorResultHandlers(
                 done: { [weak store] image in store?.applyAnnotatedImage(image, toItemWithID: item.id) },
                 copy: { [weak store] image in store?.copyAnnotatedImage(image) }
+            )
+        )
+    }
+
+    func showVideoEditor(for item: ScreenshotItem) {
+        guard let fileURL = item.fileURL else { return }
+        videoEditors.open(
+            fileURL,
+            itemID: item.id,
+            handlers: VideoEditorResultHandlers(
+                trimmed: { [weak store] url in store?.trimmedVideoSaved(at: url) },
+                gifExported: { [weak store] url in store?.gifExported(at: url) },
+                failed: { [weak store] message in store?.videoEditFailed(message) }
             )
         )
     }

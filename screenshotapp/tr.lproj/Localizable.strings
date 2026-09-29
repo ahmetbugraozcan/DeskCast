@@ -536,3 +536,23 @@
 "annotate.size.small" = "İnce";
 "annotate.size.medium" = "Orta";
 "annotate.size.large" = "Kalın";
+
+/* Video trim + GIF */
+"videoEdit.action" = "Kırp veya GIF Yap…";
+"videoEdit.title" = "Kırp · %@";
+"videoEdit.play" = "Oynat";
+"videoEdit.pause" = "Duraklat";
+"videoEdit.trim.save" = "Kırpılmış Videoyu Kaydet";
+"videoEdit.trim.help" = "Seçilen kısmı orijinalin yanına yeni bir video olarak kaydeder; orijinal değişmez.";
+"videoEdit.trim.busy" = "Video kırpılıyor…";
+"videoEdit.trim.failed" = "Video kırpılamadı";
+"videoEdit.trimmedSuffix" = "kırpılmış";
+"videoEdit.gif.export" = "GIF Olarak Dışa Aktar";
+"videoEdit.gif.size" = "GIF";
+"videoEdit.gif.small" = "Küçük (480 px, 10 fps)";
+"videoEdit.gif.medium" = "Orta (720 px, 15 fps)";
+"videoEdit.gif.large" = "Büyük (1080 px, 20 fps)";
+"videoEdit.gif.busy" = "GIF hazırlanıyor…";
+"videoEdit.gif.failed" = "GIF oluşturulamadı";
+"videoEdit.gif.saved" = "%@ kaydedildi ve kopyalandı";
+"videoEdit.missing" = "Video dosyası artık diskte değil";

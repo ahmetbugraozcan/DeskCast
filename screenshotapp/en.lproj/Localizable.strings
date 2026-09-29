@@ -536,3 +536,23 @@
 "annotate.size.small" = "Thin";
 "annotate.size.medium" = "Medium";
 "annotate.size.large" = "Thick";
+
+/* Video trim + GIF */
+"videoEdit.action" = "Trim or Make GIF…";
+"videoEdit.title" = "Trim · %@";
+"videoEdit.play" = "Play";
+"videoEdit.pause" = "Pause";
+"videoEdit.trim.save" = "Save Trimmed Video";
+"videoEdit.trim.help" = "Saves the kept part as a new video next to the original; the original is not changed.";
+"videoEdit.trim.busy" = "Trimming video…";
+"videoEdit.trim.failed" = "Could not trim the video";
+"videoEdit.trimmedSuffix" = "trimmed";
+"videoEdit.gif.export" = "Export GIF";
+"videoEdit.gif.size" = "GIF";
+"videoEdit.gif.small" = "Small (480 px, 10 fps)";
+"videoEdit.gif.medium" = "Medium (720 px, 15 fps)";
+"videoEdit.gif.large" = "Large (1080 px, 20 fps)";
+"videoEdit.gif.busy" = "Making GIF…";
+"videoEdit.gif.failed" = "Could not create the GIF";
+"videoEdit.gif.saved" = "Saved %@ and copied it";
+"videoEdit.missing" = "The video file is no longer on disk";

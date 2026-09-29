@@ -153,6 +153,7 @@ struct ScreenshotShelfView: View {
                 pinAction: { store.togglePin(item) },
                 pinToScreenAction: { store.pinToScreen(item) },
                 annotateAction: { store.annotate(item) },
+                editVideoAction: { store.editVideo(item) },
                 openAction: { store.openInPreview(item) },
                 dragPasteboardWriter: { store.draggingPasteboardWriter(for: item) },
                 exportOptions: exportOptions,
@@ -366,6 +367,7 @@ private struct ScreenshotThumbnailView: View {
     let pinAction: () -> Void
     let pinToScreenAction: () -> Void
     let annotateAction: () -> Void
+    let editVideoAction: () -> Void
     let openAction: () -> Void
     let dragPasteboardWriter: () -> NSPasteboardWriting?
     let exportOptions: [ScreenshotExportOption]
@@ -511,7 +513,13 @@ private struct ScreenshotThumbnailView: View {
                 }
             }
 
-            if !item.isVideo {
+            if item.isVideo {
+                Button {
+                    editVideoAction()
+                } label: {
+                    Label(AppLocalization.string("videoEdit.action"), systemImage: "scissors")
+                }
+            } else {
                 Button {
                     annotateAction()
                 } label: {
