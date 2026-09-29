@@ -15,6 +15,8 @@ final class ClipboardHistoryViewModel: ObservableObject {
     private var settingsObserver: AnyCancellable?
 
     static let maxEntries = 30
+    /// Images can be large; keep fewer of them than text entries.
+    static let maxImageEntries = 8
     private static let pollInterval: TimeInterval = 0.6
 
     init(clipboard: ClipboardAccessing? = nil) {
@@ -105,6 +107,12 @@ final class ClipboardHistoryViewModel: ObservableObject {
 
         if entries.count > Self.maxEntries {
             entries.removeLast(entries.count - Self.maxEntries)
+        }
+
+        let imageIDs = entries.filter(\.isImage).map(\.id)
+        if imageIDs.count > Self.maxImageEntries {
+            let dropped = Set(imageIDs.suffix(imageIDs.count - Self.maxImageEntries))
+            entries.removeAll { dropped.contains($0.id) }
         }
     }
 

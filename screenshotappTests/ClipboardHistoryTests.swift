@@ -98,3 +98,26 @@ struct ClipboardHistoryTests {
         #expect(model.entries.first?.content == .text("item \(ClipboardHistoryViewModel.maxEntries + 4)"))
     }
 }
+
+extension ClipboardHistoryTests {
+    @Test func keepsFewerImagesThanText() {
+        let clipboard = FakeClipboard()
+        let model = ClipboardHistoryViewModel(clipboard: clipboard)
+        model.setRecording(true)
+
+        for _ in 0..<(ClipboardHistoryViewModel.maxImageEntries + 3) {
+            clipboard.current = ClipboardEntry(
+                content: .image(NSImage(size: NSSize(width: 4, height: 4))),
+                copiedAt: Date(),
+                sourceBundleIdentifier: nil
+            )
+            clipboard.changeCount += 1
+            model.poll()
+        }
+        clipboard.copy("text")
+        model.poll()
+
+        #expect(model.entries.filter(\.isImage).count == ClipboardHistoryViewModel.maxImageEntries)
+        #expect(model.entries.first?.content == .text("text"))
+    }
+}

@@ -24,4 +24,9 @@ struct ClipboardEntry: Identifiable, Equatable {
     let copiedAt: Date
     /// App that was frontmost when the copy happened.
     let sourceBundleIdentifier: String?
+
+    var isImage: Bool {
+        if case .image = content { return true }
+        return false
+    }
 }
