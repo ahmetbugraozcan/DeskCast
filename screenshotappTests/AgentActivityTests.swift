@@ -157,6 +157,48 @@ struct AgentActivityServiceTests {
         #expect(sessions.map(\.kind) == [.codex])
         #expect(sessions.first?.project == "app")
     }
+
+    /// A transcript first seen mid-conversation (new, or forgotten after half
+    /// an hour idle) must not announce its past turns as just finished.
+    @Test func pastTurnsOfANewlySeenTranscriptArentAnnounced() async throws {
+        // FSEvents doesn't report changes under the temporary directory.
+        let home = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("DeskCastTests-\(UUID().uuidString)", isDirectory: true)
+        let folder = home.appendingPathComponent(".claude/projects/-Users-me-app", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        let service = AgentActivityService(home: home)
+        var finishes: [TimeInterval] = []
+        service.onFinish = { _, duration in finishes.append(duration) }
+        service.start()
+        defer { service.stop() }
+        try await Task.sleep(for: .milliseconds(300))
+
+        func turn(from start: Date, to end: Date) -> String {
+            let started = start.formatted(.iso8601)
+            let ended = end.formatted(.iso8601)
+            return #"{"type":"user","timestamp":"\#(started)","message":{"role":"user","content":"hi"}}"#
+                + "\n" + #"{"type":"assistant","timestamp":"\#(ended)","message":{"stop_reason":"end_turn","content":[]}}"# + "\n"
+        }
+
+        let file = folder.appendingPathComponent("session.jsonl")
+        let past = Date(timeIntervalSinceNow: -7200)
+        try Data(turn(from: past, to: past.addingTimeInterval(600)).utf8).write(to: file)
+        try await Task.sleep(for: .seconds(1.5))
+        #expect(finishes.isEmpty)
+
+        let handle = try FileHandle(forWritingTo: file)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data(turn(from: Date(timeIntervalSinceNow: -180), to: Date()).utf8))
+        try handle.close()
+
+        for _ in 0..<50 where finishes.isEmpty {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        #expect(finishes.count == 1)
+        #expect((finishes.first ?? 0) > 170)
+    }
 }
 
 @MainActor

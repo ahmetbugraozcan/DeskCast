@@ -43,6 +43,8 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
     private static let logger = Logger(subsystem: "com.ahmetbugraozcan.screenshotapp", category: "AgentActivity")
 
     static let staleAfter: TimeInterval = 30 * 60
+    /// A turn that ended longer ago than this (a replayed line) isn't announced.
+    private static let announceWithin: TimeInterval = 60
     /// On start, transcripts written this recently are read from their tail,
     /// growing it until a prompt or a turn's end shows up (Codex can write
     /// megabytes of tool output within one turn).
@@ -123,18 +125,25 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
             }
 
             let size = UInt64(values.fileSize ?? 0)
-            var tail = Self.initialTailBytes
+            transcripts[url.path] = restoredTranscript(at: url.path, kind: root.kind, size: size, lastWrite: modified)
+        }
+    }
 
-            while true {
-                let start = size > tail ? size - tail : 0
-                var transcript = Transcript(state: AgentTranscriptState(kind: root.kind), offset: start, lastWrite: modified)
-                // Past lines only restore state; their endings aren't news.
-                read(url.path, into: &transcript, startsMidLine: start > 0, announces: false)
-                transcripts[url.path] = transcript
+    /// Reads a transcript's tail only to learn where it stands, growing the
+    /// tail until a prompt or a turn's end shows up. Past lines only restore
+    /// state; their endings aren't news.
+    private func restoredTranscript(at path: String, kind: AgentKind, size: UInt64, lastWrite: Date) -> Transcript {
+        var tail = Self.initialTailBytes
 
-                guard !transcript.state.hasSeenTurnBoundary, start > 0, tail < Self.maxInitialTailBytes else { break }
-                tail *= 4
+        while true {
+            let start = size > tail ? size - tail : 0
+            var transcript = Transcript(state: AgentTranscriptState(kind: kind), offset: start, lastWrite: lastWrite)
+            read(path, into: &transcript, startsMidLine: start > 0, announces: false)
+
+            guard !transcript.state.hasSeenTurnBoundary, start > 0, tail < Self.maxInitialTailBytes else {
+                return transcript
             }
+            tail *= 4
         }
     }
 
@@ -170,8 +179,16 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
 
         for path in Set(paths) where Self.isTranscript(path) {
             guard let kind = kind(of: path) else { continue }
-            var transcript = transcripts[path]
-                ?? Transcript(state: AgentTranscriptState(kind: kind), offset: 0, lastWrite: Date())
+
+            // A transcript not followed yet (new, or swept after half an hour
+            // idle) is caught up silently: reading it all as news would
+            // announce every past turn as just finished.
+            guard var transcript = transcripts[path] else {
+                let size = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? NSNumber)?.uint64Value ?? 0
+                transcripts[path] = restoredTranscript(at: path, kind: kind, size: size, lastWrite: Date())
+                continue
+            }
+
             transcript.lastWrite = Date()
             read(path, into: &transcript, startsMidLine: false, announces: true)
             transcripts[path] = transcript
@@ -219,7 +236,8 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
                 Self.logger.info("\(kind, privacy: .public) \(change, privacy: .public)")
             }
 
-            if announces, case .finished(let duration) = transition, let session, !transcript.state.isSubthread {
+            if announces, case .finished(let duration) = transition, let session, !transcript.state.isSubthread,
+               session.startedAt.addingTimeInterval(duration) > Date().addingTimeInterval(-Self.announceWithin) {
                 let onFinish = onFinish
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated { onFinish?(session, duration) }
