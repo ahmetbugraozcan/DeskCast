@@ -29,10 +29,8 @@ final class AppEnvironment: ObservableObject {
         let folderPicker = FolderPicker()
 
         let dropShelf = DropShelfViewModel(
-            exporter: DropShelfExportService(),
-            settings: settings,
-            toastPresenter: toastPresenter,
-            folderPicker: folderPicker
+            exporter: DropShelfExportService(), processor: DropShelfFileProcessingService(),
+            settings: settings, toastPresenter: toastPresenter, folderPicker: folderPicker
         )
         let screenshotShelf = ScreenshotShelfViewModel(
             shelfCollector: dropShelf,

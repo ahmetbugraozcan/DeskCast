@@ -491,3 +491,16 @@
 
 /* Meeting links */
 "island.calendar.join" = "Join";
+
+/* Drop Shelf file actions */
+"dropShelf.convert" = "Convert To";
+"dropShelf.resize" = "Resize";
+"dropShelf.resize.half" = "Half size (50%)";
+"dropShelf.resize.maxEdge" = "Longest edge %ld px";
+"dropShelf.converted" = "Converted to %@";
+"dropShelf.resized" = "Resized image added";
+"dropShelf.zipAll" = "Zip All";
+"dropShelf.zipSelection" = "Zip Selected";
+"dropShelf.archiveName" = "Drop Shelf";
+"dropShelf.zipped" = "Created %@";
+"dropShelf.processingFailed" = "Couldn't process the item";

@@ -23,6 +23,17 @@ extension DropShelfItemSize {
     }
 }
 
+extension ShelfImageResize {
+    var title: String {
+        switch self {
+        case .half: AppLocalization.string("dropShelf.resize.half")
+        case .maxEdge1920: AppLocalization.formatted("dropShelf.resize.maxEdge", 1920)
+        case .maxEdge1280: AppLocalization.formatted("dropShelf.resize.maxEdge", 1280)
+        case .maxEdge640: AppLocalization.formatted("dropShelf.resize.maxEdge", 640)
+        }
+    }
+}
+
 extension DropShelfItemKind {
     var title: String {
         switch self {

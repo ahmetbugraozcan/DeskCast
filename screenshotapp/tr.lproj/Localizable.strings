@@ -491,3 +491,16 @@
 
 /* Meeting links */
 "island.calendar.join" = "Katıl";
+
+/* Drop Shelf file actions */
+"dropShelf.convert" = "Dönüştür";
+"dropShelf.resize" = "Boyutlandır";
+"dropShelf.resize.half" = "Yarı boyut (%50)";
+"dropShelf.resize.maxEdge" = "Uzun kenar %ld px";
+"dropShelf.converted" = "%@ biçimine dönüştürüldü";
+"dropShelf.resized" = "Boyutlandırılmış görsel eklendi";
+"dropShelf.zipAll" = "Tümünü Zip'le";
+"dropShelf.zipSelection" = "Seçilenleri Zip'le";
+"dropShelf.archiveName" = "Drop Shelf";
+"dropShelf.zipped" = "%@ oluşturuldu";
+"dropShelf.processingFailed" = "Öğe işlenemedi";

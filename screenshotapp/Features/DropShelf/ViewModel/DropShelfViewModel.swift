@@ -9,23 +9,28 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
     @Published private(set) var isShelfVisible = false
     @Published private(set) var isDropTargeted = false
     @Published private(set) var isInternalDragInProgress = false
+    /// A convert/resize/zip job is running (see `DropShelfViewModel+Processing`).
+    @Published var isProcessing = false
 
     private var defaultsObserver: AnyCancellable?
     private var activeObserver: AnyCancellable?
     private let shakeMonitor = DropShelfShakeMonitor()
     weak var presenter: DropShelfPresenting?
-    private let exporter: DropShelfExporting
+    let exporter: DropShelfExporting
+    let processor: DropShelfFileProcessing
     private let settings: DropShelfSettingsReading & ToolboxSettingsReading
     private let toastPresenter: ToastPresenting
     private let folderPicker: FolderPicking
 
     init(
         exporter: DropShelfExporting,
+        processor: DropShelfFileProcessing,
         settings: DropShelfSettingsReading & ToolboxSettingsReading,
         toastPresenter: ToastPresenting,
         folderPicker: FolderPicking
     ) {
         self.exporter = exporter
+        self.processor = processor
         self.settings = settings
         self.toastPresenter = toastPresenter
         self.folderPicker = folderPicker
@@ -188,6 +193,15 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
                 ? AppLocalization.formatted("Added %ld item", newItems.count)
                 : AppLocalization.formatted("Added %ld items", newItems.count)
         )
+    }
+
+    /// Adds files a shelf action produced, next to the item they came from.
+    func insertProcessedFiles(_ urls: [URL], after item: DropShelfItem?) {
+        let newItems = urls.map { DropShelfItem(kind: .file, displayName: $0.lastPathComponent, fileURL: $0) }
+        let index = item.flatMap { item in items.firstIndex { $0.id == item.id } }.map { $0 + 1 } ?? items.endIndex
+        items.insert(contentsOf: newItems, at: index)
+        trimToMaxItemCount(settings.dropShelfSettings().maxItemCount)
+        presenter?.refresh()
     }
 
     func setDropTargeted(_ isTargeted: Bool) {
@@ -435,7 +449,7 @@ final class DropShelfViewModel: ObservableObject, ShelfCollecting {
         selectedItemIDs.formIntersection(items.map(\.id))
     }
 
-    private func showToast(_ message: String, systemImage: String = "checkmark.circle.fill") {
+    func showToast(_ message: String, systemImage: String = "checkmark.circle.fill") {
         toastPresenter.show(message, systemImage: systemImage)
     }
 }

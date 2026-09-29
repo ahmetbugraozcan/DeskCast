@@ -100,6 +100,11 @@ struct DropShelfView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
 
+            DropShelfIconButton(systemName: "archivebox", help: AppLocalization.string("dropShelf.zipAll")) {
+                store.zipItems()
+            }
+            .disabled(store.items.isEmpty || store.isProcessing)
+
             DropShelfIconButton(systemName: "paperplane", help: AppLocalization.string("Send All")) {
                 store.sendAll()
             }
@@ -140,6 +145,11 @@ struct DropShelfView: View {
             DropShelfIconButton(systemName: "paperplane", help: AppLocalization.string("Send To...")) {
                 store.sendSelection()
             }
+
+            DropShelfIconButton(systemName: "archivebox", help: AppLocalization.string("dropShelf.zipSelection")) {
+                store.zipItems()
+            }
+            .disabled(store.isProcessing)
 
             DropShelfIconButton(systemName: "trash", help: AppLocalization.string("Remove")) {
                 store.removeSelection()
@@ -231,6 +241,7 @@ struct DropShelfView: View {
                         copyAction: { store.copy(item) },
                         sendAction: { store.send(item) },
                         removeAction: { store.remove(item) },
+                        imageActions: imageActions(for: item),
                         dragPasteboardWriters: { store.draggingPasteboardWriters(forDraggedItem: item) },
                         dragStarted: { store.beginInternalDrag() },
                         dragEnded: { store.endInternalDrag() }
@@ -247,6 +258,15 @@ struct DropShelfView: View {
 
     private var hiddenStackCount: Int {
         max(0, store.items.count - Self.visibleStackLimit)
+    }
+
+    private func imageActions(for item: DropShelfItem) -> DropShelfImageActions? {
+        guard store.canProcessImage(item) else { return nil }
+
+        return DropShelfImageActions(
+            convert: { store.convertImage(item, to: $0) },
+            resize: { store.resizeImage(item, $0) }
+        )
     }
 
     private func dropShelfItemCard(
@@ -269,6 +289,7 @@ struct DropShelfView: View {
             removeAction: { store.remove(item) },
             moveBackwardAction: { store.moveItemBackward(item) },
             moveForwardAction: { store.moveItemForward(item) },
+            imageActions: imageActions(for: item),
             dragPasteboardWriters: dragPasteboardWriters,
             dragStarted: { store.beginInternalDrag() },
             dragEnded: { store.endInternalDrag() }
@@ -326,6 +347,7 @@ private struct DropShelfItemCard: View {
     let removeAction: () -> Void
     let moveBackwardAction: () -> Void
     let moveForwardAction: () -> Void
+    let imageActions: DropShelfImageActions?
     let dragPasteboardWriters: () -> [NSPasteboardWriting]
     let dragStarted: () -> Void
     let dragEnded: () -> Void
@@ -347,6 +369,7 @@ private struct DropShelfItemCard: View {
         removeAction: @escaping () -> Void,
         moveBackwardAction: @escaping () -> Void,
         moveForwardAction: @escaping () -> Void,
+        imageActions: DropShelfImageActions?,
         dragPasteboardWriters: @escaping () -> [NSPasteboardWriting],
         dragStarted: @escaping () -> Void,
         dragEnded: @escaping () -> Void
@@ -364,6 +387,7 @@ private struct DropShelfItemCard: View {
         self.removeAction = removeAction
         self.moveBackwardAction = moveBackwardAction
         self.moveForwardAction = moveForwardAction
+        self.imageActions = imageActions
         self.dragPasteboardWriters = dragPasteboardWriters
         self.dragStarted = dragStarted
         self.dragEnded = dragEnded
@@ -424,6 +448,11 @@ private struct DropShelfItemCard: View {
                 sendAction()
             } label: {
                 Label(AppLocalization.string("Send To..."), systemImage: "paperplane")
+            }
+
+            if let imageActions {
+                Divider()
+                DropShelfImageMenus(actions: imageActions)
             }
 
             Divider()
@@ -626,6 +655,7 @@ private struct DropShelfListRow: View {
     let copyAction: () -> Void
     let sendAction: () -> Void
     let removeAction: () -> Void
+    let imageActions: DropShelfImageActions?
     let dragPasteboardWriters: () -> [NSPasteboardWriting]
     let dragStarted: () -> Void
     let dragEnded: () -> Void
@@ -732,6 +762,11 @@ private struct DropShelfListRow: View {
 
             Button(action: sendAction) {
                 Label(AppLocalization.string("Send To..."), systemImage: "paperplane")
+            }
+
+            if let imageActions {
+                Divider()
+                DropShelfImageMenus(actions: imageActions)
             }
 
             Divider()
@@ -930,5 +965,33 @@ private final class DropShelfDragInteractionNSView: NSView, NSDraggingSource {
     private func draggingFrame(for index: Int) -> NSRect {
         let offset = CGFloat(min(index, 4)) * 7
         return bounds.offsetBy(dx: offset, dy: -offset)
+    }
+}
+
+/// Convert / Resize submenus for image items' context menus.
+struct DropShelfImageActions {
+    let convert: (ShelfImageFormat) -> Void
+    let resize: (ShelfImageResize) -> Void
+}
+
+private struct DropShelfImageMenus: View {
+    let actions: DropShelfImageActions
+
+    var body: some View {
+        Menu {
+            ForEach(ShelfImageFormat.allCases) { format in
+                Button(format.title) { actions.convert(format) }
+            }
+        } label: {
+            Label(AppLocalization.string("dropShelf.convert"), systemImage: "arrow.triangle.2.circlepath")
+        }
+
+        Menu {
+            ForEach(ShelfImageResize.allCases) { resize in
+                Button(resize.title) { actions.resize(resize) }
+            }
+        } label: {
+            Label(AppLocalization.string("dropShelf.resize"), systemImage: "arrow.down.right.and.arrow.up.left")
+        }
     }
 }
