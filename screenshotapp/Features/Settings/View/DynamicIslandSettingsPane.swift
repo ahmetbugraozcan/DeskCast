@@ -25,6 +25,8 @@ struct DynamicIslandSettingsPane: View {
     private var showsSystemNotifications = DynamicIslandSettings.defaultShowsSystemNotifications
     @AppStorage(DynamicIslandSettings.Keys.showsBatteryEvents)
     private var showsBatteryEvents = DynamicIslandSettings.defaultShowsBatteryEvents
+    @AppStorage(DynamicIslandSettings.Keys.showsEventReminders)
+    private var showsEventReminders = DynamicIslandSettings.defaultShowsEventReminders
     @AppStorage(DynamicIslandSettings.Keys.hidesInFullScreen)
     private var hidesInFullScreen = DynamicIslandSettings.defaultHidesInFullScreen
     @AppStorage(DynamicIslandSettings.Keys.displayTarget)
@@ -194,6 +196,13 @@ struct DynamicIslandSettingsPane: View {
             SettingsToggleRow(
                 title: AppLocalization.string("Show charging and low battery alerts"),
                 isOn: $showsBatteryEvents
+            )
+
+            SettingsSectionDivider()
+
+            SettingsToggleRow(
+                title: AppLocalization.string("island.settings.eventReminders"),
+                isOn: $showsEventReminders
             )
 
             SettingsSectionDivider()

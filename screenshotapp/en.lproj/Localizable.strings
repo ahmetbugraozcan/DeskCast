@@ -489,3 +489,5 @@
 "island.controls.keepAwake.hours" = "%ld h";
 "island.controls.keepAwake.indefinitely" = "Until turned off";
 "island.controls.keepAwake.off" = "Turn off";
+"island.settings.eventReminders" = "Remind me 5 minutes before calendar events";
+"island.calendar.startsIn" = "Starts in %ld min · %@";

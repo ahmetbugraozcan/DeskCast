@@ -694,6 +694,7 @@ final class IslandPanelModels {
     let camera = CameraMirrorViewModel()
     let clipboard = ClipboardHistoryViewModel()
     let stopwatch = IslandStopwatchViewModel()
+    let eventReminders = EventReminderMonitor()
     let spotify = SpotifyAccountViewModel()
     let extras: NowPlayingExtrasViewModel
     let screenshots: ScreenshotShelfViewModel
@@ -711,5 +712,11 @@ final class IslandPanelModels {
         self.screenshots = screenshots
         self.dropShelf = dropShelf
         self.actions = actions
+    }
+
+    /// Background features that follow the island's on/off state and settings.
+    func bind(to island: DynamicIslandViewModel) {
+        clipboard.bind(to: island)
+        eventReminders.bind(to: island)
     }
 }

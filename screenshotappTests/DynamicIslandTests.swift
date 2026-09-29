@@ -651,3 +651,52 @@ struct KeepAwakeTests {
         #expect(!controls.isKeepingAwake)
     }
 }
+
+@MainActor
+private final class FakeCalendar: CalendarEventProviding {
+    var accessState = CalendarAccessState.granted
+    var events: [IslandCalendarEvent] = []
+
+    func upcomingEvents(limit: Int) -> [IslandCalendarEvent] {
+        Array(events.prefix(limit))
+    }
+}
+
+@MainActor
+struct EventReminderTests {
+    private let now = Date(timeIntervalSinceReferenceDate: 50_000)
+
+    private func event(_ id: String, startsIn minutes: Double, allDay: Bool = false) -> IslandCalendarEvent {
+        let start = now.addingTimeInterval(minutes * 60)
+        return IslandCalendarEvent(
+            id: id,
+            title: id,
+            start: start,
+            end: start.addingTimeInterval(1800),
+            isAllDay: allDay,
+            color: .systemBlue
+        )
+    }
+
+    @Test func remindsOnceShortlyBeforeTimedEvents() {
+        let calendar = FakeCalendar()
+        calendar.events = [
+            event("soon", startsIn: 4),
+            event("later", startsIn: 30),
+            event("holiday", startsIn: 3, allDay: true),
+            event("started", startsIn: -2)
+        ]
+        let monitor = EventReminderMonitor(calendar: calendar)
+
+        #expect(monitor.takeDueEvents(at: now).map(\.id) == ["soon"])
+        #expect(monitor.takeDueEvents(at: now.addingTimeInterval(60)).isEmpty)
+    }
+
+    @Test func staysQuietWithoutCalendarAccess() {
+        let calendar = FakeCalendar()
+        calendar.accessState = .notDetermined
+        calendar.events = [event("soon", startsIn: 2)]
+
+        #expect(EventReminderMonitor(calendar: calendar).takeDueEvents(at: now).isEmpty)
+    }
+}

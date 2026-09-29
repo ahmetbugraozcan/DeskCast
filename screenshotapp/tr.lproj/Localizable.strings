@@ -489,3 +489,5 @@
 "island.controls.keepAwake.hours" = "%ld sa";
 "island.controls.keepAwake.indefinitely" = "Kapatılana kadar";
 "island.controls.keepAwake.off" = "Kapat";
+"island.settings.eventReminders" = "Takvim etkinliklerinden 5 dakika önce hatırlat";
+"island.calendar.startsIn" = "%ld dk sonra · %@";

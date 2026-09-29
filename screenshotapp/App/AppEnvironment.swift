@@ -74,7 +74,7 @@ final class AppEnvironment: ObservableObject {
             dropShelf: dropShelf,
             actions: islandActions
         )
-        islandPanels.clipboard.bind(to: dynamicIsland)
+        islandPanels.bind(to: dynamicIsland)
 
         self.dropShelf = dropShelf
         self.screenRecorder = screenRecorder

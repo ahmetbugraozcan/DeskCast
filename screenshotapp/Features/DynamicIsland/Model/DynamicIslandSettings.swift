@@ -102,6 +102,7 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     var showsAppNotifications = DynamicIslandSettings.defaultShowsAppNotifications
     var showsSystemNotifications = DynamicIslandSettings.defaultShowsSystemNotifications
     var showsBatteryEvents = DynamicIslandSettings.defaultShowsBatteryEvents
+    var showsEventReminders = DynamicIslandSettings.defaultShowsEventReminders
     var openMode = DynamicIslandSettings.defaultOpenMode
     var hoverDelay = DynamicIslandSettings.defaultHoverDelay
     var reopenTarget = DynamicIslandSettings.defaultReopenTarget
@@ -131,6 +132,7 @@ enum DynamicIslandSettings {
         static let showsAppNotifications = "dynamicIsland.showsAppNotifications"
         static let showsSystemNotifications = "dynamicIsland.showsSystemNotifications"
         static let showsBatteryEvents = "dynamicIsland.showsBatteryEvents"
+        static let showsEventReminders = "dynamicIsland.showsEventReminders"
         static let openMode = "dynamicIsland.openMode"
         static let hoverDelay = "dynamicIsland.hoverDelay"
         static let reopenTarget = "dynamicIsland.reopenTarget"
@@ -158,6 +160,7 @@ enum DynamicIslandSettings {
     static let defaultShowsAppNotifications = true
     static let defaultShowsSystemNotifications = true
     static let defaultShowsBatteryEvents = true
+    static let defaultShowsEventReminders = true
     static let defaultOpenMode = IslandOpenMode.hover
     static let defaultHoverDelay = 0.15
     static let defaultReopenTarget = IslandReopenTarget.lastPanel
@@ -198,6 +201,7 @@ enum DynamicIslandSettings {
             Keys.showsAppNotifications: defaultShowsAppNotifications,
             Keys.showsSystemNotifications: defaultShowsSystemNotifications,
             Keys.showsBatteryEvents: defaultShowsBatteryEvents,
+            Keys.showsEventReminders: defaultShowsEventReminders,
             Keys.openMode: defaultOpenMode.rawValue,
             Keys.hoverDelay: defaultHoverDelay,
             Keys.reopenTarget: defaultReopenTarget.rawValue,
@@ -222,6 +226,7 @@ enum DynamicIslandSettings {
             showsAppNotifications: defaults.bool(forKey: Keys.showsAppNotifications),
             showsSystemNotifications: defaults.bool(forKey: Keys.showsSystemNotifications),
             showsBatteryEvents: defaults.bool(forKey: Keys.showsBatteryEvents),
+            showsEventReminders: defaults.bool(forKey: Keys.showsEventReminders),
             openMode: enumValue(defaults, Keys.openMode, default: defaultOpenMode),
             hoverDelay: clampedHoverDelay(defaults.double(forKey: Keys.hoverDelay)),
             reopenTarget: enumValue(defaults, Keys.reopenTarget, default: defaultReopenTarget),
