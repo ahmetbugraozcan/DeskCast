@@ -309,6 +309,10 @@
 "island.panel.scratchpad" = "Karalama defteri";
 "island.panel.aiAgents" = "YZ Ajanları";
 "island.launcher.title" = "Paneller";
+"island.launcher.edit" = "Panelleri düzenle";
+"island.launcher.done" = "Bitti";
+"island.launcher.hide" = "Island'dan gizle";
+"island.launcher.add" = "Ekle";
 "island.back" = "Geri";
 "island.pin" = "Açık tut";
 "island.unpin" = "Açık tutmayı bırak";

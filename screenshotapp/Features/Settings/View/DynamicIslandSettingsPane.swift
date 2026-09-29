@@ -374,6 +374,12 @@ private struct IslandPanelListEditor: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 8)
         }
+        // The island's launcher edits the same layout.
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            let snapshot = DynamicIslandSettings.snapshot()
+            if snapshot.panelOrder != order { order = snapshot.panelOrder }
+            if snapshot.hiddenPanels != hidden { hidden = snapshot.hiddenPanels }
+        }
     }
 
     private func row(_ panel: IslandPanel) -> some View {

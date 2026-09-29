@@ -359,6 +359,20 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         expandedContent = expandedContent == .launcher ? lastPanelContent : .launcher
     }
 
+    /// Saves the launcher layout edited in the island: `visibleOrder` is the
+    /// new order of shown panels, hidden ones keep their relative order after
+    /// them. At least one panel always stays visible. Applied right away so the
+    /// grid doesn't flash back to the old order before defaults notify.
+    func updatePanelLayout(visibleOrder: [IslandPanel], hidden: Set<IslandPanel>) {
+        let shown = visibleOrder.filter { !hidden.contains($0) }
+        guard !shown.isEmpty else { return }
+        let rest = preferences.panelOrder.filter { !shown.contains($0) }
+        let defaults = UserDefaults.standard
+        defaults.set((shown + rest).map(\.rawValue), forKey: DynamicIslandSettings.Keys.panelOrder)
+        defaults.set(IslandPanel.allCases.filter(hidden.contains).map(\.rawValue), forKey: DynamicIslandSettings.Keys.hiddenPanels)
+        applySettingsChange()
+    }
+
     /// Opens the island on a panel (side buttons, shortcuts); toggles closed when
     /// that panel is already showing.
     func open(_ panel: IslandPanel) {

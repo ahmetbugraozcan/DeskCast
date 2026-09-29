@@ -309,6 +309,10 @@
 "island.panel.scratchpad" = "Scratchpad";
 "island.panel.aiAgents" = "AI Agents";
 "island.launcher.title" = "Panels";
+"island.launcher.edit" = "Edit panels";
+"island.launcher.done" = "Done";
+"island.launcher.hide" = "Hide from island";
+"island.launcher.add" = "Add";
 "island.back" = "Back";
 "island.pin" = "Keep open";
 "island.unpin" = "Stop keeping open";
