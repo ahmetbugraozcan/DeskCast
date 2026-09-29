@@ -110,6 +110,8 @@ struct SettingsView: View {
 
     @AppStorage(ColorPickerSettings.Keys.copyFormat)
     private var colorCopyFormatRaw = ColorPickerSettings.defaultCopyFormat.rawValue
+    @AppStorage(ToolboxSettings.Keys.scrollingCaptureEnabled)
+    private var scrollingCaptureEnabled = ToolboxSettings.defaultScrollingCaptureEnabled
     @AppStorage(ToolboxSettings.Keys.pickColorEnabled)
     private var pickColorEnabled = ToolboxSettings.defaultPickColorEnabled
 
@@ -240,7 +242,7 @@ struct SettingsView: View {
         SettingsPage(section: .screenshots) {
             ToolCategorySection(
                 title: AppLocalization.string("Tools"),
-                tools: [.captureSelectedArea, .captureOCR, .pickColor, .imageSearch]
+                tools: [.captureSelectedArea, .captureOCR, .scrollingCapture, .pickColor, .imageSearch]
             )
 
             FeaturePermissionManagerView(
@@ -545,6 +547,12 @@ struct SettingsView: View {
                     )
 
                     KeyboardShortcuts.Recorder(
+                        AppLocalization.string("shortcuts.scrollingCapture"),
+                        name: .scrollingCapture
+                    )
+                    .disabled(!scrollingCaptureEnabled)
+
+                    KeyboardShortcuts.Recorder(
                         AppLocalization.string("shortcuts.pickColor"),
                         name: .pickColor
                     )
@@ -632,12 +640,15 @@ struct SettingsView: View {
 
         saveDirectoryPath = url.path
     }
+}
 
+// Resets touch only UserDefaults and shortcuts, so they live outside the view body.
+extension SettingsView {
     private func resetScreenshotSettings() {
         ScreenshotShelfSettings.resetToDefaults()
-        ToolboxSettings.resetTools([.captureSelectedArea, .captureOCR, .pickColor, .imageSearch])
+        ToolboxSettings.resetTools([.captureSelectedArea, .captureOCR, .scrollingCapture, .pickColor, .imageSearch])
         UserDefaults.standard.set(ColorPickerSettings.defaultCopyFormat.rawValue, forKey: ColorPickerSettings.Keys.copyFormat)
-        KeyboardShortcuts.reset(.captureSelectedArea, .pickColor)
+        KeyboardShortcuts.reset(.captureSelectedArea, .scrollingCapture, .pickColor)
     }
 
     private func resetFinderPathSettings() {

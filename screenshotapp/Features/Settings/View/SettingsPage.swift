@@ -169,6 +169,7 @@ extension ToolboxToolID {
         case .captureSelectedArea: .purple
         case .captureVideo: .red
         case .captureOCR: .teal
+        case .scrollingCapture: .green
         case .pickColor: .indigo
         case .copyFinderPath: .cyan
         case .imageSearch: .blue

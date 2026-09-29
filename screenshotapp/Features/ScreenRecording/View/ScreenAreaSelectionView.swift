@@ -4,6 +4,8 @@ struct ScreenAreaSelectionView: View {
     private static let minimumSize = CGSize(width: 160, height: 100)
 
     let initialRect: CGRect?
+    var title = AppLocalization.string("Select Recording Area")
+    var message = AppLocalization.string("Drag to draw, then move or resize the selection.")
     let onComplete: (CGRect?) -> Void
 
     @State private var selectionRect: CGRect?
@@ -24,9 +26,9 @@ struct ScreenAreaSelectionView: View {
                 }
 
                 VStack(spacing: 5) {
-                    Text(AppLocalization.string("Select Recording Area"))
+                    Text(title)
                         .font(.system(size: 14, weight: .semibold))
-                    Text(AppLocalization.string("Drag to draw, then move or resize the selection."))
+                    Text(message)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }

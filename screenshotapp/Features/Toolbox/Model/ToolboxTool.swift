@@ -30,6 +30,7 @@ enum ToolboxToolID: String, CaseIterable, Identifiable {
     case captureSelectedArea
     case captureVideo
     case captureOCR
+    case scrollingCapture
     case pickColor
     case copyFinderPath
     case imageSearch
@@ -85,6 +86,15 @@ enum ToolboxCatalog {
             titleKey: "Capture OCR",
             subtitleKey: "Capture a selected region and copy recognized text or QR code contents.",
             systemImage: "text.viewfinder",
+            category: .screenshots,
+            defaultEnabled: true,
+            defaultShowInMenu: true
+        ),
+        ToolboxTool(
+            id: .scrollingCapture,
+            titleKey: "Scrolling Capture",
+            subtitleKey: "scrollCapture.subtitle",
+            systemImage: "scroll",
             category: .screenshots,
             defaultEnabled: true,
             defaultShowInMenu: true
@@ -153,6 +163,8 @@ enum ToolboxSettings {
         static let captureVideoShowInMenu = ToolboxToolID.captureVideo.showInMenuKey
         static let captureOCREnabled = ToolboxToolID.captureOCR.enabledKey
         static let captureOCRShowInMenu = ToolboxToolID.captureOCR.showInMenuKey
+        static let scrollingCaptureEnabled = ToolboxToolID.scrollingCapture.enabledKey
+        static let scrollingCaptureShowInMenu = ToolboxToolID.scrollingCapture.showInMenuKey
         static let pickColorEnabled = ToolboxToolID.pickColor.enabledKey
         static let pickColorShowInMenu = ToolboxToolID.pickColor.showInMenuKey
         static let copyFinderPathEnabled = ToolboxToolID.copyFinderPath.enabledKey
@@ -173,6 +185,8 @@ enum ToolboxSettings {
     static let defaultCaptureVideoShowInMenu = ToolboxToolID.captureVideo.defaultShowInMenu
     static let defaultCaptureOCREnabled = ToolboxToolID.captureOCR.defaultEnabled
     static let defaultCaptureOCRShowInMenu = ToolboxToolID.captureOCR.defaultShowInMenu
+    static let defaultScrollingCaptureEnabled = ToolboxToolID.scrollingCapture.defaultEnabled
+    static let defaultScrollingCaptureShowInMenu = ToolboxToolID.scrollingCapture.defaultShowInMenu
     static let defaultPickColorEnabled = ToolboxToolID.pickColor.defaultEnabled
     static let defaultPickColorShowInMenu = ToolboxToolID.pickColor.defaultShowInMenu
     static let defaultCopyFinderPathEnabled = ToolboxToolID.copyFinderPath.defaultEnabled

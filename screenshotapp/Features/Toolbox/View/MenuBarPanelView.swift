@@ -8,6 +8,7 @@ struct MenuBarPanelVisibility {
     var captureSelectedArea: Bool
     var captureVideo: Bool
     var captureOCR: Bool
+    var scrollingCapture: Bool
     var pickColor: Bool
     var imageSearch: Bool
     var copyFinderPath: Bool
@@ -15,7 +16,7 @@ struct MenuBarPanelVisibility {
     var dynamicIsland: Bool
 
     var toolCount: Int {
-        [captureSelectedArea, captureVideo, captureOCR, pickColor, imageSearch, copyFinderPath, dropShelf, dynamicIsland]
+        [captureSelectedArea, captureVideo, captureOCR, scrollingCapture, pickColor, imageSearch, copyFinderPath, dropShelf, dynamicIsland]
             .filter { $0 }
             .count
     }
@@ -40,6 +41,7 @@ struct MenuBarPanelView: View {
     @ObservedObject var dropShelf: DropShelfViewModel
     @ObservedObject var island: DynamicIslandViewModel
     @ObservedObject var colorPicker: ColorPickerViewModel
+    @ObservedObject var scrollingCapture: ScrollingCaptureViewModel
     let visibility: MenuBarPanelVisibility
     let actions: MenuBarPanelActions
 
@@ -143,6 +145,18 @@ struct MenuBarPanelView: View {
                     runAfterDismiss { screenshots.captureOCRTextFromSelectedArea() }
                 }
                 .disabled(screenshots.isCapturing)
+            }
+
+            if visibility.scrollingCapture {
+                MenuPanelTile(
+                    title: AppLocalization.string("menu.tile.scrollingCapture"),
+                    systemImage: "scroll",
+                    tint: .green,
+                    shortcut: .scrollingCapture
+                ) {
+                    runAfterDismiss { scrollingCapture.start() }
+                }
+                .disabled(scrollingCapture.isBusy)
             }
 
             if visibility.pickColor {

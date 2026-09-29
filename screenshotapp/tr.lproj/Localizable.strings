@@ -566,3 +566,18 @@
 "island.settings.clipboard" = "Pano Geçmişi";
 "island.settings.clipboard.save" = "Pano geçmişini bu Mac'e kaydet";
 "island.settings.clipboard.saveInfo" = "Kopyalanan en fazla 200 metin, bağlantı ve dosya referansını, yalnızca sizin kullanıcınızın okuyabildiği bir dosyada uygulama kapansa da saklar. Görseller hiçbir zaman kaydedilmez. Bu seçeneği kapatmak kayıtlı geçmişi siler. Kapalıyken geçmiş bellekte kalır (30 öğe) ve DeskCast kapanınca unutulur.";
+
+/* Scrolling capture */
+"Scrolling Capture" = "Kaydırmalı Yakalama";
+"scrollCapture.subtitle" = "Bir alan seçin, kaydırın ve rafta tek bir uzun ekran görüntüsü alın.";
+"menu.tile.scrollingCapture" = "Kaydır";
+"shortcuts.scrollingCapture" = "Kaydırmalı yakalama:";
+"scrollCapture.select.title" = "Kaydırılacak Alanı Seçin";
+"scrollCapture.select.message" = "Pencerenin kayan kısmını seçin, sonra yavaşça aşağı kaydırın.";
+"scrollCapture.status.waiting" = "Yavaşça aşağı kaydırın";
+"scrollCapture.status.scrolling" = "Yakalanıyor — kaydırmaya devam edin";
+"scrollCapture.status.lostTrack" = "İz kaybedildi — biraz yukarı kaydırıp daha yavaş devam edin";
+"scrollCapture.status.limit" = "En fazla yüksekliğe ulaşıldı — Bitti'ye basın";
+"scrollCapture.height" = "%ld pt yükseklik";
+"scrollCapture.done" = "Kaydırmalı yakalama eklendi (%ld pt)";
+"scrollCapture.failed" = "Alan yakalanamadı";

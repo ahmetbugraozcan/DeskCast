@@ -8,6 +8,7 @@ A macOS menu-bar utility toolbox. It bundles several small productivity tools be
 
 - **Capture Selected Area** — `screencapture`-based region capture into a floating media shelf. Image captures can be annotated (`Features/Annotation`: arrow, rectangle, pen, text, highlight, pixelate; Done replaces the shelf image and rewrites its saved PNG) or pinned on screen as always-on-top panels.
 - **Capture Video** — full-display or resizable selected-area recording through ScreenCaptureKit and DeskCast's own recorder panel, with system-audio/microphone options. Completed videos join screenshots in the same shelf, where "Trim or Make GIF…" (`Features/VideoEditing`) saves a passthrough-trimmed copy (added to the shelf) or a looping GIF next to the original, which is never overwritten.
+- **Scrolling Capture** — select an area, scroll it yourself; `ScrollingFrameCaptureService` grabs the area through `SCScreenshotManager` (DeskCast excluded) every ~120 ms and `ScrollStitcher` (pure, unit-tested) finds the vertical offset from grayscale row signatures, ignores fixed header/footer bands (footer appended once), and keeps only newly revealed strips (≤20 000 px). The result joins the screenshot shelf.
 - **Capture OCR** — capture a region and copy recognized text, or the contents of QR codes/barcodes in it (Vision).
 - **Pick Color** — system loupe (`NSColorSampler`, no Screen Recording permission) copies the picked color as HEX/RGB/HSL/SwiftUI; the last 8 colors show in the menu panel.
 - **Copy Finder Path** — copy the front Finder window's path via AppleScript.
@@ -34,7 +35,7 @@ The Xcode target uses `PBXFileSystemSynchronizedRootGroup`, so moving/adding `.s
 
 - `App/` — `@main DeskCastApp`, `AppDelegate`, and `AppEnvironment` (the composition root that builds view models, injects dependencies, and owns the presentation coordinators — no singletons).
 - `Core/` — cross-cutting: `Localization/` (`AppLocalization`, `AppLanguage`), `UI/` (`ToastPanelController`), `Support/` (`AppConstants`, `TemporaryPNGWriter`, extensions), and `ShelfCollecting` (cross-feature protocol).
-- `Features/<Feature>/` — one folder per feature (`ScreenshotShelf`, `Annotation`, `VideoEditing`, `ScreenRecording`, `DropShelf`, `ImageSearch`, `Permissions`, `Settings`, `Toolbox`), plus `DynamicIsland`, each split into the relevant `Model/`, `ViewModel/`, `View/`, `Service/`, and `Presentation/` layers.
+- `Features/<Feature>/` — one folder per feature (`ScreenshotShelf`, `Annotation`, `VideoEditing`, `ScrollingCapture`, `ScreenRecording`, `DropShelf`, `ImageSearch`, `Permissions`, `Settings`, `Toolbox`), plus `DynamicIsland`, each split into the relevant `Model/`, `ViewModel/`, `View/`, `Service/`, and `Presentation/` layers.
 - `en.lproj/` + `tr.lproj/` — `Localizable.strings`.
 
 ## MVVM roles
@@ -100,7 +101,7 @@ xcodebuild -project screenshotapp.xcodeproj -scheme screenshotapp -configuration
 xcodebuild -project screenshotapp.xcodeproj -scheme screenshotapp -destination 'platform=macOS' test
 ```
 
-Debug launch arguments for UI checks: `-DeskCastAllowsIslandCapture YES` (island visible to `screencapture`), `-DeskCastDemoPanel <panel|launcher>`, `-DeskCastDemoTrack YES`, `-DeskCastDemoTimer <min>`, `-DeskCastDemoNotification <text>`, `-DeskCastDemoMeeting <title>` (calendar reminder banner with a Join button), `-DeskCastDemoPin YES` (pins a sample screenshot on screen), `-DeskCastDemoAnnotate YES` (annotation editor on a sample image), `-DeskCastDemoVideo <path>` (Trim / GIF window on that video), `-DeskCastDemoSettings <section>`, `-DeskCastDemoMenuPanel YES` (menu panel in a plain window), and `-DeskCastSnapshotDir <folder>` (writes PNGs of all visible windows ~2.5 s after launch — works even while the screen is locked). `run-app.yml` uses these to upload screenshots as the `island-screenshots` artifact.
+Debug launch arguments for UI checks: `-DeskCastAllowsIslandCapture YES` (island visible to `screencapture`), `-DeskCastDemoPanel <panel|launcher>`, `-DeskCastDemoTrack YES`, `-DeskCastDemoTimer <min>`, `-DeskCastDemoNotification <text>`, `-DeskCastDemoMeeting <title>` (calendar reminder banner with a Join button), `-DeskCastDemoPin YES` (pins a sample screenshot on screen), `-DeskCastDemoAnnotate YES` (annotation editor on a sample image), `-DeskCastDemoVideo <path>` (Trim / GIF window on that video), `-DeskCastDemoScrollFrame <png>` (one scrolling-capture frame of main-display area 100,100 600×400 pt), `-DeskCastDemoSettings <section>`, `-DeskCastDemoMenuPanel YES` (menu panel in a plain window), and `-DeskCastSnapshotDir <folder>` (writes PNGs of all visible windows ~2.5 s after launch — works even while the screen is locked). `run-app.yml` uses these to upload screenshots as the `island-screenshots` artifact.
 
 CI: `.github/workflows/build.yml` runs an unsigned Debug `build-for-testing`, the unit tests, and strict SwiftLint on every pushed branch (use it when no Mac is available). `release.yml` signs, notarizes and publishes — don't trigger it for checks.
 

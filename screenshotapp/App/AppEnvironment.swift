@@ -11,6 +11,7 @@ final class AppEnvironment: ObservableObject {
     let screenshotShelf: ScreenshotShelfViewModel
     let dynamicIsland: DynamicIslandViewModel
     let colorPicker: ColorPickerViewModel
+    let scrollingCapture: ScrollingCaptureViewModel
     let appUpdate: AppUpdateService
 
     // Retained for the app's lifetime; the view models reference them weakly.
@@ -18,6 +19,7 @@ final class AppEnvironment: ObservableObject {
     private let screenRecordingCoordinator: ScreenRecordingPanelCoordinator
     private let screenshotShelfCoordinator: ScreenshotShelfPanelCoordinator
     private let dynamicIslandCoordinator: DynamicIslandPanelCoordinator
+    private let scrollingCaptureCoordinator: ScrollingCapturePanelCoordinator
 
     let settings: SettingsProviding
 
@@ -33,15 +35,9 @@ final class AppEnvironment: ObservableObject {
             settings: settings, toastPresenter: toastPresenter, folderPicker: folderPicker
         )
         let screenshotShelf = ScreenshotShelfViewModel(
-            shelfCollector: dropShelf,
-            capturer: ScreenshotCaptureService(),
-            recognizer: OCRTextRecognitionService(),
-            barcodeReader: VisionBarcodeReadingService(),
-            exporter: ScreenshotExportService(),
-            finderPath: FinderPathService(),
-            videoMetadata: VideoMetadataService(),
-            settings: settings,
-            toastPresenter: toastPresenter,
+            shelfCollector: dropShelf, capturer: ScreenshotCaptureService(), recognizer: OCRTextRecognitionService(),
+            barcodeReader: VisionBarcodeReadingService(), exporter: ScreenshotExportService(), finderPath: FinderPathService(),
+            videoMetadata: VideoMetadataService(), settings: settings, toastPresenter: toastPresenter,
             screenRecording: ScreenRecordingPermissionService()
         )
         let screenRecorder = ScreenRecordingViewModel(
@@ -81,12 +77,18 @@ final class AppEnvironment: ObservableObject {
         self.dynamicIsland = dynamicIsland
         colorPicker = ColorPickerViewModel(sampler: ScreenColorSamplingService(), settings: settings, toastPresenter: toastPresenter)
         appUpdate = AppUpdateService()
+        scrollingCapture = ScrollingCaptureViewModel(
+            capturer: ScrollingFrameCaptureService(), shelf: screenshotShelf, settings: settings,
+            screenRecording: ScreenRecordingPermissionService(), toastPresenter: toastPresenter
+        )
 
         // Wire presentation coordinators and hand them to the view models.
         dropShelfCoordinator = DropShelfPanelCoordinator(store: dropShelf)
         screenRecordingCoordinator = ScreenRecordingPanelCoordinator(store: screenRecorder)
         screenshotShelfCoordinator = ScreenshotShelfPanelCoordinator(store: screenshotShelf)
         dynamicIslandCoordinator = DynamicIslandPanelCoordinator(store: dynamicIsland, panels: islandPanels)
+        scrollingCaptureCoordinator = ScrollingCapturePanelCoordinator(store: scrollingCapture)
+        scrollingCapture.presenter = scrollingCaptureCoordinator
         dropShelf.presenter = dropShelfCoordinator
         screenRecorder.presenter = screenRecordingCoordinator
         screenshotShelf.presenter = screenshotShelfCoordinator
@@ -109,6 +111,7 @@ final class AppEnvironment: ObservableObject {
         screenshotShelf.pinDemoScreenshotIfRequested()
         screenshotShelf.annotateDemoScreenshotIfRequested()
         screenshotShelf.editDemoVideoIfRequested()
+        await scrollingCapture.writeDemoFrameIfRequested()
         await DebugWindowSnapshot.writeIfRequested()
         #endif
     }

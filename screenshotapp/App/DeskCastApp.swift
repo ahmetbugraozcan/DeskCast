@@ -19,6 +19,7 @@ struct DeskCastApp: App {
     @StateObject private var dropShelfStore: DropShelfViewModel
     @StateObject private var dynamicIslandStore: DynamicIslandViewModel
     @StateObject private var colorPickerStore: ColorPickerViewModel
+    @StateObject private var scrollingCaptureStore: ScrollingCaptureViewModel
     @AppStorage(ToolboxSettings.Keys.menuLayout)
     private var menuLayoutRaw = ToolboxSettings.defaultMenuLayout.rawValue
     @AppStorage(ToolboxSettings.Keys.language)
@@ -31,6 +32,10 @@ struct DeskCastApp: App {
     private var captureVideoEnabled = ToolboxSettings.defaultCaptureVideoEnabled
     @AppStorage(ToolboxSettings.Keys.captureVideoShowInMenu)
     private var captureVideoShowInMenu = ToolboxSettings.defaultCaptureVideoShowInMenu
+    @AppStorage(ToolboxSettings.Keys.scrollingCaptureEnabled)
+    private var scrollingCaptureEnabled = ToolboxSettings.defaultScrollingCaptureEnabled
+    @AppStorage(ToolboxSettings.Keys.scrollingCaptureShowInMenu)
+    private var scrollingCaptureShowInMenu = ToolboxSettings.defaultScrollingCaptureShowInMenu
     @AppStorage(ToolboxSettings.Keys.captureOCREnabled)
     private var captureOCREnabled = ToolboxSettings.defaultCaptureOCREnabled
     @AppStorage(ToolboxSettings.Keys.captureOCRShowInMenu)
@@ -66,6 +71,7 @@ struct DeskCastApp: App {
         _dropShelfStore = StateObject(wrappedValue: environment.dropShelf)
         _dynamicIslandStore = StateObject(wrappedValue: environment.dynamicIsland)
         _colorPickerStore = StateObject(wrappedValue: environment.colorPicker)
+        _scrollingCaptureStore = StateObject(wrappedValue: environment.scrollingCapture)
     }
 
     var body: some Scene {
@@ -78,6 +84,7 @@ struct DeskCastApp: App {
                 dropShelf: dropShelfStore,
                 island: dynamicIslandStore,
                 colorPicker: colorPickerStore,
+                scrollingCapture: scrollingCaptureStore,
                 visibility: menuPanelVisibility,
                 actions: menuPanelActions
             )
@@ -216,6 +223,15 @@ struct DeskCastApp: App {
                 Label(ToolboxToolID.captureOCR.title, systemImage: ToolboxToolID.captureOCR.systemImage)
             }
             .disabled(screenshotStore.isCapturing)
+        }
+
+        if shouldShowScrollingCaptureInMenu {
+            Button {
+                scrollingCaptureStore.start()
+            } label: {
+                Label(ToolboxToolID.scrollingCapture.title, systemImage: ToolboxToolID.scrollingCapture.systemImage)
+            }
+            .disabled(scrollingCaptureStore.isBusy)
         }
 
         if shouldShowPickColorInMenu {
@@ -371,6 +387,7 @@ struct DeskCastApp: App {
             captureSelectedArea: shouldShowCaptureSelectedAreaInMenu,
             captureVideo: shouldShowCaptureVideoInMenu,
             captureOCR: shouldShowCaptureOCRInMenu,
+            scrollingCapture: shouldShowScrollingCaptureInMenu,
             pickColor: shouldShowPickColorInMenu,
             imageSearch: shouldShowImageSearchInMenu,
             copyFinderPath: shouldShowCopyFinderPathInMenu,
@@ -418,6 +435,7 @@ struct DeskCastApp: App {
         shouldShowCaptureSelectedAreaInMenu
             || shouldShowCaptureVideoInMenu
             || shouldShowCaptureOCRInMenu
+            || shouldShowScrollingCaptureInMenu
             || shouldShowPickColorInMenu
             || shouldShowImageSearchInMenu
     }
@@ -432,6 +450,10 @@ struct DeskCastApp: App {
 
     private var shouldShowCaptureOCRInMenu: Bool {
         captureOCREnabled && captureOCRShowInMenu
+    }
+
+    private var shouldShowScrollingCaptureInMenu: Bool {
+        scrollingCaptureEnabled && scrollingCaptureShowInMenu
     }
 
     private var shouldShowPickColorInMenu: Bool {

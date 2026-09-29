@@ -3,7 +3,7 @@ import Combine
 import KeyboardShortcuts
 
 @MainActor
-final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
+final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting, CapturedImageReceiving {
     @Published private(set) var screenshots: [ScreenshotItem] = []
     @Published private(set) var isCapturing = false
 
@@ -382,6 +382,11 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
         }
 
         screenshots[index].fileURL = url
+    }
+
+    /// Adds an image made by another capture tool (scrolling capture).
+    func addCapturedImage(_ image: NSImage) {
+        add(image, screenAnchor: presenter?.screenAnchorForNewCapture(settings: settings.screenshotShelfSettings()))
     }
 
     /// Swaps in an edited image (annotations) and returns the updated item.

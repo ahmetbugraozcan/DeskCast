@@ -566,3 +566,18 @@
 "island.settings.clipboard" = "Clipboard History";
 "island.settings.clipboard.save" = "Save clipboard history on this Mac";
 "island.settings.clipboard.saveInfo" = "Keeps up to 200 copied texts, links and file references between launches, in a file only your user can read. Images are never saved. Turning this off deletes the saved history. When off, history stays in memory (30 items) and is forgotten when DeskCast quits.";
+
+/* Scrolling capture */
+"Scrolling Capture" = "Scrolling Capture";
+"scrollCapture.subtitle" = "Select an area, scroll it, and get one tall screenshot in the shelf.";
+"menu.tile.scrollingCapture" = "Scroll";
+"shortcuts.scrollingCapture" = "Scrolling capture:";
+"scrollCapture.select.title" = "Select the Area to Scroll";
+"scrollCapture.select.message" = "Pick the scrolling part of a window, then scroll it down slowly.";
+"scrollCapture.status.waiting" = "Scroll down slowly";
+"scrollCapture.status.scrolling" = "Capturing — keep scrolling";
+"scrollCapture.status.lostTrack" = "Lost track — scroll back up a little, then slower";
+"scrollCapture.status.limit" = "Maximum height reached — press Done";
+"scrollCapture.height" = "%ld pt tall";
+"scrollCapture.done" = "Scrolling capture added (%ld pt tall)";
+"scrollCapture.failed" = "Could not capture the area";
