@@ -97,10 +97,17 @@ final class AppEnvironment: ObservableObject {
         toastPresenter.islandRouter = dynamicIsland
         // The island panel is shown immediately (unlike the on-demand shelves),
         // so defer it to the next main-actor turn, after launch has finished.
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             dynamicIsland.start()
-            await Self.openDemoSettingsIfRequested()
+            await self?.openDemoWindowsIfRequested()
         }
+    }
+
+    private func openDemoWindowsIfRequested() async {
+        await Self.openDemoSettingsIfRequested()
+        #if DEBUG
+        DemoMenuPanelWindow.showIfRequested(environment: self)
+        #endif
     }
 
     /// Debug builds only: `-DeskCastDemoSettings <section>` opens Settings on

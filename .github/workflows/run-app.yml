@@ -59,8 +59,13 @@ jobs:
           capture compact-media -DeskCastDemoTrack YES
           capture notification -DeskCastDemoTrack YES -DeskCastDemoNotification "Akşam yemeğine geliyor musun?"
           capture compact-timer -DeskCastDemoTimer 25
-          for panel in launcher nowPlaying system volume controls aiAgents timer calendar notifications tools downloads scratchpad; do
+          echo "https://deskcast.app/download" | pbcopy
+          for panel in launcher nowPlaying system volume controls aiAgents timer calendar notifications tools downloads scratchpad clipboard files captures; do
             capture "panel-$panel" -DeskCastDemoTrack YES -DeskCastDemoTimer 25 -DeskCastDemoPanel "$panel"
+          done
+          capture menu-panel -DeskCastDemoTrack YES -DeskCastDemoMenuPanel YES
+          for section in menuBar dynamicIsland screenshots; do
+            capture "settings-$section" -DeskCastDemoSettings "$section"
           done
           ls -la shots
 
