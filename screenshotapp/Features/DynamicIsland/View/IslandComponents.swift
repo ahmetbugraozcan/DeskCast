@@ -296,6 +296,17 @@ enum IslandFormat {
         return AppLocalization.currentLanguage == .turkish ? "%\(value)" : "\(value)%"
     }
 
+    /// "1:05.3" (or "1:02:05.3" past an hour), tenths of a second.
+    static func stopwatch(_ interval: TimeInterval) -> String {
+        let tenths = max(Int((interval * 10).rounded(.down)), 0)
+        let seconds = tenths / 10
+        let (hours, minutes) = (seconds / 3600, (seconds % 3600) / 60)
+
+        return hours > 0
+            ? String(format: "%d:%02d:%02d.%d", hours, minutes, seconds % 60, tenths % 10)
+            : String(format: "%02d:%02d.%d", minutes, seconds % 60, tenths % 10)
+    }
+
     static func bytes(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file

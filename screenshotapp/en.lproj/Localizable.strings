@@ -480,3 +480,6 @@
 "island.clipboard.clear" = "Clear clipboard history";
 "island.clipboard.files" = "%ld files";
 "island.clipboard.image" = "Image · %ld × %ld";
+"island.stopwatch.title" = "Stopwatch";
+"island.stopwatch.lap" = "Lap";
+"island.stopwatch.lapNumber" = "Lap %ld";

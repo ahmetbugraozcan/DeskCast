@@ -602,3 +602,33 @@ extension DynamicIslandViewModelTests {
         #expect(viewModel.mode == .compactMedia)
     }
 }
+
+@MainActor
+struct IslandStopwatchTests {
+    private let start = Date(timeIntervalSinceReferenceDate: 10_000)
+
+    @Test func pausesResumesAndRecordsLapSplits() {
+        let stopwatch = IslandStopwatchViewModel()
+        stopwatch.toggle(at: start)
+        #expect(stopwatch.elapsed(at: start.addingTimeInterval(5)) == 5)
+
+        stopwatch.lap(at: start.addingTimeInterval(5))
+        stopwatch.toggle(at: start.addingTimeInterval(8))
+        #expect(stopwatch.isPaused)
+        #expect(stopwatch.elapsed(at: start.addingTimeInterval(100)) == 8)
+
+        // Resuming continues from 8 s; the pause doesn't count.
+        stopwatch.toggle(at: start.addingTimeInterval(100))
+        stopwatch.lap(at: start.addingTimeInterval(104))
+        #expect(stopwatch.laps == [5, 7])
+
+        stopwatch.reset()
+        #expect(!stopwatch.isActive)
+        #expect(stopwatch.laps.isEmpty)
+    }
+
+    @Test func formatsTenths() {
+        #expect(IslandFormat.stopwatch(65.37) == "01:05.3")
+        #expect(IslandFormat.stopwatch(3725.0) == "1:02:05.0")
+    }
+}

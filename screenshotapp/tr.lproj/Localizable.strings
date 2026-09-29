@@ -480,3 +480,6 @@
 "island.clipboard.clear" = "Pano geçmişini temizle";
 "island.clipboard.files" = "%ld dosya";
 "island.clipboard.image" = "Görsel · %ld × %ld";
+"island.stopwatch.title" = "Kronometre";
+"island.stopwatch.lap" = "Tur";
+"island.stopwatch.lapNumber" = "Tur %ld";

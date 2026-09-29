@@ -100,6 +100,8 @@ struct IslandExpandedView: View {
                     action: { store.clearNotificationHistory() }
                 )
             }
+        case .timer:
+            TimerModePicker(timer: panels.timer)
         case .clipboard:
             if !panels.clipboard.entries.isEmpty {
                 IslandIconButton(
@@ -143,7 +145,7 @@ struct IslandExpandedView: View {
         case .notifications:
             NotificationsPanelView(store: store)
         case .timer:
-            TimerPanelView(timer: panels.timer)
+            TimerPanelView(timer: panels.timer, stopwatch: panels.stopwatch)
         case .camera:
             CameraPanelView(model: panels.camera)
         case .downloads:

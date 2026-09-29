@@ -406,6 +406,8 @@ final class DownloadsViewModel: ObservableObject, IslandPanelActivating {
 
 @MainActor
 final class IslandTimerViewModel: ObservableObject {
+    /// Which page the Timer panel shows; the stopwatch runs independently.
+    @Published var panelMode = IslandTimerPanelMode.timer
     @Published private(set) var totalDuration: TimeInterval = 5 * 60
     @Published private(set) var endDate: Date?
     @Published private(set) var pausedRemaining: TimeInterval?
@@ -489,6 +491,69 @@ final class IslandTimerViewModel: ObservableObject {
             NSSound(named: NSSound.Name("Glass"))?.play()
             self.onFinish?()
         }
+    }
+}
+
+enum IslandTimerPanelMode: String, CaseIterable, Identifiable {
+    case timer
+    case stopwatch
+
+    var id: String { rawValue }
+
+    var titleKey: String {
+        switch self {
+        case .timer: "island.panel.timer"
+        case .stopwatch: "island.stopwatch.title"
+        }
+    }
+}
+
+// MARK: - Stopwatch
+
+@MainActor
+final class IslandStopwatchViewModel: ObservableObject {
+    /// Set while running: when the stopwatch would have started had it never paused.
+    @Published private(set) var startDate: Date?
+    /// Set while paused.
+    @Published private(set) var pausedElapsed: TimeInterval?
+    /// Split times (time since the previous lap), oldest first.
+    @Published private(set) var laps: [TimeInterval] = []
+
+    private var lastLapElapsed: TimeInterval = 0
+
+    var isRunning: Bool { startDate != nil }
+    var isPaused: Bool { pausedElapsed != nil }
+    var isActive: Bool { isRunning || isPaused }
+
+    func elapsed(at date: Date = Date()) -> TimeInterval {
+        if let startDate {
+            return max(date.timeIntervalSince(startDate), 0)
+        }
+        return pausedElapsed ?? 0
+    }
+
+    func toggle(at date: Date = Date()) {
+        if isRunning {
+            pausedElapsed = elapsed(at: date)
+            startDate = nil
+        } else {
+            startDate = date.addingTimeInterval(-(pausedElapsed ?? 0))
+            pausedElapsed = nil
+        }
+    }
+
+    func lap(at date: Date = Date()) {
+        guard isRunning else { return }
+        let total = elapsed(at: date)
+        laps.append(total - lastLapElapsed)
+        lastLapElapsed = total
+    }
+
+    func reset() {
+        startDate = nil
+        pausedElapsed = nil
+        laps = []
+        lastLapElapsed = 0
     }
 }
 
@@ -591,6 +656,7 @@ final class IslandPanelModels {
     let controls = ControlsViewModel()
     let camera = CameraMirrorViewModel()
     let clipboard = ClipboardHistoryViewModel()
+    let stopwatch = IslandStopwatchViewModel()
     let spotify = SpotifyAccountViewModel()
     let extras: NowPlayingExtrasViewModel
     let screenshots: ScreenshotShelfViewModel
