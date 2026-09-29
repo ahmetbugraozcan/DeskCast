@@ -121,20 +121,23 @@ struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selectedSection) {
-                Section("App") {
+                Section(AppLocalization.string("App")) {
                     ForEach(SettingsSection.appSections) { section in
                         sidebarRow(section)
                     }
                 }
 
-                Section("Features") {
+                Section(AppLocalization.string("Features")) {
                     ForEach(SettingsSection.featureSections) { section in
                         sidebarRow(section)
                     }
                 }
             }
             .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 150, ideal: 170)
+            .navigationSplitViewColumnWidth(min: 170, ideal: 196)
+            // Settings has no reason to collapse its sidebar; dropping the
+            // toggle also removes the empty toolbar row above every page.
+            .toolbar(removing: .sidebarToggle)
         } detail: {
             selectedPane
         }
@@ -517,7 +520,7 @@ struct SettingsView: View {
     private var shortcutsPane: some View {
         SettingsPage(section: .shortcuts) {
             Form {
-                Section("Screenshots") {
+                Section(AppLocalization.string("Screenshots")) {
                     KeyboardShortcuts.Recorder(
                         AppLocalization.string("Selected area:"),
                         name: .captureSelectedArea
@@ -533,7 +536,7 @@ struct SettingsView: View {
                     .disabled(!captureVideoEnabled)
                 }
 
-                Section("Files") {
+                Section(AppLocalization.string("Files")) {
                     KeyboardShortcuts.Recorder(
                         AppLocalization.string("Drop shelf:"),
                         name: .openDropShelf
@@ -783,19 +786,19 @@ private struct MenuLayoutSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text("Layout")
+            Text(AppLocalization.string("Layout"))
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 4)
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 16) {
-                    Text("Menu layout")
+                    Text(AppLocalization.string("Menu layout"))
                         .font(.system(size: 13, weight: .medium))
 
                     Spacer()
 
-                    Picker("Menu layout", selection: $selection) {
+                    Picker(AppLocalization.string("Menu layout"), selection: $selection) {
                         ForEach(ToolboxMenuLayout.allCases) { layout in
                             Text(layout.title).tag(layout.rawValue)
                         }
@@ -960,7 +963,7 @@ private struct ToolSettingsRow: View {
             }
 
             HStack(spacing: 12) {
-                Text("Show in menu")
+                Text(AppLocalization.string("Show in menu"))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(isEnabled ? .secondary : .tertiary)
 

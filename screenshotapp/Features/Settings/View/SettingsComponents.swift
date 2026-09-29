@@ -78,7 +78,7 @@ struct FeatureResetSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text("Reset Settings")
+            Text(AppLocalization.string("Reset Settings"))
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 4)
@@ -89,7 +89,7 @@ struct FeatureResetSection: View {
                 Button(role: .destructive) {
                     resetAction()
                 } label: {
-                    Label("Reset All Settings", systemImage: "arrow.counterclockwise")
+                    Label(AppLocalization.string("Reset All Settings"), systemImage: "arrow.counterclockwise")
                 }
             }
             .padding(14)

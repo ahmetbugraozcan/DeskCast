@@ -7,7 +7,7 @@ struct FeaturePermissionManagerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text("Permissions")
+            Text(AppLocalization.string("Permissions"))
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 4)
@@ -28,7 +28,7 @@ struct FeaturePermissionManagerView: View {
                     Button(role: .destructive) {
                         store.reset(permissions)
                     } label: {
-                        Label("Reset Feature Permissions", systemImage: "arrow.counterclockwise")
+                        Label(AppLocalization.string("Reset Feature Permissions"), systemImage: "arrow.counterclockwise")
                     }
                     .buttonStyle(.bordered)
                     .disabled(permissions.contains { store.isPending($0) })
@@ -93,7 +93,7 @@ private struct PermissionSettingsRow: View {
                 Button {
                     requestAction()
                 } label: {
-                    Label("Request", systemImage: "person.crop.circle.badge.checkmark")
+                    Label(AppLocalization.string("Request"), systemImage: "person.crop.circle.badge.checkmark")
                 }
                 .disabled(status.isGranted || isPending)
 
@@ -102,13 +102,13 @@ private struct PermissionSettingsRow: View {
                 } label: {
                     Image(systemName: "gearshape")
                 }
-                .help("Open Privacy Settings")
+                .help(AppLocalization.string("Open Privacy Settings"))
                 .disabled(isPending)
 
                 Button(role: .destructive) {
                     resetAction()
                 } label: {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
+                    Label(AppLocalization.string("Reset"), systemImage: "arrow.counterclockwise")
                 }
                 .disabled(isPending)
             }

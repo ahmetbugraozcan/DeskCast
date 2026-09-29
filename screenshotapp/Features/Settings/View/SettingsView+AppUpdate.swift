@@ -22,7 +22,7 @@ extension SettingsView {
 
             SettingsControlSection(title: AppLocalization.string("Developer")) {
                 SettingsControlRow(title: AppLocalization.string("Name")) {
-                    Text("Ahmet Buğra Özcan")
+                    Text(verbatim: "Ahmet Buğra Özcan")
                         .foregroundStyle(.secondary)
                 }
 

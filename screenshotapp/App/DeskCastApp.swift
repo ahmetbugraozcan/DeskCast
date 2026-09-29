@@ -226,14 +226,14 @@ struct DeskCastApp: App {
         Button {
             screenshotStore.copyAll()
         } label: {
-            Label("Copy All", systemImage: "doc.on.doc")
+            Label(AppLocalization.string("Copy All"), systemImage: "doc.on.doc")
         }
         .disabled(screenshotStore.screenshots.isEmpty)
 
         Button(role: .destructive) {
             screenshotStore.clearAll()
         } label: {
-            Label("Clear All", systemImage: "trash")
+            Label(AppLocalization.string("Clear All"), systemImage: "trash")
         }
         .disabled(screenshotStore.screenshots.isEmpty)
     }
@@ -277,14 +277,14 @@ struct DeskCastApp: App {
         Button {
             dropShelfStore.sendAll()
         } label: {
-            Label("Send Shelf Items", systemImage: "paperplane")
+            Label(AppLocalization.string("Send Shelf Items"), systemImage: "paperplane")
         }
         .disabled(dropShelfStore.items.isEmpty)
 
         Button(role: .destructive) {
             dropShelfStore.clearAll()
         } label: {
-            Label("Clear Drop Shelf", systemImage: "trash")
+            Label(AppLocalization.string("Clear Drop Shelf"), systemImage: "trash")
         }
         .disabled(dropShelfStore.items.isEmpty)
     }
@@ -304,7 +304,7 @@ struct DeskCastApp: App {
             dynamicIslandStore.togglePlayPause()
         } label: {
             Label(
-                "Play / Pause",
+                AppLocalization.string("Play / Pause"),
                 systemImage: dynamicIslandStore.nowPlaying?.isPlaying == true ? "pause.fill" : "play.fill"
             )
         }
@@ -313,14 +313,14 @@ struct DeskCastApp: App {
         Button {
             dynamicIslandStore.previousTrack()
         } label: {
-            Label("Previous Track", systemImage: "backward.fill")
+            Label(AppLocalization.string("Previous Track"), systemImage: "backward.fill")
         }
         .disabled(dynamicIslandStore.nowPlaying == nil)
 
         Button {
             dynamicIslandStore.nextTrack()
         } label: {
-            Label("Next Track", systemImage: "forward.fill")
+            Label(AppLocalization.string("Next Track"), systemImage: "forward.fill")
         }
         .disabled(dynamicIslandStore.nowPlaying == nil)
     }
@@ -331,7 +331,7 @@ struct DeskCastApp: App {
             NSApp.activate(ignoringOtherApps: true)
             openSettings()
         } label: {
-            Label("Settings", systemImage: "gearshape")
+            Label(AppLocalization.string("Settings"), systemImage: "gearshape")
         }
 
         Divider()

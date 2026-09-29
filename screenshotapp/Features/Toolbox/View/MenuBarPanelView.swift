@@ -12,6 +12,12 @@ struct MenuBarPanelVisibility {
     var dropShelf: Bool
     var dynamicIsland: Bool
 
+    var toolCount: Int {
+        [captureSelectedArea, captureVideo, captureOCR, imageSearch, copyFinderPath, dropShelf, dynamicIsland]
+            .filter { $0 }
+            .count
+    }
+
     var hasTools: Bool {
         captureSelectedArea || captureVideo || captureOCR || imageSearch || copyFinderPath || dropShelf || dynamicIsland
     }
@@ -97,7 +103,10 @@ struct MenuBarPanelView: View {
     // MARK: - Tools
 
     private var toolGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+        // Four columns once a third row would hold a lone tile.
+        let columnCount = visibility.toolCount > 6 ? 4 : 3
+
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columnCount), spacing: 8) {
             if visibility.captureSelectedArea {
                 MenuPanelTile(title: AppLocalization.string("menu.tile.screenshot"), systemImage: "camera.viewfinder", tint: .purple) {
                     runAfterDismiss { screenshots.captureSelectedArea() }
