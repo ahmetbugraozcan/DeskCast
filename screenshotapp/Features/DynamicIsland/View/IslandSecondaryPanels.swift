@@ -23,8 +23,13 @@ struct ControlsPanelView: View {
                 IslandTileButton(
                     title: AppLocalization.string("island.controls.keepAwake"),
                     systemImage: "cup.and.saucer.fill",
+                    subtitle: controls.keepAwakeUntil.map {
+                        AppLocalization.formatted("island.controls.keepAwake.until", $0.formatted(date: .omitted, time: .shortened))
+                    },
                     isOn: controls.isKeepingAwake
                 ) { controls.toggleKeepAwake() }
+                .contextMenu { keepAwakeMenu }
+                .help(AppLocalization.string("island.controls.keepAwake.help"))
 
                 IslandTileButton(
                     title: AppLocalization.string("island.controls.mute"),
@@ -79,6 +84,32 @@ struct ControlsPanelView: View {
         }
         .activatesIslandPanel(controls)
         .activatesIslandPanel(audio)
+    }
+}
+
+extension ControlsPanelView {
+    @ViewBuilder
+    var keepAwakeMenu: some View {
+        ForEach(ControlsViewModel.keepAwakeMinuteOptions, id: \.self) { minutes in
+            Button(
+                minutes < 60
+                    ? AppLocalization.formatted("island.timer.minutes", minutes)
+                    : AppLocalization.formatted("island.controls.keepAwake.hours", minutes / 60)
+            ) {
+                controls.keepAwake(forMinutes: minutes)
+            }
+        }
+
+        Button(AppLocalization.string("island.controls.keepAwake.indefinitely")) {
+            controls.keepAwake(forMinutes: nil)
+        }
+
+        if controls.isKeepingAwake {
+            Divider()
+            Button(AppLocalization.string("island.controls.keepAwake.off")) {
+                controls.stopKeepingAwake()
+            }
+        }
     }
 }
 

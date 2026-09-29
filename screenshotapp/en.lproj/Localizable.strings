@@ -484,3 +484,8 @@
 "island.stopwatch.lap" = "Lap";
 "island.stopwatch.lapNumber" = "Lap %ld";
 "Finder Path" = "Finder Path";
+"island.controls.keepAwake.until" = "Until %@";
+"island.controls.keepAwake.help" = "Click to toggle; right-click for a duration";
+"island.controls.keepAwake.hours" = "%ld h";
+"island.controls.keepAwake.indefinitely" = "Until turned off";
+"island.controls.keepAwake.off" = "Turn off";

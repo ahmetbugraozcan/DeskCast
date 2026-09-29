@@ -563,8 +563,13 @@ final class IslandStopwatchViewModel: ObservableObject {
 final class ControlsViewModel: ObservableObject, IslandPanelActivating {
     @Published private(set) var isDarkMode = false
     @Published private(set) var isKeepingAwake = false
+    /// End of a timed keep-awake; `nil` while off or on until turned off.
+    @Published private(set) var keepAwakeUntil: Date?
+
+    static let keepAwakeMinuteOptions = [30, 60, 120]
 
     private let service: SystemControlsService
+    private var keepAwakeTask: Task<Void, Never>?
 
     init(service: SystemControlsService? = nil) {
         let service = service ?? SystemControlsService()
@@ -588,7 +593,39 @@ final class ControlsViewModel: ObservableObject, IslandPanelActivating {
     }
 
     func toggleKeepAwake() {
-        service.setKeepAwake(!service.isKeepingAwake)
+        if service.isKeepingAwake {
+            stopKeepingAwake()
+        } else {
+            keepAwake(forMinutes: nil)
+        }
+    }
+
+    /// Keeps the display awake for a while (`nil` = until turned off).
+    func keepAwake(forMinutes minutes: Int?) {
+        keepAwakeTask?.cancel()
+        keepAwakeTask = nil
+        service.setKeepAwake(true)
+        isKeepingAwake = service.isKeepingAwake
+
+        guard isKeepingAwake, let minutes else {
+            keepAwakeUntil = nil
+            return
+        }
+
+        let until = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        keepAwakeUntil = until
+        keepAwakeTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(until.timeIntervalSinceNow))
+            guard !Task.isCancelled else { return }
+            self?.stopKeepingAwake()
+        }
+    }
+
+    func stopKeepingAwake() {
+        keepAwakeTask?.cancel()
+        keepAwakeTask = nil
+        keepAwakeUntil = nil
+        service.setKeepAwake(false)
         isKeepingAwake = service.isKeepingAwake
     }
 

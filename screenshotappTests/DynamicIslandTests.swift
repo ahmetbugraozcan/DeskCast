@@ -632,3 +632,22 @@ struct IslandStopwatchTests {
         #expect(IslandFormat.stopwatch(3725.0) == "1:02:05.0")
     }
 }
+
+@MainActor
+struct KeepAwakeTests {
+    @Test func timedKeepAwakeReportsItsEndAndTurnsOff() throws {
+        let controls = ControlsViewModel()
+        controls.keepAwake(forMinutes: 30)
+        #expect(controls.isKeepingAwake)
+        let until = try #require(controls.keepAwakeUntil)
+        #expect(abs(until.timeIntervalSinceNow - 30 * 60) < 5)
+
+        // Switching to "until turned off" drops the end time.
+        controls.keepAwake(forMinutes: nil)
+        #expect(controls.isKeepingAwake)
+        #expect(controls.keepAwakeUntil == nil)
+
+        controls.stopKeepingAwake()
+        #expect(!controls.isKeepingAwake)
+    }
+}

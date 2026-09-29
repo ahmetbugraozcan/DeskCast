@@ -484,3 +484,8 @@
 "island.stopwatch.lap" = "Tur";
 "island.stopwatch.lapNumber" = "Tur %ld";
 "Finder Path" = "Finder Yolu";
+"island.controls.keepAwake.until" = "%@ kadar";
+"island.controls.keepAwake.help" = "Aç/kapat için tıkla; süre için sağ tıkla";
+"island.controls.keepAwake.hours" = "%ld sa";
+"island.controls.keepAwake.indefinitely" = "Kapatılana kadar";
+"island.controls.keepAwake.off" = "Kapat";
