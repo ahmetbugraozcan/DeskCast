@@ -92,6 +92,9 @@ private struct ClipboardSearchField: View {
         .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(IslandPalette.card))
         .onChange(of: isFocused) { _, focused in model.isSearchFocused = focused }
         .onChange(of: model.isSearchFocused) { _, focused in if !focused { isFocused = false } }
+        // Closing the island removes the field without a focus change; don't
+        // leave the island thinking it still holds typing (it would stay open).
+        .onDisappear { model.isSearchFocused = false }
     }
 }
 

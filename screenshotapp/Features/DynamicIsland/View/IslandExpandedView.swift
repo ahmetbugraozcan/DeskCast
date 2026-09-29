@@ -192,7 +192,8 @@ extension View {
 struct IslandLauncherView: View {
     @ObservedObject var store: DynamicIslandViewModel
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+    // Six columns keep three rows for up to 18 panels; more scroll.
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 6)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -217,19 +218,24 @@ struct IslandLauncherView: View {
             }
             .frame(height: 26)
 
-            LazyVGrid(columns: columns, spacing: 8) {
-                ForEach(Array(store.preferences.visiblePanels.enumerated()), id: \.element) { index, panel in
-                    LauncherTile(
-                        panel: panel,
-                        isSelected: store.lastSelectedPanel == panel,
-                        showsShortcut: store.preferences.panelShortcutsEnabled
-                    ) {
-                        store.select(panel)
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 8) {
+                    ForEach(Array(store.preferences.visiblePanels.enumerated()), id: \.element) { index, panel in
+                        LauncherTile(
+                            panel: panel,
+                            isSelected: store.lastSelectedPanel == panel,
+                            showsShortcut: store.preferences.panelShortcutsEnabled
+                        ) {
+                            store.select(panel)
+                        }
+                        .transition(.scale(scale: 0.8).combined(with: .opacity))
+                        .animation(.spring(response: 0.4, dampingFraction: 0.75).delay(Double(index) * 0.015), value: store.expandedContent)
                     }
-                    .transition(.scale(scale: 0.8).combined(with: .opacity))
-                    .animation(.spring(response: 0.4, dampingFraction: 0.75).delay(Double(index) * 0.015), value: store.expandedContent)
                 }
+                .padding(.bottom, 8)
             }
+            .scrollIndicators(.never)
+            .islandScrollFade()
         }
     }
 }

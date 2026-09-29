@@ -593,3 +593,12 @@
 "island.devices.right" = "Sağ";
 "island.devices.case" = "Kutu";
 "island.devices.noLevel" = "Pil bilgisi yok";
+"island.devices.kind.headphones" = "Kulaklık";
+"island.devices.kind.keyboard" = "Klavye";
+"island.devices.kind.mouse" = "Fare";
+"island.devices.kind.trackpad" = "Trackpad";
+"island.devices.kind.gameController" = "Oyun kumandası";
+"island.devices.kind.speaker" = "Hoparlör";
+"island.devices.kind.other" = "Aksesuar";
+"island.devices.ok" = "Pil iyi durumda";
+"island.devices.low" = "Pil azaldı — yakında şarj edin";

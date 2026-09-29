@@ -593,3 +593,12 @@
 "island.devices.right" = "R";
 "island.devices.case" = "Case";
 "island.devices.noLevel" = "No battery info";
+"island.devices.kind.headphones" = "Headphones";
+"island.devices.kind.keyboard" = "Keyboard";
+"island.devices.kind.mouse" = "Mouse";
+"island.devices.kind.trackpad" = "Trackpad";
+"island.devices.kind.gameController" = "Game controller";
+"island.devices.kind.speaker" = "Speaker";
+"island.devices.kind.other" = "Accessory";
+"island.devices.ok" = "Battery good";
+"island.devices.low" = "Low battery — charge soon";

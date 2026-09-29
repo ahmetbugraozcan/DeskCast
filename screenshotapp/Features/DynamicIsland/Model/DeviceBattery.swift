@@ -24,6 +24,8 @@ nonisolated struct DeviceBattery: Identifiable, Equatable, Sendable {
             }
         }
 
+        var titleKey: String { "island.devices.kind.\(rawValue)" }
+
         var systemImage: String {
             switch self {
             case .headphones: "airpods"
