@@ -174,6 +174,9 @@ struct DynamicIslandView: View {
         return frames
     }
 
+    /// Room for a compact toast's message on the right wing.
+    static let compactToastTextWidth: CGFloat = 110
+
     /// Full island frame for a mode, including the flared top "ears".
     static func islandSize(
         for mode: DynamicIslandMode,
@@ -188,9 +191,13 @@ struct DynamicIslandView: View {
         switch mode {
         case .idle:
             return CGSize(width: notch.width + ears, height: notch.height)
-        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent:
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent, .compactToast:
             // Music with a running timer shows the countdown on the right wing.
-            let sideWidth = notch.height + (mode == .compactMedia && !combinesTimer ? 18 : 34)
+            let sideWidth = switch mode {
+            case .compactMedia where !combinesTimer: notch.height + 18
+            case .compactToast: notch.height + compactToastTextWidth - 12
+            default: notch.height + 34
+            }
             let centerWidth = geometry.hasNotch ? notch.width : max(notch.width, 220)
             return CGSize(width: centerWidth + sideWidth * 2 + ears, height: notch.height)
         case .notification:
@@ -209,7 +216,8 @@ struct DynamicIslandView: View {
     static func cornerMetrics(for mode: DynamicIslandMode) -> (top: CGFloat, bottom: CGFloat) {
         switch mode {
         case .idle: return (top: 6, bottom: 9)
-        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent: return (top: 6, bottom: 13)
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent, .compactToast:
+            return (top: 6, bottom: 13)
         case .notification: return (top: 12, bottom: 24)
         case .expanded: return (top: 14, bottom: 30)
         }
@@ -342,6 +350,12 @@ struct DynamicIslandView: View {
                 geometry: geometry
             )
             .transition(Self.contentTransition)
+        case .compactToast:
+            if let notification = store.activeNotification {
+                CompactToastView(notification: notification, geometry: geometry)
+                    .id(notification.id)
+                    .transition(Self.contentTransition)
+            }
         case .notification:
             if let notification = store.activeNotification {
                 NotificationBannerView(notification: notification, geometry: geometry) { url in

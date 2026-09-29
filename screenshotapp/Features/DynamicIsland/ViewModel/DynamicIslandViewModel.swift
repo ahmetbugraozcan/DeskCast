@@ -85,6 +85,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     static let pausedMediaLinger: TimeInterval = 300
     private static let hoverEndDelay: Duration = .milliseconds(160)
     static let actionBannerSeconds = 15
+    /// Compact confirmations only need a glance.
+    static let compactToastSeconds = 2
     private static let lowBatteryThresholds = [20, 10]
     private static let maxHistoryCount = 50
     private static let lastPanelKey = "dynamicIsland.lastPanel"
@@ -167,12 +169,16 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         }
 
         // A banner stays put while hovered so it can be read and clicked.
-        if activeNotification != nil {
+        if let activeNotification, !activeNotification.isCompact {
             return .notification
         }
 
         if isExpandedByHover {
             return .expanded
+        }
+
+        if activeNotification != nil {
+            return .compactToast
         }
 
         switch primaryActivity {
@@ -541,7 +547,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
                 title: AppConstants.displayName,
                 message: message,
                 systemImage: systemImage,
-                style: DynamicIslandNotificationStyle(style)
+                style: DynamicIslandNotificationStyle(style),
+                // Confirmations stay small; problems get a banner to read.
+                isCompact: style == .success
             )
         )
         return true
@@ -550,7 +558,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     private func show(_ notification: DynamicIslandNotification) {
         activeNotification = notification
 
-        if isHovering {
+        if isHovering, !notification.isCompact {
             notificationDismissTask?.cancel()
             notificationDismissTask = nil
         } else {
@@ -563,7 +571,11 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
         // Banners with a button (e.g. "Join") stay long enough to reach it.
         let seconds = preferences.notificationDurationSeconds
-        let duration = Duration.seconds(notification.action == nil ? seconds : max(seconds, Self.actionBannerSeconds))
+        let duration: Duration = if notification.isCompact {
+            .seconds(min(seconds, Self.compactToastSeconds))
+        } else {
+            .seconds(notification.action == nil ? seconds : max(seconds, Self.actionBannerSeconds))
+        }
         let id = notification.id
 
         notificationDismissTask = Task { [weak self] in
@@ -1064,6 +1076,10 @@ extension DynamicIslandViewModel {
         let timerMinutes = defaults.integer(forKey: "DeskCastDemoTimer")
         if timerMinutes > 0 {
             timer.start(minutes: timerMinutes)
+        }
+
+        if let message = defaults.string(forKey: "DeskCastDemoToast") {
+            _ = postToast(message, systemImage: ToastStyle.success.systemImage, style: .success)
         }
 
         if let message = defaults.string(forKey: "DeskCastDemoNotification") {

@@ -30,6 +30,9 @@ struct DynamicIslandNotification: Identifiable {
     var sourceAppURL: URL?
     /// Optional button on the banner (e.g. "Join" for a meeting link).
     var action: DynamicIslandNotificationAction?
+    /// A quick confirmation (e.g. "Saved to DeskCast") shown in the closed
+    /// island's wings instead of a full banner.
+    var isCompact = false
 }
 
 struct DynamicIslandNotificationAction: Equatable {
@@ -47,13 +50,14 @@ enum DynamicIslandMode: Equatable {
     case compactWeather
     case compactFocus
     case compactAgent
+    case compactToast
     case notification
     case expanded
 
     /// The closed island showing something beside the camera.
     var isCompact: Bool {
         switch self {
-        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent: true
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent, .compactToast: true
         case .idle, .notification, .expanded: false
         }
     }

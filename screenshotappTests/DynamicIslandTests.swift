@@ -370,7 +370,11 @@ struct DynamicIslandViewModelTests {
 
         presenter.isVisible = true
         #expect(viewModel.postToast("Copied", systemImage: "checkmark", style: .success))
-        #expect(viewModel.activeNotification?.message == "Copied")
+        // Confirmations stay in the closed island; problems get a banner.
+        #expect(viewModel.activeNotification?.message == "Copied" && viewModel.mode == .compactToast)
+
+        viewModel.dismissNotification()
+        #expect(viewModel.postToast("Could not save", systemImage: "xmark.circle.fill", style: .error) && viewModel.mode == .notification)
     }
 
     @Test func pluggingInChargerPostsBatteryBanner() {

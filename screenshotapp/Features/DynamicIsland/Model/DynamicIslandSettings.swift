@@ -228,7 +228,7 @@ enum DynamicIslandSettings {
     static let defaultHapticsEnabled = true
     static let defaultHidesInFullScreen = true
     static let defaultDisplayTarget = IslandDisplayTarget.automatic
-    static let defaultShowsInCaptures = false
+    static let defaultShowsInCaptures = true
     static let defaultShowsOutline = false
     static let defaultPanelShortcutsEnabled = true
     static let defaultShowsSideButtons = true
