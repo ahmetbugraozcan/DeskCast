@@ -60,18 +60,49 @@ enum IslandIdleContent: String, CaseIterable, Identifiable {
 }
 
 /// Which page the island shows when it opens again.
-enum IslandReopenTarget: String, CaseIterable, Identifiable {
+enum IslandReopenTarget: Hashable, Identifiable, CaseIterable, RawRepresentable {
     case lastPanel
     case launcher
+    /// Always the same panel.
+    case panel(IslandPanel)
+
+    static var allCases: [IslandReopenTarget] {
+        [.lastPanel, .launcher] + IslandPanel.allCases.map(IslandReopenTarget.panel)
+    }
+
+    init?(rawValue: String) {
+        switch rawValue {
+        case "lastPanel": self = .lastPanel
+        case "launcher": self = .launcher
+        default:
+            guard rawValue.hasPrefix(Self.panelPrefix),
+                  let panel = IslandPanel(rawValue: String(rawValue.dropFirst(Self.panelPrefix.count))) else {
+                return nil
+            }
+            self = .panel(panel)
+        }
+    }
+
+    var rawValue: String {
+        switch self {
+        case .lastPanel: "lastPanel"
+        case .launcher: "launcher"
+        case .panel(let panel): Self.panelPrefix + panel.rawValue
+        }
+    }
 
     var id: String { rawValue }
 
+    /// Resolved in the view layer; a fixed panel shows the panel's own title.
     var titleKey: String {
         switch self {
         case .lastPanel: "island.settings.reopen.lastPanel"
         case .launcher: "island.settings.reopen.launcher"
+        case .panel(let panel): panel.titleKey
         }
     }
+
+    private static let panelPrefix = "panel."
 }
 
 /// Which screen hosts the island.
@@ -112,6 +143,7 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     var hoverDelay = DynamicIslandSettings.defaultHoverDelay
     var closeDelay = DynamicIslandSettings.defaultCloseDelay
     var reopenTarget = DynamicIslandSettings.defaultReopenTarget
+    var opensToActivity = DynamicIslandSettings.defaultOpensToActivity
     var gesturesEnabled = DynamicIslandSettings.defaultGesturesEnabled
     var hapticsEnabled = DynamicIslandSettings.defaultHapticsEnabled
     var hidesInFullScreen = DynamicIslandSettings.defaultHidesInFullScreen
@@ -148,6 +180,7 @@ enum DynamicIslandSettings {
         static let hoverDelay = "dynamicIsland.hoverDelay"
         static let closeDelay = "dynamicIsland.closeDelay"
         static let reopenTarget = "dynamicIsland.reopenTarget"
+        static let opensToActivity = "dynamicIsland.opensToActivity"
         static let gesturesEnabled = "dynamicIsland.gesturesEnabled"
         static let hapticsEnabled = "dynamicIsland.hapticsEnabled"
         static let hidesInFullScreen = "dynamicIsland.hidesInFullScreen"
@@ -182,6 +215,8 @@ enum DynamicIslandSettings {
     /// Grace period before an open island closes once the pointer leaves it.
     static let defaultCloseDelay = 0.5
     static let defaultReopenTarget = IslandReopenTarget.lastPanel
+    /// Opening during music, a timer or a banner goes straight to that page.
+    static let defaultOpensToActivity = true
     static let defaultGesturesEnabled = true
     static let defaultHapticsEnabled = true
     static let defaultHidesInFullScreen = true
@@ -222,6 +257,7 @@ enum DynamicIslandSettings {
             Keys.hoverDelay: defaultHoverDelay,
             Keys.closeDelay: defaultCloseDelay,
             Keys.reopenTarget: defaultReopenTarget.rawValue,
+            Keys.opensToActivity: defaultOpensToActivity,
             Keys.gesturesEnabled: defaultGesturesEnabled,
             Keys.hapticsEnabled: defaultHapticsEnabled,
             Keys.hidesInFullScreen: defaultHidesInFullScreen,
@@ -251,6 +287,7 @@ enum DynamicIslandSettings {
             hoverDelay: clampedHoverDelay(defaults.double(forKey: Keys.hoverDelay)),
             closeDelay: clampedCloseDelay(defaults.double(forKey: Keys.closeDelay)),
             reopenTarget: enumValue(defaults, Keys.reopenTarget, default: defaultReopenTarget),
+            opensToActivity: defaults.bool(forKey: Keys.opensToActivity),
             gesturesEnabled: defaults.bool(forKey: Keys.gesturesEnabled),
             hapticsEnabled: defaults.bool(forKey: Keys.hapticsEnabled),
             hidesInFullScreen: defaults.bool(forKey: Keys.hidesInFullScreen),

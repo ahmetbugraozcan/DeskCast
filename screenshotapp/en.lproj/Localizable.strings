@@ -414,6 +414,8 @@
 "island.settings.reopen" = "When reopened";
 "island.settings.reopen.lastPanel" = "Last panel";
 "island.settings.reopen.launcher" = "Panel grid";
+"island.settings.opensToActivity" = "Open to the current activity";
+"island.settings.opensToActivityHint" = "Opening during music, a timer, a working AI agent or a notification goes straight to its page. Otherwise the island opens on the page chosen above.";
 "island.settings.whileIdle" = "While Idle";
 "island.settings.idle.nothing" = "Nothing";
 "island.settings.idle.battery" = "Battery";

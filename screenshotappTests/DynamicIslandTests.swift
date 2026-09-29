@@ -192,6 +192,47 @@ struct DynamicIslandViewModelTests {
         #expect(viewModel.expandedContent == .launcher)
     }
 
+    @Test func openingDuringAnActivityShowsItsPageThenReturnsToTheLastPanel() {
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.openMode = .click })
+        viewModel.select(.clipboard)
+
+        viewModel.timer.start(minutes: 5)
+        viewModel.toggleExpanded()
+        #expect(viewModel.expandedContent == .panel(.timer))
+        viewModel.toggleExpanded()
+
+        nowPlaying.emit(track("a"))
+        viewModel.toggleExpanded()
+        #expect(viewModel.expandedContent == .panel(.nowPlaying))
+        viewModel.toggleExpanded()
+
+        // Without an activity the user's last panel comes back.
+        viewModel.timer.reset()
+        nowPlaying.emit(nil)
+        viewModel.toggleExpanded()
+        #expect(viewModel.expandedContent == .panel(.clipboard))
+    }
+
+    @Test func activityOpeningCanBeTurnedOffAndAFixedPanelChosen() {
+        let viewModel = makeViewModel(settings: StubIslandSettings {
+            $0.openMode = .click
+            $0.opensToActivity = false
+            $0.reopenTarget = .panel(.calendar)
+        })
+        viewModel.timer.start(minutes: 5)
+        viewModel.toggleExpanded()
+        #expect(viewModel.expandedContent == .panel(.calendar))
+    }
+
+    @Test func reopenTargetRawValuesRoundTrip() {
+        for target in IslandReopenTarget.allCases {
+            #expect(IslandReopenTarget(rawValue: target.rawValue) == target)
+        }
+        #expect(IslandReopenTarget(rawValue: "launcher") == .launcher)
+        #expect(IslandReopenTarget(rawValue: "panel.clipboard") == .panel(.clipboard))
+        #expect(IslandReopenTarget(rawValue: "panel.nope") == nil)
+    }
+
     @Test func swipesOpenCloseAndSkipTracks() {
         let viewModel = makeViewModel(settings: StubIslandSettings { $0.openMode = .click })
         nowPlaying.emit(track("a"))

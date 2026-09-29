@@ -414,6 +414,8 @@
 "island.settings.reopen" = "Yeniden açıldığında";
 "island.settings.reopen.lastPanel" = "Son panel";
 "island.settings.reopen.launcher" = "Panel ızgarası";
+"island.settings.opensToActivity" = "Etkinliğin sayfasında aç";
+"island.settings.opensToActivityHint" = "Müzik, zamanlayıcı, çalışan bir yapay zekâ ajanı ya da bildirim varken ada doğrudan onun sayfasında açılır. Aksi hâlde yukarıda seçilen sayfada açılır.";
 "island.settings.whileIdle" = "Beklerken";
 "island.settings.idle.nothing" = "Hiçbir şey";
 "island.settings.idle.battery" = "Pil";

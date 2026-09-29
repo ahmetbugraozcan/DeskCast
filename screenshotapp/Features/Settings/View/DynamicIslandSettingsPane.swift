@@ -16,6 +16,8 @@ struct DynamicIslandSettingsPane: View {
     private var hapticsEnabled = DynamicIslandSettings.defaultHapticsEnabled
     @AppStorage(DynamicIslandSettings.Keys.reopenTarget)
     private var reopenTarget = DynamicIslandSettings.defaultReopenTarget
+    @AppStorage(DynamicIslandSettings.Keys.opensToActivity)
+    private var opensToActivity = DynamicIslandSettings.defaultOpensToActivity
     @AppStorage(DynamicIslandSettings.Keys.idleContent)
     private var idleContent = DynamicIslandSettings.defaultIdleContent
     @AppStorage(DynamicIslandSettings.Keys.showsTrackChanges)
@@ -145,11 +147,24 @@ struct DynamicIslandSettingsPane: View {
 
             SettingsPickerRow(title: AppLocalization.string("island.settings.reopen")) {
                 Picker("", selection: $reopenTarget) {
-                    ForEach(IslandReopenTarget.allCases) { target in
-                        Text(AppLocalization.string(target.titleKey)).tag(target)
+                    Text(AppLocalization.string(IslandReopenTarget.lastPanel.titleKey)).tag(IslandReopenTarget.lastPanel)
+                    Text(AppLocalization.string(IslandReopenTarget.launcher.titleKey)).tag(IslandReopenTarget.launcher)
+                    Divider()
+                    ForEach(IslandPanel.allCases) { panel in
+                        Label(AppLocalization.string(panel.titleKey), systemImage: panel.systemImage)
+                            .tag(IslandReopenTarget.panel(panel))
                     }
                 }
             }
+
+            SettingsSectionDivider()
+
+            SettingsToggleRow(
+                title: AppLocalization.string("island.settings.opensToActivity"),
+                isOn: $opensToActivity
+            )
+
+            hint("island.settings.opensToActivityHint")
 
             SettingsSectionDivider()
 

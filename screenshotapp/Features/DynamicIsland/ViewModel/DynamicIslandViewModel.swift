@@ -69,6 +69,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// After the collapse button, ignore hover until the pointer leaves once.
     private var suppressesHoverUntilExit = false
     private var hasRegisteredShortcuts = false
+    /// The page shown before an opening jumped to an activity's page; the
+    /// next plain opening returns to it, so "last panel" stays the user's.
+    private var contentBeforeActivity: IslandExpandedContent?
 
     let timer: IslandTimerViewModel
 
@@ -288,13 +291,6 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         isHoverActivated = true
     }
 
-    /// "Reopen on: launcher" starts every fresh opening on the panel grid.
-    private func prepareForOpening() {
-        if preferences.reopenTarget == .launcher {
-            expandedContent = .launcher
-        }
-    }
-
     /// Clicking a banner opens the app that posted it; otherwise it toggles
     /// click-to-expand.
     func handleTap() {
@@ -371,11 +367,13 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     // MARK: - Panels
 
     func select(_ panel: IslandPanel) {
+        contentBeforeActivity = nil
         expandedContent = .panel(panel)
         UserDefaults.standard.set(panel.rawValue, forKey: Self.lastPanelKey)
     }
 
     func showLauncher() {
+        contentBeforeActivity = nil
         expandedContent = expandedContent == .launcher ? lastPanelContent : .launcher
     }
 
@@ -914,6 +912,40 @@ extension DynamicIslandViewModel {
 
     private static func historySignature(_ notification: DynamicIslandNotification) -> String {
         [notification.caption ?? "", notification.title, notification.message ?? ""].joined(separator: "\u{1F}")
+    }
+
+    /// Picks the page a fresh opening shows: the activity on screen, when
+    /// that setting is on, otherwise the reopen target.
+    private func prepareForOpening() {
+        if preferences.opensToActivity, let panel = activityPanel, preferences.visiblePanels.contains(panel) {
+            if contentBeforeActivity == nil {
+                contentBeforeActivity = expandedContent
+            }
+            expandedContent = .panel(panel)
+            return
+        }
+
+        let previous = contentBeforeActivity ?? expandedContent
+        contentBeforeActivity = nil
+
+        switch preferences.reopenTarget {
+        case .lastPanel:
+            expandedContent = previous
+        case .launcher:
+            expandedContent = .launcher
+        case .panel(let panel):
+            expandedContent = preferences.visiblePanels.contains(panel) ? .panel(panel) : previous
+        }
+    }
+
+    /// The page of what the closed island is showing, if it is an activity.
+    var activityPanel: IslandPanel? {
+        switch mode {
+        case .compactMedia: .nowPlaying
+        case .compactTimer: .timer
+        case .notification: .notifications
+        case .idle, .compactBattery, .compactWeather, .compactFocus, .expanded: nil
+        }
     }
 
     func updateFocusActive(_ active: Bool) {
