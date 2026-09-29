@@ -125,6 +125,8 @@ final class SystemNowPlayingBridge {
 
         let output = Pipe()
         let input = Pipe()
+        // Writing to a watcher that already exited must fail, not raise SIGPIPE.
+        _ = fcntl(input.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
         process.standardOutput = output
         process.standardInput = input
         process.standardError = FileHandle.nullDevice
@@ -140,8 +142,12 @@ final class SystemNowPlayingBridge {
             let states = reader.append(data).compactMap(Self.decode)
             guard !states.isEmpty else { return }
 
-            Task { @MainActor in
-                states.forEach { self?.apply($0) }
+            // GCD keeps the lines in order; artwork only rides on the first
+            // line after it changes.
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    states.forEach { self?.apply($0) }
+                }
             }
         }
 
