@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Closed island with a quick DeskCast confirmation: the symbol on the left
@@ -16,19 +17,33 @@ struct CompactToastView: View {
                 .symbolEffect(.bounce, options: .nonRepeating)
                 .frame(width: height - 12)
 
-            Spacer(minLength: geometry.hasNotch ? geometry.notchSize.width : 12)
+            Spacer(minLength: geometry.hasNotch ? geometry.notchSize.width : 0)
 
-            Text(notification.message ?? notification.title)
-                .font(.system(size: 12, weight: .semibold))
+            Text(Self.text(of: notification))
+                .font(.system(size: Self.fontSize, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .minimumScaleFactor(0.8)
-                .frame(maxWidth: DynamicIslandView.compactToastTextWidth, alignment: .trailing)
+                .frame(width: Self.textWidth(Self.text(of: notification)), alignment: .leading)
         }
         .padding(.horizontal, 10)
         .frame(height: height)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(notification.message ?? notification.title))
+        .accessibilityLabel(Text(Self.text(of: notification)))
+    }
+
+    private static let fontSize: CGFloat = 12
+    /// Longer messages (file names) are shortened in the middle.
+    private static let maxTextWidth: CGFloat = 150
+
+    static func text(of notification: DynamicIslandNotification) -> String {
+        notification.message ?? notification.title
+    }
+
+    /// The message's width on the right wing, which sizes the island.
+    static func textWidth(_ text: String) -> CGFloat {
+        let font = NSFont.systemFont(ofSize: fontSize, weight: .semibold)
+        let width = (text as NSString).size(withAttributes: [.font: font]).width
+        return min(ceil(width) + 2, maxTextWidth)
     }
 }

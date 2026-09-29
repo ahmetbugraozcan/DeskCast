@@ -113,7 +113,8 @@ struct DynamicIslandView: View {
             content: store.expandedContent,
             geometry: geometry,
             hasMedia: store.hasMedia,
-            combinesTimer: store.showsTimerBeside
+            combinesTimer: store.showsTimerBeside,
+            toastText: store.activeNotification.map(CompactToastView.text(of:))
         )
         let islandFrame = CGRect(
             x: ((panelSize.width - size.width) / 2).rounded(),
@@ -174,16 +175,14 @@ struct DynamicIslandView: View {
         return frames
     }
 
-    /// Room for a compact toast's message on the right wing.
-    static let compactToastTextWidth: CGFloat = 110
-
     /// Full island frame for a mode, including the flared top "ears".
     static func islandSize(
         for mode: DynamicIslandMode,
         content: IslandExpandedContent,
         geometry: DynamicIslandGeometry,
         hasMedia: Bool,
-        combinesTimer: Bool = false
+        combinesTimer: Bool = false,
+        toastText: String? = nil
     ) -> CGSize {
         let notch = geometry.notchSize
         let ears = cornerMetrics(for: mode).top * 2
@@ -191,11 +190,16 @@ struct DynamicIslandView: View {
         switch mode {
         case .idle:
             return CGSize(width: notch.width + ears, height: notch.height)
+        case .compactToast where !geometry.hasNotch:
+            // No camera housing to clear: symbol and message side by side.
+            let content = (notch.height - 12) + 8 + CompactToastView.textWidth(toastText ?? "") + 20
+            return CGSize(width: content + ears, height: notch.height)
         case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent, .compactToast:
             // Music with a running timer shows the countdown on the right wing.
             let sideWidth = switch mode {
             case .compactMedia where !combinesTimer: notch.height + 18
-            case .compactToast: notch.height + compactToastTextWidth - 12
+            // The right wing fits the message, so it sits next to the notch.
+            case .compactToast: max(CompactToastView.textWidth(toastText ?? "") + 20, notch.height + 18)
             default: notch.height + 34
             }
             let centerWidth = geometry.hasNotch ? notch.width : max(notch.width, 220)
@@ -636,9 +640,12 @@ struct NotificationBannerView: View {
     @ViewBuilder
     private var icon: some View {
         if let image = notification.image {
+            // Clip after framing: a wide video thumbnail filled without a frame
+            // spills past the square onto the text.
             Image(nsImage: image)
                 .resizable()
                 .scaledToFill()
+                .frame(width: 36, height: 36)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         } else {
             Image(systemName: notification.systemImage)
