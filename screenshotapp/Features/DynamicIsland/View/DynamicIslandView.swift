@@ -107,7 +107,8 @@ struct DynamicIslandView: View {
             for: mode,
             content: store.expandedContent,
             geometry: geometry,
-            hasMedia: store.hasMedia
+            hasMedia: store.hasMedia,
+            combinesTimer: store.timer.isActive
         )
         let islandFrame = CGRect(
             x: ((panelSize.width - size.width) / 2).rounded(),
@@ -148,7 +149,8 @@ struct DynamicIslandView: View {
         for mode: DynamicIslandMode,
         content: IslandExpandedContent,
         geometry: DynamicIslandGeometry,
-        hasMedia: Bool
+        hasMedia: Bool,
+        combinesTimer: Bool = false
     ) -> CGSize {
         let notch = geometry.notchSize
         let ears = cornerMetrics(for: mode).top * 2
@@ -157,7 +159,8 @@ struct DynamicIslandView: View {
         case .idle:
             return CGSize(width: notch.width + ears, height: notch.height)
         case .compactMedia, .compactTimer, .compactBattery:
-            let sideWidth = notch.height + (mode == .compactMedia ? 18 : 34)
+            // Music with a running timer shows the countdown on the right wing.
+            let sideWidth = notch.height + (mode == .compactMedia && !combinesTimer ? 18 : 34)
             let centerWidth = geometry.hasNotch ? notch.width : max(notch.width, 220)
             return CGSize(width: centerWidth + sideWidth * 2 + ears, height: notch.height)
         case .notification:
@@ -268,6 +271,7 @@ struct DynamicIslandView: View {
             if let nowPlaying = store.nowPlaying {
                 CompactMediaView(
                     nowPlaying: nowPlaying,
+                    timer: store.timer,
                     geometry: geometry,
                     namespace: namespace
                 )
@@ -374,6 +378,7 @@ struct DynamicIslandShape: Shape {
 
 struct CompactMediaView: View {
     let nowPlaying: NowPlayingInfo
+    @ObservedObject var timer: IslandTimerViewModel
     let geometry: DynamicIslandGeometry
     let namespace: Namespace.ID
 
@@ -396,9 +401,20 @@ struct CompactMediaView: View {
                     .frame(maxWidth: .infinity)
             }
 
-            EqualizerBarsView(isPlaying: nowPlaying.isPlaying, tint: nowPlaying.tintColor)
-                .frame(width: 18, height: 13)
-                .matchedGeometryEffect(id: "equalizer", in: namespace)
+            if timer.isActive {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(IslandFormat.clock(timer.remaining(at: context.date)))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(timer.isPaused ? .white.opacity(0.5) : .orange)
+                        .contentTransition(.numericText(countsDown: true))
+                        .animation(.snappy, value: Int(timer.remaining(at: context.date)))
+                }
+                .transition(.opacity)
+            } else {
+                EqualizerBarsView(isPlaying: nowPlaying.isPlaying, tint: nowPlaying.tintColor)
+                    .frame(width: 18, height: 13)
+                    .matchedGeometryEffect(id: "equalizer", in: namespace)
+            }
         }
         .padding(.horizontal, 10)
         .frame(height: height)
