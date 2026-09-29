@@ -510,3 +510,29 @@
 "pin.toScreen" = "Pin to Screen";
 "pin.opacity" = "Opacity";
 "pin.hint" = "Drag to move · scroll or pinch to resize · Esc to close";
+
+/* Annotation editor */
+"annotate.action" = "Annotate";
+"annotate.title" = "Annotate Capture";
+"annotate.done" = "Done";
+"annotate.undo" = "Undo";
+"annotate.redo" = "Redo";
+"annotate.clear" = "Clear All";
+"annotate.applied" = "Annotations applied";
+"annotate.text.placeholder" = "Type text";
+"annotate.tool.arrow" = "Arrow";
+"annotate.tool.rectangle" = "Rectangle";
+"annotate.tool.pen" = "Pen";
+"annotate.tool.text" = "Text";
+"annotate.tool.highlight" = "Highlight";
+"annotate.tool.blur" = "Blur (pixelate)";
+"annotate.color.red" = "Red";
+"annotate.color.orange" = "Orange";
+"annotate.color.yellow" = "Yellow";
+"annotate.color.green" = "Green";
+"annotate.color.blue" = "Blue";
+"annotate.color.black" = "Black";
+"annotate.color.white" = "White";
+"annotate.size.small" = "Thin";
+"annotate.size.medium" = "Medium";
+"annotate.size.large" = "Thick";

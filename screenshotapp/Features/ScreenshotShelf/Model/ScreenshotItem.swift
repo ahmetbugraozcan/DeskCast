@@ -10,7 +10,8 @@ struct ScreenshotItem: Identifiable, Equatable {
     let id = UUID()
     let kind: CaptureShelfMediaKind
     /// Image content for screenshots and a generated poster frame for videos.
-    let image: NSImage
+    /// Replaced when the capture is annotated.
+    var image: NSImage
     let createdAt = Date()
     var isPinned: Bool
     let durationSeconds: TimeInterval?

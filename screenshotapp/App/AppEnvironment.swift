@@ -107,6 +107,7 @@ final class AppEnvironment: ObservableObject {
         #if DEBUG
         DemoMenuPanelWindow.showIfRequested(environment: self)
         screenshotShelf.pinDemoScreenshotIfRequested()
+        screenshotShelf.annotateDemoScreenshotIfRequested()
         await DebugWindowSnapshot.writeIfRequested()
         #endif
     }

@@ -265,27 +265,6 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
         )
     }
 
-    func openInPreview(_ item: ScreenshotItem) {
-        if item.isVideo, let fileURL = item.fileURL {
-            NSWorkspace.shared.open(fileURL)
-            return
-        }
-
-        do {
-            let url = try TemporaryPNGWriter.write(item.image)
-            let configuration = NSWorkspace.OpenConfiguration()
-            let previewURL = URL(fileURLWithPath: "/System/Applications/Preview.app")
-
-            NSWorkspace.shared.open(
-                [url],
-                withApplicationAt: previewURL,
-                configuration: configuration
-            )
-        } catch {
-            NSSound.beep()
-        }
-    }
-
     func togglePin(_ item: ScreenshotItem) {
         guard let index = screenshots.firstIndex(where: { $0.id == item.id }) else {
             return
@@ -403,6 +382,13 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
         }
 
         screenshots[index].fileURL = url
+    }
+
+    /// Swaps in an edited image (annotations) and returns the updated item.
+    func replaceImage(_ image: NSImage, forID id: UUID) -> ScreenshotItem? {
+        guard let index = screenshots.firstIndex(where: { $0.id == id }) else { return nil }
+        screenshots[index].image = image
+        return screenshots[index]
     }
 
     private func currentFileURL(for id: UUID) -> URL? {

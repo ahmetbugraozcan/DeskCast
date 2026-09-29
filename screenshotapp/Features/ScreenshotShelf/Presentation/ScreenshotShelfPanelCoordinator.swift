@@ -15,6 +15,7 @@ protocol ScreenshotShelfPresenting: AnyObject {
     func refreshIfVisible()
     func hide()
     func pinToScreen(_ item: ScreenshotItem)
+    func showAnnotationEditor(for item: ScreenshotItem)
 }
 
 extension ScreenshotShelfPresenting {
@@ -29,6 +30,7 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
     private var panel: NSPanel?
     private var anchoredScreen: ScreenshotShelfScreenAnchor?
     private let pinnedScreenshots = PinnedScreenshotPanels()
+    private let annotationEditors = AnnotationEditorWindows()
 
     private let screenMargin: CGFloat = 18
 
@@ -73,6 +75,17 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
         pinnedScreenshots.pin(item.image) { [weak store] in
             store?.copyPinnedScreenshot(item)
         }
+    }
+
+    func showAnnotationEditor(for item: ScreenshotItem) {
+        annotationEditors.open(
+            item.image,
+            itemID: item.id,
+            handlers: AnnotationEditorResultHandlers(
+                done: { [weak store] image in store?.applyAnnotatedImage(image, toItemWithID: item.id) },
+                copy: { [weak store] image in store?.copyAnnotatedImage(image) }
+            )
+        )
     }
 
     private func makePanel() -> NSPanel {

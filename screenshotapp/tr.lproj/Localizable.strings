@@ -510,3 +510,29 @@
 "pin.toScreen" = "Ekrana Sabitle";
 "pin.opacity" = "Opaklık";
 "pin.hint" = "Taşımak için sürükleyin · boyut için kaydırın veya kıstırın · kapatmak için Esc";
+
+/* Annotation editor */
+"annotate.action" = "İşaretle";
+"annotate.title" = "Yakalamayı İşaretle";
+"annotate.done" = "Bitti";
+"annotate.undo" = "Geri Al";
+"annotate.redo" = "Yinele";
+"annotate.clear" = "Tümünü Temizle";
+"annotate.applied" = "İşaretlemeler uygulandı";
+"annotate.text.placeholder" = "Metin yazın";
+"annotate.tool.arrow" = "Ok";
+"annotate.tool.rectangle" = "Dikdörtgen";
+"annotate.tool.pen" = "Kalem";
+"annotate.tool.text" = "Metin";
+"annotate.tool.highlight" = "Vurgula";
+"annotate.tool.blur" = "Bulanıklaştır (pikselleştir)";
+"annotate.color.red" = "Kırmızı";
+"annotate.color.orange" = "Turuncu";
+"annotate.color.yellow" = "Sarı";
+"annotate.color.green" = "Yeşil";
+"annotate.color.blue" = "Mavi";
+"annotate.color.black" = "Siyah";
+"annotate.color.white" = "Beyaz";
+"annotate.size.small" = "İnce";
+"annotate.size.medium" = "Orta";
+"annotate.size.large" = "Kalın";

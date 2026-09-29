@@ -20,7 +20,17 @@ extension ScreenshotShelfViewModel {
     /// Debug builds only: `-DeskCastDemoPin YES` pins a sample image for UI checks.
     func pinDemoScreenshotIfRequested() {
         guard UserDefaults.standard.bool(forKey: "DeskCastDemoPin") else { return }
-        let image = NSImage(size: CGSize(width: 520, height: 320), flipped: false) { rect in
+        pinToScreen(ScreenshotItem(image: Self.demoImage, isPinned: false))
+    }
+
+    /// Debug builds only: `-DeskCastDemoAnnotate YES` opens the annotation editor on a sample image.
+    func annotateDemoScreenshotIfRequested() {
+        guard UserDefaults.standard.bool(forKey: "DeskCastDemoAnnotate") else { return }
+        annotate(ScreenshotItem(image: Self.demoImage, isPinned: false))
+    }
+
+    private static var demoImage: NSImage {
+        NSImage(size: CGSize(width: 520, height: 320), flipped: false) { rect in
             NSGradient(starting: .systemIndigo, ending: .systemTeal)?.draw(in: rect, angle: 35)
             let text = NSAttributedString(
                 string: "DeskCast",
@@ -29,7 +39,6 @@ extension ScreenshotShelfViewModel {
             text.draw(at: CGPoint(x: rect.midX - text.size().width / 2, y: rect.midY - text.size().height / 2))
             return true
         }
-        pinToScreen(ScreenshotItem(image: image, isPinned: false))
     }
 }
 #endif

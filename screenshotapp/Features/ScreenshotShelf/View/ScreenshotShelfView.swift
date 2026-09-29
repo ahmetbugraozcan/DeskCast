@@ -152,6 +152,7 @@ struct ScreenshotShelfView: View {
                 saveExportAction: { option in store.save(item, exportOption: option) },
                 pinAction: { store.togglePin(item) },
                 pinToScreenAction: { store.pinToScreen(item) },
+                annotateAction: { store.annotate(item) },
                 openAction: { store.openInPreview(item) },
                 dragPasteboardWriter: { store.draggingPasteboardWriter(for: item) },
                 exportOptions: exportOptions,
@@ -364,6 +365,7 @@ private struct ScreenshotThumbnailView: View {
     let saveExportAction: (ScreenshotExportOption) -> Void
     let pinAction: () -> Void
     let pinToScreenAction: () -> Void
+    let annotateAction: () -> Void
     let openAction: () -> Void
     let dragPasteboardWriter: () -> NSPasteboardWriting?
     let exportOptions: [ScreenshotExportOption]
@@ -443,9 +445,9 @@ private struct ScreenshotThumbnailView: View {
 
                 HStack {
                     ThumbnailControlButton(
-                        systemName: item.isVideo ? "play.fill" : "pencil",
-                        help: AppLocalization.string(item.isVideo ? "Play Video" : "Edit in Preview"),
-                        action: openAction
+                        systemName: item.isVideo ? "play.fill" : "pencil.tip.crop.circle",
+                        help: AppLocalization.string(item.isVideo ? "Play Video" : "annotate.action"),
+                        action: item.isVideo ? openAction : annotateAction
                     )
 
                     Spacer()
@@ -506,6 +508,14 @@ private struct ScreenshotThumbnailView: View {
                     copyTextAction()
                 } label: {
                     Label(AppLocalization.string("Copy Text"), systemImage: "text.viewfinder")
+                }
+            }
+
+            if !item.isVideo {
+                Button {
+                    annotateAction()
+                } label: {
+                    Label(AppLocalization.string("annotate.action"), systemImage: "pencil.tip.crop.circle")
                 }
             }
 
