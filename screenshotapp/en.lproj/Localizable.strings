@@ -408,7 +408,7 @@
 "island.spotify.disconnect" = "Disconnect";
 "island.spotify.connected" = "Connected";
 "island.spotify.notConnected" = "Not connected";
-"island.spotify.setupSteps" = "1. Open developer.spotify.com/dashboard and create an app (Web API). 2. Add the redirect URI below. 3. Paste the app's Client ID here and connect.";
+"island.spotify.setupSteps" = "Optional: Now Playing and its controls work without it; connecting only adds Spotify's Up Next queue. 1. Open developer.spotify.com/dashboard and create an app (Web API). 2. Add the redirect URI below. 3. Paste the app's Client ID here and connect.";
 "island.spotify.redirectHint" = "Redirect URI: %@";
 "island.spotify.error.clientID" = "Enter your Spotify Client ID first.";
 "island.spotify.error.connect" = "Spotify sign-in didn't finish. Check the Client ID and redirect URI, then try again.";

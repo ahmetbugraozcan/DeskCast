@@ -408,7 +408,7 @@
 "island.spotify.disconnect" = "Bağlantıyı Kes";
 "island.spotify.connected" = "Bağlı";
 "island.spotify.notConnected" = "Bağlı değil";
-"island.spotify.setupSteps" = "1. developer.spotify.com/dashboard adresini açıp bir uygulama oluşturun (Web API). 2. Aşağıdaki yönlendirme adresini ekleyin. 3. Uygulamanın Client ID'sini buraya yapıştırıp bağlanın.";
+"island.spotify.setupSteps" = "İsteğe bağlı: Şu An Çalıyor ve kontrolleri bağlantı olmadan çalışır; bağlanmak yalnızca Spotify'ın Sıradaki listesini ekler. 1. developer.spotify.com/dashboard adresini açıp bir uygulama oluşturun (Web API). 2. Aşağıdaki yönlendirme adresini ekleyin. 3. Uygulamanın Client ID'sini buraya yapıştırıp bağlanın.";
 "island.spotify.redirectHint" = "Yönlendirme adresi (Redirect URI): %@";
 "island.spotify.error.clientID" = "Önce Spotify Client ID'nizi girin.";
 "island.spotify.error.connect" = "Spotify girişi tamamlanmadı. Client ID'yi ve yönlendirme adresini kontrol edip tekrar deneyin.";
