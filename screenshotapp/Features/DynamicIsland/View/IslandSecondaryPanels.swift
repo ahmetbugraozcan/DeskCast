@@ -466,8 +466,10 @@ struct NotificationsPanelView: View {
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
                 }
+                .padding(.bottom, 10)
                 .animation(.spring(response: 0.4, dampingFraction: 0.85), value: store.notificationHistory.map(\.id))
             }
+            .islandScrollFade()
         }
     }
 
@@ -603,8 +605,10 @@ struct DownloadsPanelView: View {
                             row(file)
                         }
                     }
+                    .padding(.bottom, 10)
                     .animation(.spring(response: 0.4, dampingFraction: 0.85), value: model.files.map(\.id))
                 }
+                .islandScrollFade()
             }
 
             HStack {

@@ -23,9 +23,11 @@ struct ClipboardPanelView: View {
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
                 }
+                .padding(.bottom, 10)
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.entries.map(\.id))
             }
             .scrollIndicators(.never)
+            .islandScrollFade()
         }
     }
 }

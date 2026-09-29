@@ -371,3 +371,17 @@ enum IslandFormat {
         return formatter.localizedString(for: date, relativeTo: now)
     }
 }
+
+extension View {
+    /// Fades a scrolling list out at the bottom edge, so a row cut off by the
+    /// panel reads as "more below" instead of clipped.
+    func islandScrollFade(length: CGFloat = 18) -> some View {
+        mask {
+            VStack(spacing: 0) {
+                Rectangle()
+                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: length)
+            }
+        }
+    }
+}
