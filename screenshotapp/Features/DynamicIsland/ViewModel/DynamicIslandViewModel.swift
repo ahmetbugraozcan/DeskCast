@@ -860,6 +860,10 @@ extension DynamicIslandViewModel {
             hasReceivedNowPlaying = true
         }
 
+        if defaults.bool(forKey: "DeskCastDemoStopwatch") {
+            timer.panelMode = .stopwatch
+        }
+
         let timerMinutes = defaults.integer(forKey: "DeskCastDemoTimer")
         if timerMinutes > 0 {
             timer.start(minutes: timerMinutes)
