@@ -188,6 +188,9 @@ struct CapturesPanelView: View {
         }
         .contextMenu {
             Button(AppLocalization.string("island.captures.copy")) { shelf.copy(item) }
+            if !item.isVideo {
+                Button(AppLocalization.string("pin.toScreen")) { shelf.pinToScreen(item) }
+            }
             if item.fileURL != nil {
                 Button(AppLocalization.string("island.captures.reveal")) { shelf.showInFinder(item) }
             }

@@ -505,3 +505,8 @@
 "dropShelf.zipped" = "%@ oluşturuldu";
 "dropShelf.processingFailed" = "Öğe işlenemedi";
 "island.files.zip" = "Zip'le";
+
+/* Pin to Screen */
+"pin.toScreen" = "Ekrana Sabitle";
+"pin.opacity" = "Opaklık";
+"pin.hint" = "Taşımak için sürükleyin · boyut için kaydırın veya kıstırın · kapatmak için Esc";

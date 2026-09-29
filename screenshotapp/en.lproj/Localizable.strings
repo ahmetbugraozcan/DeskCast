@@ -505,3 +505,8 @@
 "dropShelf.zipped" = "Created %@";
 "dropShelf.processingFailed" = "Couldn't process the item";
 "island.files.zip" = "Zip";
+
+/* Pin to Screen */
+"pin.toScreen" = "Pin to Screen";
+"pin.opacity" = "Opacity";
+"pin.hint" = "Drag to move · scroll or pinch to resize · Esc to close";

@@ -151,6 +151,7 @@ struct ScreenshotShelfView: View {
                 quickSaveAction: { store.quickSave(item) },
                 saveExportAction: { option in store.save(item, exportOption: option) },
                 pinAction: { store.togglePin(item) },
+                pinToScreenAction: { store.pinToScreen(item) },
                 openAction: { store.openInPreview(item) },
                 dragPasteboardWriter: { store.draggingPasteboardWriter(for: item) },
                 exportOptions: exportOptions,
@@ -362,6 +363,7 @@ private struct ScreenshotThumbnailView: View {
     let quickSaveAction: () -> Void
     let saveExportAction: (ScreenshotExportOption) -> Void
     let pinAction: () -> Void
+    let pinToScreenAction: () -> Void
     let openAction: () -> Void
     let dragPasteboardWriter: () -> NSPasteboardWriting?
     let exportOptions: [ScreenshotExportOption]
@@ -514,6 +516,14 @@ private struct ScreenshotThumbnailView: View {
                     AppLocalization.string(item.isVideo ? "Play Video" : "Edit in Preview"),
                     systemImage: item.isVideo ? "play.fill" : "pencil"
                 )
+            }
+
+            if !item.isVideo {
+                Button {
+                    pinToScreenAction()
+                } label: {
+                    Label(AppLocalization.string("pin.toScreen"), systemImage: "pin.square")
+                }
             }
 
             Divider()

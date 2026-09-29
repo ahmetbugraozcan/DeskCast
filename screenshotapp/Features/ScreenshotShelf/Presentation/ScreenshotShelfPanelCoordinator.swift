@@ -14,6 +14,7 @@ protocol ScreenshotShelfPresenting: AnyObject {
     func refresh(screenAnchor: ScreenshotShelfScreenAnchor?)
     func refreshIfVisible()
     func hide()
+    func pinToScreen(_ item: ScreenshotItem)
 }
 
 extension ScreenshotShelfPresenting {
@@ -27,6 +28,7 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
     private let store: ScreenshotShelfViewModel
     private var panel: NSPanel?
     private var anchoredScreen: ScreenshotShelfScreenAnchor?
+    private let pinnedScreenshots = PinnedScreenshotPanels()
 
     private let screenMargin: CGFloat = 18
 
@@ -65,6 +67,12 @@ final class ScreenshotShelfPanelCoordinator: ScreenshotShelfPresenting {
 
     func hide() {
         panel?.orderOut(nil)
+    }
+
+    func pinToScreen(_ item: ScreenshotItem) {
+        pinnedScreenshots.pin(item.image) { [weak store] in
+            store?.copyPinnedScreenshot(item)
+        }
     }
 
     private func makePanel() -> NSPanel {

@@ -100,7 +100,7 @@ xcodebuild -project screenshotapp.xcodeproj -scheme screenshotapp -configuration
 xcodebuild -project screenshotapp.xcodeproj -scheme screenshotapp -destination 'platform=macOS' test
 ```
 
-Debug launch arguments for UI checks: `-DeskCastAllowsIslandCapture YES` (island visible to `screencapture`), `-DeskCastDemoPanel <panel|launcher>`, `-DeskCastDemoTrack YES`, `-DeskCastDemoTimer <min>`, `-DeskCastDemoNotification <text>`, `-DeskCastDemoMeeting <title>` (calendar reminder banner with a Join button), `-DeskCastDemoSettings <section>`, `-DeskCastDemoMenuPanel YES` (menu panel in a plain window), and `-DeskCastSnapshotDir <folder>` (writes PNGs of all visible windows ~2.5 s after launch — works even while the screen is locked). `run-app.yml` uses these to upload screenshots as the `island-screenshots` artifact.
+Debug launch arguments for UI checks: `-DeskCastAllowsIslandCapture YES` (island visible to `screencapture`), `-DeskCastDemoPanel <panel|launcher>`, `-DeskCastDemoTrack YES`, `-DeskCastDemoTimer <min>`, `-DeskCastDemoNotification <text>`, `-DeskCastDemoMeeting <title>` (calendar reminder banner with a Join button), `-DeskCastDemoPin YES` (pins a sample screenshot on screen), `-DeskCastDemoSettings <section>`, `-DeskCastDemoMenuPanel YES` (menu panel in a plain window), and `-DeskCastSnapshotDir <folder>` (writes PNGs of all visible windows ~2.5 s after launch — works even while the screen is locked). `run-app.yml` uses these to upload screenshots as the `island-screenshots` artifact.
 
 CI: `.github/workflows/build.yml` runs an unsigned Debug `build-for-testing`, the unit tests, and strict SwiftLint on every pushed branch (use it when no Mac is available). `release.yml` signs, notarizes and publishes — don't trigger it for checks.
 
