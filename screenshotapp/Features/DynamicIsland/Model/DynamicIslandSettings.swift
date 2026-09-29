@@ -149,8 +149,6 @@ enum DynamicIslandSettings {
         static let panelOrder = "dynamicIsland.panelOrder"
         static let hiddenPanels = "dynamicIsland.hiddenPanels"
         static let scratchpadText = "dynamicIsland.scratchpadText"
-        /// The user's own Spotify app Client ID (public with PKCE; not a secret).
-        static let spotifyClientID = "dynamicIsland.spotifyClientID"
         static let notificationDurationSeconds = "dynamicIsland.notificationDurationSeconds"
     }
 
@@ -177,19 +175,12 @@ enum DynamicIslandSettings {
     static let defaultShowsOutline = false
     static let defaultPanelShortcutsEnabled = true
     static let defaultShowsSideButtons = true
-    /// DeskCast's Spotify app. A PKCE client ID is public (no secret), so it
-    /// can ship in the binary; users may still paste their own in Settings.
-    static let defaultSpotifyClientID = "561d2c5ed85940bcb9be0a89b71329eb"
     static let defaultNotificationDurationSeconds = 4
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
-        // Scratchpad text and the Spotify Client ID are user content, so they're
-        // registered but never reset.
+        // Scratchpad text is user content, so it's registered but never reset.
         defaults.register(
-            defaults: defaultValues.merging([
-                Keys.scratchpadText: "",
-                Keys.spotifyClientID: defaultSpotifyClientID
-            ]) { current, _ in current }
+            defaults: defaultValues.merging([Keys.scratchpadText: ""]) { current, _ in current }
         )
     }
 

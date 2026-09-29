@@ -8,13 +8,11 @@ struct NowPlayingPanelView: View {
     @ObservedObject var store: DynamicIslandViewModel
     @ObservedObject var audio: AudioViewModel
     @ObservedObject var extras: NowPlayingExtrasViewModel
-    let actions: IslandToolActions
     let namespace: Namespace.ID
 
     private enum Detail {
         case none
         case lyrics
-        case queue
     }
 
     @State private var detail: Detail = .none
@@ -24,9 +22,6 @@ struct NowPlayingPanelView: View {
             if let nowPlaying = store.nowPlaying {
                 content(nowPlaying)
                     .onChange(of: nowPlaying.cacheKey, initial: true) { _, _ in
-                        if detail == .queue, nowPlaying.player != .spotify {
-                            detail = .none
-                        }
                         loadDetail(for: nowPlaying)
                     }
                     .onChange(of: detail) { _, _ in
@@ -43,7 +38,6 @@ struct NowPlayingPanelView: View {
     private func loadDetail(for nowPlaying: NowPlayingInfo) {
         switch detail {
         case .lyrics: extras.loadLyrics(for: nowPlaying)
-        case .queue: extras.loadQueue(for: nowPlaying)
         case .none: break
         }
     }
@@ -59,13 +53,7 @@ struct NowPlayingPanelView: View {
                         compactPlayer(nowPlaying)
                             .frame(width: 150)
 
-                        Group {
-                            if detail == .lyrics {
-                                LyricsView(extras: extras, nowPlaying: nowPlaying)
-                            } else {
-                                QueueView(extras: extras, actions: actions, nowPlaying: nowPlaying)
-                            }
-                        }
+                        LyricsView(extras: extras, nowPlaying: nowPlaying)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                     }
@@ -85,17 +73,6 @@ struct NowPlayingPanelView: View {
                     isOn: detail == .lyrics
                 ) {
                     detail = detail == .lyrics ? .none : .lyrics
-                }
-
-                // "Up Next" comes from Spotify's Web API; other sources have no queue.
-                if nowPlaying.player == .spotify {
-                    IslandChipButton(
-                        title: AppLocalization.string("island.nowPlaying.upNext"),
-                        systemImage: "list.bullet",
-                        isOn: detail == .queue
-                    ) {
-                        detail = detail == .queue ? .none : .queue
-                    }
                 }
             }
         }
@@ -164,7 +141,7 @@ struct NowPlayingPanelView: View {
         }
     }
 
-    /// Artwork + title + controls squeezed into a column beside lyrics/queue.
+    /// Artwork + title + controls squeezed into a column beside the lyrics.
     private func compactPlayer(_ nowPlaying: NowPlayingInfo) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
@@ -311,115 +288,6 @@ private struct LyricsView: View {
                 }
             }
         }
-    }
-}
-
-/// Spotify's "Up Next" queue via the Web API.
-private struct QueueView: View {
-    @ObservedObject var extras: NowPlayingExtrasViewModel
-    @ObservedObject var account: SpotifyAccountViewModel
-    let actions: IslandToolActions
-    let nowPlaying: NowPlayingInfo
-
-    init(extras: NowPlayingExtrasViewModel, actions: IslandToolActions, nowPlaying: NowPlayingInfo) {
-        self.extras = extras
-        account = extras.account
-        self.actions = actions
-        self.nowPlaying = nowPlaying
-    }
-
-    var body: some View {
-        Group {
-            if !extras.queue.isEmpty {
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 4) {
-                        ForEach(Array(extras.queue.enumerated()), id: \.offset) { index, item in
-                            row(item, position: index + 1)
-                        }
-                    }
-                }
-            } else if extras.queueState == .loading {
-                ProgressView()
-                    .controlSize(.small)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                issueView
-            }
-        }
-        .onChange(of: account.isConnected) { _, _ in
-            extras.loadQueue(for: nowPlaying)
-        }
-    }
-
-    @ViewBuilder
-    private var issueView: some View {
-        switch extras.queueIssue {
-        case .notSpotify:
-            IslandEmptyState(
-                systemImage: "list.bullet",
-                title: AppLocalization.string("island.queue.spotifyOnly")
-            )
-        case .needsClientID:
-            IslandEmptyState(
-                systemImage: "key",
-                title: AppLocalization.string("island.queue.setupTitle"),
-                message: AppLocalization.string("island.queue.setupMessage"),
-                actionTitle: AppLocalization.string("island.queue.openSettings"),
-                action: { actions.openSettings() }
-            )
-        case .notConnected:
-            IslandEmptyState(
-                systemImage: "link",
-                title: AppLocalization.string("island.queue.connectTitle"),
-                actionTitle: AppLocalization.string(account.isConnecting ? "island.spotify.connecting" : "island.spotify.connect"),
-                action: { account.connect() }
-            )
-        case .nothingPlaying:
-            IslandEmptyState(systemImage: "list.bullet", title: AppLocalization.string("island.queue.empty"))
-        case .failed, .none:
-            IslandEmptyState(
-                systemImage: "exclamationmark.triangle",
-                title: AppLocalization.string("island.queue.failed"),
-                actionTitle: AppLocalization.string("island.queue.retry"),
-                action: { extras.loadQueue(for: nowPlaying) }
-            )
-        }
-    }
-
-    private func row(_ item: SpotifyQueueItem, position: Int) -> some View {
-        HStack(spacing: 9) {
-            Text("\(position)")
-                .font(.system(size: 10, weight: .semibold).monospacedDigit())
-                .foregroundStyle(IslandPalette.tertiaryText)
-                .frame(width: 14)
-
-            AsyncImage(url: item.artworkURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Color.white.opacity(0.08)
-            }
-            .frame(width: 30, height: 30)
-            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(item.title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                Text(item.subtitle)
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(IslandPalette.secondaryText)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 4)
-
-            Text(IslandFormat.clock(item.duration))
-                .font(.system(size: 10).monospacedDigit())
-                .foregroundStyle(IslandPalette.tertiaryText)
-        }
-        .padding(.horizontal, 6)
-        .frame(height: 36)
     }
 }
 

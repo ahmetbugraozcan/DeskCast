@@ -97,7 +97,7 @@ struct DeskCastApp: App {
         .environment(\.locale, selectedLanguage.locale)
 
         Settings {
-            SettingsView(updateService: environment.appUpdate, spotifyAccount: environment.spotifyAccount)
+            SettingsView(updateService: environment.appUpdate)
         }
         .environment(\.locale, selectedLanguage.locale)
         .windowResizability(.contentSize)

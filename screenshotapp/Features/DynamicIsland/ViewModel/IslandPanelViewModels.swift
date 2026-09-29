@@ -695,8 +695,7 @@ final class IslandPanelModels {
     let clipboard = ClipboardHistoryViewModel()
     let stopwatch = IslandStopwatchViewModel()
     let eventReminders = EventReminderMonitor()
-    let spotify = SpotifyAccountViewModel()
-    let extras: NowPlayingExtrasViewModel
+    let extras = NowPlayingExtrasViewModel()
     let screenshots: ScreenshotShelfViewModel
     let dropShelf: DropShelfViewModel
     let actions: IslandToolActions
@@ -708,7 +707,6 @@ final class IslandPanelModels {
         actions: IslandToolActions
     ) {
         self.timer = timer
-        extras = NowPlayingExtrasViewModel(account: spotify)
         self.screenshots = screenshots
         self.dropShelf = dropShelf
         self.actions = actions

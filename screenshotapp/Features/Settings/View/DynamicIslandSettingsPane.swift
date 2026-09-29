@@ -2,7 +2,6 @@ import KeyboardShortcuts
 import SwiftUI
 
 struct DynamicIslandSettingsPane: View {
-    @ObservedObject var spotifyAccount: SpotifyAccountViewModel
     @AppStorage(ToolboxSettings.Keys.dynamicIslandEnabled)
     private var isEnabled = ToolboxSettings.defaultDynamicIslandEnabled
     @AppStorage(DynamicIslandSettings.Keys.openMode)
@@ -70,8 +69,6 @@ struct DynamicIslandSettingsPane: View {
                 }
 
                 displaySection
-                spotifySection
-                    .onAppear { spotifyAccount.loadConnectionState() }
             }
             .disabled(!isEnabled)
             .opacity(isEnabled ? 1 : 0.5)
@@ -261,61 +258,6 @@ struct DynamicIslandSettingsPane: View {
                 title: AppLocalization.string("island.settings.outline"),
                 isOn: $showsOutline
             )
-        }
-    }
-
-    private var spotifySection: some View {
-        SettingsControlSection(title: AppLocalization.string("island.spotify.title")) {
-            SettingsControlRow(title: AppLocalization.string("island.spotify.clientID")) {
-                TextField("", text: $spotifyAccount.clientID, prompt: Text(verbatim: "1a2b3c…"))
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 260)
-                    .disabled(spotifyAccount.isConnected)
-            }
-
-            SettingsSectionDivider()
-
-            SettingsControlRow(
-                title: AppLocalization.string(
-                    spotifyAccount.isConnected ? "island.spotify.connected" : "island.spotify.notConnected"
-                )
-            ) {
-                if spotifyAccount.isConnected {
-                    Button(AppLocalization.string("island.spotify.disconnect"), role: .destructive) {
-                        spotifyAccount.disconnect()
-                    }
-                } else {
-                    Button(AppLocalization.string(
-                        spotifyAccount.isConnecting ? "island.spotify.connecting" : "island.spotify.connect"
-                    )) {
-                        spotifyAccount.connect()
-                    }
-                    .disabled(!spotifyAccount.hasClientID || spotifyAccount.isConnecting)
-                }
-            }
-
-            if let errorMessage = spotifyAccount.errorMessage {
-                Text(errorMessage)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            SettingsSectionDivider()
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(AppLocalization.string("island.spotify.setupSteps"))
-                Text(AppLocalization.formatted("island.spotify.redirectHint", SpotifyService.redirectURI))
-                    .textSelection(.enabled)
-            }
-            .font(.system(size: 12))
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

@@ -389,29 +389,9 @@
 "island.settings.panelShortcuts" = "Panel shortcuts (⌥⌘ + letter)";
 "island.settings.panelShortcutsHint" = "Opens a panel from anywhere, e.g. ⌥⌘M for Now Playing. ⌥⌘D replaces the system's Dock hiding shortcut while this is on.";
 
-/* Dynamic Island: lyrics, queue, Spotify, per-app volume */
+/* Dynamic Island: lyrics, per-app volume */
 "island.nowPlaying.lyrics" = "Lyrics";
-"island.nowPlaying.upNext" = "Up Next";
 "island.lyrics.none" = "No lyrics found for this song";
-"island.queue.spotifyOnly" = "Up Next is available for Spotify. Apple Music doesn't share its queue.";
-"island.queue.setupTitle" = "Connect Spotify to see Up Next";
-"island.queue.setupMessage" = "Add your Spotify app's Client ID in Settings → Dynamic Island.";
-"island.queue.openSettings" = "Open Settings";
-"island.queue.connectTitle" = "Sign in to Spotify to see Up Next";
-"island.queue.empty" = "Nothing queued";
-"island.queue.failed" = "Couldn't load the queue";
-"island.queue.retry" = "Try Again";
-"island.spotify.title" = "Spotify (Up Next)";
-"island.spotify.clientID" = "Client ID";
-"island.spotify.connect" = "Connect Spotify";
-"island.spotify.connecting" = "Waiting for browser…";
-"island.spotify.disconnect" = "Disconnect";
-"island.spotify.connected" = "Connected";
-"island.spotify.notConnected" = "Not connected";
-"island.spotify.setupSteps" = "Optional: Now Playing and its controls work without it; connecting only adds Spotify's Up Next queue. 1. Open developer.spotify.com/dashboard and create an app (Web API). 2. Add the redirect URI below. 3. Paste the app's Client ID here and connect.";
-"island.spotify.redirectHint" = "Redirect URI: %@";
-"island.spotify.error.clientID" = "Enter your Spotify Client ID first.";
-"island.spotify.error.connect" = "Spotify sign-in didn't finish. Check the Client ID and redirect URI, then try again.";
 "island.audio.noApps" = "No apps are playing audio";
 "island.audio.noAppsMessage" = "Apps appear here while they play sound. Changing an app's level asks once for System Audio Recording permission.";
 "island.audio.muteApp" = "Mute";

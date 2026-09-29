@@ -10,7 +10,6 @@ final class AppEnvironment: ObservableObject {
     let screenRecorder: ScreenRecordingViewModel
     let screenshotShelf: ScreenshotShelfViewModel
     let dynamicIsland: DynamicIslandViewModel
-    let spotifyAccount: SpotifyAccountViewModel
     let appUpdate: AppUpdateService
 
     // Retained for the app's lifetime; the view models reference them weakly.
@@ -80,7 +79,6 @@ final class AppEnvironment: ObservableObject {
         self.screenRecorder = screenRecorder
         self.screenshotShelf = screenshotShelf
         self.dynamicIsland = dynamicIsland
-        spotifyAccount = islandPanels.spotify
         appUpdate = AppUpdateService()
 
         // Wire presentation coordinators and hand them to the view models.

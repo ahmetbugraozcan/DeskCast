@@ -127,7 +127,6 @@ struct IslandExpandedView: View {
                 store: store,
                 audio: panels.audio,
                 extras: panels.extras,
-                actions: panels.actions,
                 namespace: namespace
             )
         case .captures:
