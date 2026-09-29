@@ -504,3 +504,4 @@
 "dropShelf.archiveName" = "Drop Shelf";
 "dropShelf.zipped" = "%@ oluşturuldu";
 "dropShelf.processingFailed" = "Öğe işlenemedi";
+"island.files.zip" = "Zip'le";

@@ -240,6 +240,11 @@ struct FilesPanelView: View {
                         dropShelf.sendAll()
                     }
 
+                    IslandChipButton(title: AppLocalization.string("island.files.zip"), systemImage: "archivebox") {
+                        dropShelf.zipItems()
+                    }
+                    .disabled(dropShelf.isProcessing)
+
                     IslandChipButton(title: AppLocalization.string("Clear Drop Shelf"), systemImage: "trash") {
                         dropShelf.clearAll()
                     }
@@ -304,6 +309,18 @@ struct FilesPanelView: View {
             }
 
             return NSItemProvider()
+        }
+        .contextMenu {
+            if dropShelf.canProcessImage(item) {
+                DropShelfImageMenus(actions: DropShelfImageActions(
+                    convert: { dropShelf.convertImage(item, to: $0) },
+                    resize: { dropShelf.resizeImage(item, $0) }
+                ))
+
+                Divider()
+            }
+
+            Button(AppLocalization.string("Remove"), role: .destructive) { dropShelf.remove(item) }
         }
     }
 }

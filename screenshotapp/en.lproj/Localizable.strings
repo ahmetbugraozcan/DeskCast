@@ -504,3 +504,4 @@
 "dropShelf.archiveName" = "Drop Shelf";
 "dropShelf.zipped" = "Created %@";
 "dropShelf.processingFailed" = "Couldn't process the item";
+"island.files.zip" = "Zip";

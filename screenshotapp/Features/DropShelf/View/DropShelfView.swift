@@ -974,7 +974,7 @@ struct DropShelfImageActions {
     let resize: (ShelfImageResize) -> Void
 }
 
-private struct DropShelfImageMenus: View {
+struct DropShelfImageMenus: View {
     let actions: DropShelfImageActions
 
     var body: some View {
