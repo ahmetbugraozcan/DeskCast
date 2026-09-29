@@ -5,7 +5,7 @@
 # DeskCast
 
 **A lightweight macOS menu-bar toolbox for everyday desktop work.**
-Capture, collect, and search — without a Dock icon getting in your way.
+Capture, record, annotate, collect, and search — plus a Dynamic Island for your notch.
 
 [![Platform](https://img.shields.io/badge/platform-macOS-0a84ff)](https://github.com/ahmetbugraozcan/DeskCast/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
@@ -13,54 +13,85 @@ Capture, collect, and search — without a Dock icon getting in your way.
 
 <br/>
 
-<img src="docs/images/menu.png" width="300" alt="DeskCast menu-bar menu" />
+<img src="docs/images/menu-panel.png" width="320" alt="DeskCast menu-bar panel" />
 
 </div>
 
 ---
 
-DeskCast lives quietly in the menu bar and bundles a handful of focused, keyboard-
-and drag-friendly tools. Every tool can be toggled and shown or hidden in the menu,
-and the entire UI is localized in **English and Turkish**.
+DeskCast lives quietly in the menu bar (no Dock icon) and bundles a set of focused,
+keyboard- and drag-friendly tools behind one panel: tool tiles, what's playing, recent
+captures and colors. Every tool can be turned off or hidden from the menu, and the
+entire UI is localized in **English and Turkish**.
 
 ## Features
 
-### 🎬 Screen recording
+### 🏝️ Dynamic Island
 
-Record the **full display** or a **resizable selected area** to a video file, with
-optional system audio and microphone. A clean floating controller lets you pick the
-mode, quality (bitrate), codec (H.264/HEVC), frame rate and an optional 3-2-1
-countdown; a live outline shows exactly which region is being captured. Finished
-videos land in the same shelf as your screenshots.
+A notch-anchored island that expands on hover. When closed, it shows what's going on:
+the playing song (Music, Spotify, browser video), a running timer, or a **Claude Code /
+Codex agent that is working** — with a banner when a long turn finishes. It also
+mirrors other apps' notifications, DeskCast confirmations, battery alerts and
+upcoming meetings (with a Join button).
 
-<div align="center"><img src="docs/images/recorder-panel.png" width="640" alt="Screen recording controller" /></div>
+<div align="center"><img src="docs/images/island-compact.png" width="372" alt="Closed Dynamic Island" /></div>
 
-### 📸 Screenshot shelf
+Open it for media controls with synced lyrics, or pick one of 17 panels from the
+launcher: per-app **volume mixer**, AI agent usage, clipboard history, system stats,
+calendar, timer & stopwatch, camera mirror, downloads, scratchpad, Bluetooth device
+batteries (AirPods included), weather and more. Panels can be reordered and hidden
+right in the island.
 
-Capture a screen region into a floating shelf, then reorder, pin, copy, drag out to
-other apps, save (or auto-save), and reveal in Finder — all without breaking your flow.
+<div align="center">
+<img src="docs/images/island-nowplaying.png" width="420" alt="Now Playing panel" />
+<img src="docs/images/island-launcher.png" width="420" alt="Panel launcher" />
+</div>
 
-<div align="center"><img src="docs/images/screenshot-shelf.png" width="480" alt="Screenshot shelf" /></div>
+### 📸 Screenshots, annotation & pinning
+
+Capture a screen region into a floating shelf, then reorder, copy, drag out to other
+apps, save (or auto-save), and reveal in Finder. **Annotate** a capture with arrows,
+rectangles, pen, text, highlight and pixelate, or **pin** it on screen as an
+always-on-top panel.
+
+<div align="center"><img src="docs/images/annotate.png" width="600" alt="Annotation editor" /></div>
+
+### 📜 Scrolling capture
+
+Select an area and scroll it yourself — DeskCast stitches the frames into one tall
+image, skipping fixed headers and footers.
+
+### 🎬 Screen recording, trim & GIF
+
+Record the **full display** or a **resizable selected area**, with optional system
+audio and microphone. A floating controller picks quality, codec (H.264/HEVC), frame
+rate and a 3-2-1 countdown. Finished videos join the same shelf, where you can **trim**
+them or turn them into a looping **GIF** — the original is never overwritten.
+
+<div align="center"><img src="docs/images/recorder-panel.png" width="560" alt="Screen recording controller" /></div>
+<div align="center"><img src="docs/images/video-editor.png" width="560" alt="Trim or make a GIF" /></div>
+
+### 🔤 Text, QR codes & colors
+
+Capture a region to copy its **recognized text** or the contents of **QR codes and
+barcodes** (Vision). **Pick a color** anywhere on screen with the system loupe and copy
+it as HEX, RGB, HSL or SwiftUI; recent colors stay in the menu.
 
 ### 🗂️ Drop shelf
 
 A floating tray that collects dragged **files, folders, links, text, and images** so
-you can gather things from everywhere and send them somewhere together. Each item is
-tinted by kind, and it opens on a shake while you're dragging content.
+you can gather things from everywhere and send them somewhere together. It opens on a
+shake while you're dragging.
 
 <div align="center"><img src="docs/images/drop-shelf.png" width="420" alt="Drop shelf" /></div>
 
-### 🔎 Image text search
+### 🔎 Image text search & Finder path
 
-Index a folder and search your local images by **filename and recognized text**
-(Vision OCR) — great for finding that one screenshot with the right words in it.
+Index a folder and search your local images by **filename and recognized text** — great
+for finding that one screenshot with the right words in it. Copy the front Finder
+window's path with one click.
 
 <div align="center"><img src="docs/images/image-search.png" width="560" alt="Image text search" /></div>
-
-### 📋 Copy Finder path & OCR
-
-Copy the front Finder window's path to the clipboard, or capture a region and copy the
-**recognized text** straight to your pasteboard.
 
 ## Download & install
 
@@ -97,7 +128,9 @@ The deployment target is set in `screenshotapp.xcodeproj`.
 
 DeskCast asks for standard macOS permissions only when a feature needs them: **Screen
 Recording** (capture / OCR / video), **Microphone** (optional recording audio),
-**Automation → Finder** (copy path), and **Accessibility** (shake-to-open). It is
+**Automation → Finder** (copy path), **Accessibility** (shake-to-open, mirrored
+notifications, clipboard paste), **System Audio Recording** (per-app volume), and
+**Calendar / Camera / Bluetooth** for the matching island panels. It is
 distributed outside the Mac App Store (Developer ID / notarized), so it is not sandboxed.
 
 ## Architecture
@@ -108,7 +141,8 @@ DeskCast is a SwiftUI + AppKit app organized as a layered, feature-module MVVM c
 screenshotapp/
   App/       @main app, AppDelegate, AppEnvironment (composition root / DI)
   Core/      cross-cutting: localization, shared UI, support helpers, ShelfCollecting
-  Features/  ScreenshotShelf · ScreenRecording · DropShelf · ImageSearch ·
+  Features/  ScreenshotShelf · Annotation · ScreenRecording · VideoEditing ·
+             ScrollingCapture · ColorPicker · DropShelf · ImageSearch · DynamicIsland ·
              Permissions · Settings · Toolbox
              each split into Model / ViewModel / View / Service / Presentation
 ```
