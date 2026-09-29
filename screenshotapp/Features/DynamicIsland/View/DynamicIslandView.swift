@@ -160,7 +160,7 @@ struct DynamicIslandView: View {
         switch mode {
         case .idle:
             return CGSize(width: notch.width + ears, height: notch.height)
-        case .compactMedia, .compactTimer, .compactBattery, .compactWeather:
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus:
             // Music with a running timer shows the countdown on the right wing.
             let sideWidth = notch.height + (mode == .compactMedia && !combinesTimer ? 18 : 34)
             let centerWidth = geometry.hasNotch ? notch.width : max(notch.width, 220)
@@ -181,7 +181,7 @@ struct DynamicIslandView: View {
     static func cornerMetrics(for mode: DynamicIslandMode) -> (top: CGFloat, bottom: CGFloat) {
         switch mode {
         case .idle: return (top: 6, bottom: 9)
-        case .compactMedia, .compactTimer, .compactBattery, .compactWeather: return (top: 6, bottom: 13)
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus: return (top: 6, bottom: 13)
         case .notification: return (top: 12, bottom: 24)
         case .expanded: return (top: 14, bottom: 30)
         }
@@ -200,7 +200,7 @@ struct DynamicIslandView: View {
         let isShapeVisible = !store.hidesCollapsedIsland
         // The closed island swells slightly under the pointer before it opens.
         let growsOnHover = store.isHovering && !reduceMotion
-            && [.idle, .compactMedia, .compactTimer, .compactBattery, .compactWeather].contains(mode)
+            && [.idle, .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus].contains(mode)
 
         ZStack(alignment: .topLeading) {
             ZStack(alignment: .top) {
@@ -284,14 +284,17 @@ struct DynamicIslandView: View {
                 .transition(Self.contentTransition)
         case .compactBattery:
             if let status = store.batteryStatus {
-                CompactBatteryView(status: status, geometry: geometry)
+                CompactBatteryView(status: status, showsFocus: store.isFocusActive, geometry: geometry)
                     .transition(Self.contentTransition)
             }
         case .compactWeather:
             if let weather = store.idleWeather {
-                CompactWeatherView(report: weather, geometry: geometry)
+                CompactWeatherView(report: weather, showsFocus: store.isFocusActive, geometry: geometry)
                     .transition(Self.contentTransition)
             }
+        case .compactFocus:
+            CompactFocusView(geometry: geometry)
+                .transition(Self.contentTransition)
         case .notification:
             if let notification = store.activeNotification {
                 NotificationBannerView(notification: notification, geometry: geometry) { url in

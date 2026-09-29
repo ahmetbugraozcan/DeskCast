@@ -127,6 +127,7 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     /// City typed in Settings; empty until the user sets one.
     var weatherCity = ""
     var weatherUnit = DynamicIslandSettings.defaultWeatherUnit
+    var showsFocusIndicator = DynamicIslandSettings.defaultShowsFocusIndicator
 
     /// Panels shown in the launcher, in the user's order.
     var visiblePanels: [IslandPanel] {
@@ -161,6 +162,7 @@ enum DynamicIslandSettings {
         static let notificationDurationSeconds = "dynamicIsland.notificationDurationSeconds"
         static let weatherCity = "dynamicIsland.weatherCity"
         static let weatherUnit = "dynamicIsland.weatherUnit"
+        static let showsFocusIndicator = "dynamicIsland.showsFocusIndicator"
     }
 
     static let notificationDurationRange = 2...10
@@ -190,6 +192,8 @@ enum DynamicIslandSettings {
     static let defaultShowsSideButtons = true
     static let defaultNotificationDurationSeconds = 4
     static var defaultWeatherUnit: WeatherUnit { .localeDefault }
+    /// Off by default: turning it on asks for Focus Status access.
+    static let defaultShowsFocusIndicator = false
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
         // Scratchpad text and the weather city are user content, so they're
@@ -229,7 +233,8 @@ enum DynamicIslandSettings {
             Keys.panelOrder: IslandPanel.allCases.map(\.rawValue),
             Keys.hiddenPanels: [String](),
             Keys.notificationDurationSeconds: defaultNotificationDurationSeconds,
-            Keys.weatherUnit: defaultWeatherUnit.rawValue
+            Keys.weatherUnit: defaultWeatherUnit.rawValue,
+            Keys.showsFocusIndicator: defaultShowsFocusIndicator
         ]
     }
 
@@ -260,7 +265,8 @@ enum DynamicIslandSettings {
             panelOrder: normalizedPanelOrder(defaults.stringArray(forKey: Keys.panelOrder) ?? []),
             hiddenPanels: Set((defaults.stringArray(forKey: Keys.hiddenPanels) ?? []).compactMap(IslandPanel.init(rawValue:))),
             weatherCity: (defaults.string(forKey: Keys.weatherCity) ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
-            weatherUnit: enumValue(defaults, Keys.weatherUnit, default: defaultWeatherUnit)
+            weatherUnit: enumValue(defaults, Keys.weatherUnit, default: defaultWeatherUnit),
+            showsFocusIndicator: defaults.bool(forKey: Keys.showsFocusIndicator)
         )
     }
 

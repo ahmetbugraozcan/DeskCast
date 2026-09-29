@@ -691,6 +691,7 @@ final class IslandPanelModels {
     let downloads = DownloadsViewModel()
     let devices = DevicesViewModel()
     let weather = WeatherViewModel()
+    let focus = FocusIndicatorMonitor()
     let timer: IslandTimerViewModel
     let controls = ControlsViewModel()
     let camera = CameraMirrorViewModel()
@@ -719,5 +720,6 @@ final class IslandPanelModels {
         clipboard.bind(to: island)
         eventReminders.bind(to: island)
         weather.bind(to: island)
+        focus.bind(to: island)
     }
 }

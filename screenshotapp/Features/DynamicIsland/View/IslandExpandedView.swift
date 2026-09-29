@@ -235,6 +235,7 @@ struct CompactTimerView: View {
 /// Closed-island battery readout ("While idle: Battery").
 struct CompactBatteryView: View {
     let status: BatteryStatus
+    var showsFocus = false
     let geometry: DynamicIslandGeometry
 
     var body: some View {
@@ -248,6 +249,10 @@ struct CompactBatteryView: View {
                 .foregroundStyle(tint)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: height - 12)
+
+            if showsFocus {
+                IslandFocusMoon()
+            }
 
             Spacer(minLength: geometry.hasNotch ? geometry.notchSize.width : 12)
 

@@ -44,6 +44,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// Current weather for the closed island, pushed by `WeatherViewModel`
     /// while the idle content is weather.
     @Published private(set) var idleWeather: WeatherReport?
+    /// A Focus is on and the Focus indicator setting is on.
+    @Published private(set) var isFocusActive = false
 
     weak var presenter: DynamicIslandPresenting?
 
@@ -172,6 +174,10 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             return .compactWeather
         }
 
+        if isFocusActive {
+            return .compactFocus
+        }
+
         return .idle
     }
 
@@ -182,7 +188,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// "Hidden until hover": the collapsed island is invisible; banners still show.
     var hidesCollapsedIsland: Bool {
         preferences.openMode == .hiddenUntilHover && (mode == .idle || mode == .compactMedia
-            || mode == .compactTimer || mode == .compactBattery || mode == .compactWeather)
+            || mode == .compactTimer || mode == .compactBattery || mode == .compactWeather || mode == .compactFocus)
     }
 
     var batteryStatus: BatteryStatus? {
@@ -856,6 +862,11 @@ extension DynamicIslandViewModel {
         guard idleWeather != report else { return }
         idleWeather = report
     }
+
+    func updateFocusActive(_ active: Bool) {
+        guard isFocusActive != active else { return }
+        isFocusActive = active
+    }
 }
 
 private extension DynamicIslandNotificationStyle {
@@ -898,6 +909,10 @@ extension DynamicIslandViewModel {
 
         if defaults.bool(forKey: "DeskCastDemoStopwatch") {
             timer.panelMode = .stopwatch
+        }
+
+        if defaults.bool(forKey: "DeskCastDemoFocus") {
+            isFocusActive = true
         }
 
         let timerMinutes = defaults.integer(forKey: "DeskCastDemoTimer")

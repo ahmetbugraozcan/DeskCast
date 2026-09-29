@@ -644,3 +644,12 @@
 "island.weather.condition.rainShowers" = "Sağanak";
 "island.weather.condition.snowShowers" = "Kar sağanağı";
 "island.weather.condition.thunderstorm" = "Gök gürültülü fırtına";
+
+/* Focus */
+"island.focus.on" = "Odak açık";
+"island.focus.label" = "Odak";
+"island.settings.focus" = "Odak";
+"island.settings.focus.toggle" = "Odak açıkken ay simgesi göster";
+"island.settings.focus.denied" = "Odak Durumu erişimi kapalı";
+"island.settings.focus.openSettings" = "Sistem Ayarları'nı Aç";
+"island.settings.focus.hint" = "Başka bir şey gösterilmiyorsa kapalı island'da ay simgesi görünür; pil veya hava durumunun yanına da küçük bir ay eklenir. macOS DeskCast'e yalnızca bir Odak'ın açık olduğunu söyler, hangisi olduğunu söylemez.";

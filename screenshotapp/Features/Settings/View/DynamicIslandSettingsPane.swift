@@ -64,6 +64,7 @@ struct DynamicIslandSettingsPane: View {
                 openingSection
                 idleSection
                 IslandWeatherSettingsSection()
+                IslandFocusSettingsSection()
                 notificationsSection
                 clipboardSection
 

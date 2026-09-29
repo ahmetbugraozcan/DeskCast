@@ -181,6 +181,7 @@ private struct HourlyForecastStrip: View {
 /// Closed island: condition icon on the left wing, temperature on the right.
 struct CompactWeatherView: View {
     let report: WeatherReport
+    var showsFocus = false
     let geometry: DynamicIslandGeometry
 
     var body: some View {
@@ -192,6 +193,10 @@ struct CompactWeatherView: View {
                 .font(.system(size: 13))
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: height - 12)
+
+            if showsFocus {
+                IslandFocusMoon()
+            }
 
             Spacer(minLength: geometry.hasNotch ? geometry.notchSize.width : 12)
 

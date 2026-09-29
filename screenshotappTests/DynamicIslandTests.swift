@@ -323,6 +323,64 @@ struct DynamicIslandViewModelTests {
 }
 
 @MainActor
+private final class FakeFocusStatus: FocusStatusProviding {
+    var access = FocusAccess.allowed
+    var isFocused = false
+
+    func requestAccess(_ completion: @escaping (FocusAccess) -> Void) {
+        completion(access)
+    }
+}
+
+@MainActor
+private func weatherReport(_ temperature: Double = 19) -> WeatherReport {
+    WeatherReport(
+        place: WeatherPlace(name: "Istanbul", country: nil, latitude: 41, longitude: 29),
+        unit: .celsius,
+        temperature: temperature,
+        apparentTemperature: nil,
+        humidity: nil,
+        windSpeed: nil,
+        condition: .rain,
+        isDay: true,
+        high: nil,
+        low: nil,
+        timeZone: .gmt,
+        hourly: [],
+        fetchedAt: Date()
+    )
+}
+
+extension DynamicIslandViewModelTests {
+    @Test func focusIndicatorFollowsFocusOnlyWhileTheSettingIsOn() {
+        let focus = FakeFocusStatus()
+        focus.isFocused = true
+
+        let off = makeViewModel()
+        let offMonitor = FocusIndicatorMonitor(service: focus)
+        offMonitor.bind(to: off)
+        #expect(off.mode == .idle)
+
+        let on = makeViewModel(settings: StubIslandSettings { $0.showsFocusIndicator = true })
+        let onMonitor = FocusIndicatorMonitor(service: focus)
+        onMonitor.bind(to: on)
+        #expect(on.mode == .compactFocus)
+    }
+
+    @Test func idleContentOutranksTheFocusMoonAndMusicOutranksWeather() {
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.idleContent = .weather })
+        viewModel.updateFocusActive(true)
+        #expect(viewModel.mode == .compactFocus)
+
+        viewModel.updateIdleWeather(weatherReport())
+        #expect(viewModel.mode == .compactWeather)
+
+        nowPlaying.emit(track("a"))
+        #expect(viewModel.mode == .compactMedia)
+    }
+}
+
+@MainActor
 struct NowPlayingInfoTests {
     @Test func elapsedExtrapolatesOnlyWhilePlaying() {
         let start = Date(timeIntervalSinceReferenceDate: 1_000)

@@ -45,6 +45,7 @@ enum DynamicIslandMode: Equatable {
     case compactTimer
     case compactBattery
     case compactWeather
+    case compactFocus
     case notification
     case expanded
 }

@@ -644,3 +644,12 @@
 "island.weather.condition.rainShowers" = "Showers";
 "island.weather.condition.snowShowers" = "Snow showers";
 "island.weather.condition.thunderstorm" = "Thunderstorm";
+
+/* Focus */
+"island.focus.on" = "Focus is on";
+"island.focus.label" = "Focus";
+"island.settings.focus" = "Focus";
+"island.settings.focus.toggle" = "Show a moon while a Focus is on";
+"island.settings.focus.denied" = "Focus Status access is off";
+"island.settings.focus.openSettings" = "Open System Settings";
+"island.settings.focus.hint" = "When nothing else is showing, the closed island shows a moon; next to battery or weather it adds a small moon. macOS only tells DeskCast that a Focus is on, not which one.";
