@@ -53,6 +53,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     private let batteryMonitor: BatteryMonitoring
     private let systemNotifications: SystemNotificationMonitoring
     private let settings: DynamicIslandSettingsReading & ToolboxSettingsReading
+    private let historyStore: NotificationHistoryPersisting?
     private var pendingNotifications: [DynamicIslandNotification] = []
     private var notificationDismissTask: Task<Void, Never>?
     private var hoverEndTask: Task<Void, Never>?
@@ -77,7 +78,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     private static let hoverEndDelay: Duration = .milliseconds(160)
     static let actionBannerSeconds = 15
     private static let lowBatteryThresholds = [20, 10]
-    private static let maxHistoryCount = 30
+    private static let maxHistoryCount = 50
     private static let lastPanelKey = "dynamicIsland.lastPanel"
 
     init(
@@ -85,6 +86,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         batteryMonitor: BatteryMonitoring,
         systemNotifications: SystemNotificationMonitoring,
         timer: IslandTimerViewModel? = nil,
+        historyStore: NotificationHistoryPersisting? = nil,
         settings: DynamicIslandSettingsReading & ToolboxSettingsReading
     ) {
         self.timer = timer ?? IslandTimerViewModel()
@@ -92,6 +94,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         self.batteryMonitor = batteryMonitor
         self.systemNotifications = systemNotifications
         self.settings = settings
+        self.historyStore = historyStore
+        notificationHistory = historyStore?.load() ?? []
         let initialPreferences = settings.dynamicIslandSettings()
         preferences = initialPreferences
         expandedContent = .panel(Self.storedLastPanel(visible: initialPreferences.visiblePanels))
@@ -104,6 +108,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         }
         systemNotifications.onBanner = { [weak self] banner in
             self?.handleSystemBanner(banner)
+        }
+        systemNotifications.onNotificationCenterList = { [weak self] banners in
+            self?.importNotificationCenterList(banners)
         }
 
         // The compact island shows the running timer, so re-render with it.
@@ -428,10 +435,6 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         suppressesHoverUntilExit = isHovering
     }
 
-    func clearNotificationHistory() {
-        notificationHistory = []
-    }
-
     func preferPlayer(_ player: MediaPlayerApp) {
         nowPlayingService.prefer(player)
     }
@@ -503,9 +506,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         if notification.style != .media {
             notificationHistory.insert(notification, at: 0)
 
-            if notificationHistory.count > Self.maxHistoryCount {
-                notificationHistory.removeLast(notificationHistory.count - Self.maxHistoryCount)
-            }
+            trimAndSaveHistory()
         }
 
         guard activeNotification != nil else {
@@ -623,19 +624,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     private func handleSystemBanner(_ banner: SystemNotificationBanner) {
         guard preferences.showsSystemNotifications else { return }
 
-        let app = banner.appName.flatMap(Self.application(named:))
-
-        post(
-            DynamicIslandNotification(
-                caption: banner.appName,
-                title: banner.title,
-                message: banner.message,
-                systemImage: "bell.badge.fill",
-                style: .system,
-                image: app?.icon,
-                sourceAppURL: app?.url
-            )
-        )
+        post(Self.systemNotification(from: banner))
     }
 
     /// Resolves the app a banner names, preferring a running instance.
@@ -861,6 +850,53 @@ extension DynamicIslandViewModel {
     func updateIdleWeather(_ report: WeatherReport?) {
         guard idleWeather != report else { return }
         idleWeather = report
+    }
+
+    func clearNotificationHistory() {
+        notificationHistory = []
+        historyStore?.save([])
+    }
+
+    private static func systemNotification(from banner: SystemNotificationBanner, date: Date = Date()) -> DynamicIslandNotification {
+        let app = banner.appName.flatMap(Self.application(named:))
+        return DynamicIslandNotification(
+            date: date,
+            caption: banner.appName,
+            title: banner.title,
+            message: banner.message,
+            systemImage: "bell.badge.fill",
+            style: .system,
+            image: app?.icon,
+            sourceAppURL: app?.url
+        )
+    }
+
+    /// Adds what the open Notification Center lists and the history lacks,
+    /// without showing banners for it.
+    func importNotificationCenterList(_ banners: [SystemNotificationBanner]) {
+        guard isEnabled, preferences.showsSystemNotifications else { return }
+        let known = Set(notificationHistory.map(Self.historySignature))
+        let now = Date()
+        // Listed newest first; older items get slightly older times so the
+        // order survives sorting.
+        let imported = banners.enumerated().compactMap { index, banner -> DynamicIslandNotification? in
+            let notification = Self.systemNotification(from: banner, date: now.addingTimeInterval(-Double(index + 1)))
+            return known.contains(Self.historySignature(notification)) ? nil : notification
+        }
+        guard !imported.isEmpty else { return }
+        notificationHistory = (notificationHistory + imported).sorted { $0.date > $1.date }
+        trimAndSaveHistory()
+    }
+
+    private func trimAndSaveHistory() {
+        if notificationHistory.count > Self.maxHistoryCount {
+            notificationHistory.removeLast(notificationHistory.count - Self.maxHistoryCount)
+        }
+        historyStore?.save(notificationHistory)
+    }
+
+    private static func historySignature(_ notification: DynamicIslandNotification) -> String {
+        [notification.caption ?? "", notification.title, notification.message ?? ""].joined(separator: "\u{1F}")
     }
 
     func updateFocusActive(_ active: Bool) {

@@ -1,5 +1,6 @@
 import AppKit
 import Intents
+import OSLog
 
 enum FocusAccess: Equatable {
     case notDetermined
@@ -27,8 +28,18 @@ final class SystemFocusStatusService: FocusStatusProviding {
     }
 
     var isFocused: Bool {
-        access == .allowed && INFocusStatusCenter.default.focusStatus.isFocused == true
+        let status = INFocusStatusCenter.default.authorizationStatus
+        let raw = INFocusStatusCenter.default.focusStatus.isFocused
+        let summary = "auth=\(status.rawValue) focused=\(String(describing: raw))"
+        if summary != lastLogged {
+            lastLogged = summary
+            Self.logger.notice("Focus status \(summary, privacy: .public)")
+        }
+        return Self.access(for: status) == .allowed && raw == true
     }
+
+    private var lastLogged = ""
+    private static let logger = Logger(subsystem: "com.ahmetbugraozcan.screenshotapp", category: "FocusStatus")
 
     func requestAccess(_ completion: @escaping (FocusAccess) -> Void) {
         INFocusStatusCenter.default.requestAuthorization { status in

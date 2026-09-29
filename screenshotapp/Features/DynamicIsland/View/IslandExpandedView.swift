@@ -201,6 +201,7 @@ extension View {
 
 struct CompactTimerView: View {
     @ObservedObject var timer: IslandTimerViewModel
+    var showsFocus = false
     let geometry: DynamicIslandGeometry
 
     var body: some View {
@@ -217,6 +218,10 @@ struct CompactTimerView: View {
                         .animation(.linear(duration: 1), value: timer.progress(at: context.date))
                 }
                 .frame(width: height - 14, height: height - 14)
+
+                if showsFocus {
+                    IslandFocusMoon()
+                }
 
                 Spacer(minLength: geometry.hasNotch ? geometry.notchSize.width : 12)
 

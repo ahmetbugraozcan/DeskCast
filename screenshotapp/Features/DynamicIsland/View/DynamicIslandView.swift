@@ -274,13 +274,14 @@ struct DynamicIslandView: View {
                 CompactMediaView(
                     nowPlaying: nowPlaying,
                     timer: store.timer,
+                    showsFocus: store.isFocusActive,
                     geometry: geometry,
                     namespace: namespace
                 )
                 .transition(Self.contentTransition)
             }
         case .compactTimer:
-            CompactTimerView(timer: store.timer, geometry: geometry)
+            CompactTimerView(timer: store.timer, showsFocus: store.isFocusActive, geometry: geometry)
                 .transition(Self.contentTransition)
         case .compactBattery:
             if let status = store.batteryStatus {
@@ -392,6 +393,7 @@ struct DynamicIslandShape: Shape {
 struct CompactMediaView: View {
     let nowPlaying: NowPlayingInfo
     @ObservedObject var timer: IslandTimerViewModel
+    var showsFocus = false
     let geometry: DynamicIslandGeometry
     let namespace: Namespace.ID
 
@@ -424,6 +426,9 @@ struct CompactMediaView: View {
                 }
                 .transition(.opacity)
             } else {
+                if showsFocus {
+                    IslandFocusMoon()
+                }
                 EqualizerBarsView(isPlaying: nowPlaying.isPlaying, tint: nowPlaying.tintColor)
                     .frame(width: 18, height: 13)
                     .matchedGeometryEffect(id: "equalizer", in: namespace)

@@ -239,6 +239,8 @@ final class AIUsageViewModel: ObservableObject, IslandPanelActivating {
     @Published private(set) var report = AIUsageReport()
     @Published private(set) var isLoading = false
     @Published private(set) var hasLoaded = false
+    /// The spend scan finished at least once (limits arrive first).
+    @Published private(set) var hasLoadedSpend = false
     @Published var spendPeriod: SpendPeriod = .today
 
     private let service: AIUsageService
@@ -280,6 +282,8 @@ final class AIUsageViewModel: ObservableObject, IslandPanelActivating {
         self.timer = timer
     }
 
+    /// Limits first (small files), then spend (transcripts, read
+    /// incrementally), each published as soon as it's ready.
     func refresh() {
         guard loadTask == nil else { return }
 
@@ -287,16 +291,37 @@ final class AIUsageViewModel: ObservableObject, IslandPanelActivating {
         let service = service
 
         loadTask = Task { [weak self] in
-            let report = await Task.detached(priority: .utility) {
-                await service.load()
+            let limits = await Task.detached(priority: .userInitiated) {
+                await service.loadLimits()
+            }.value
+            self?.applyLimits(limits)
+
+            let spend = await Task.detached(priority: .utility) {
+                service.loadSpend()
             }.value
 
             guard let self else { return }
-            self.report = report
-            self.isLoading = false
-            self.hasLoaded = true
-            self.loadTask = nil
+            report.dailySpend = spend
+            isLoading = false
+            hasLoadedSpend = true
+            loadTask = nil
         }
+    }
+
+    /// Reads transcripts in the background shortly after launch, so the
+    /// first look at the panel doesn't wait for a cold scan.
+    func warmUp(after delay: Duration = .seconds(8), when shouldLoad: @escaping () -> Bool) {
+        Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard shouldLoad() else { return }
+            self?.refresh()
+        }
+    }
+
+    private func applyLimits(_ limits: AIUsageReport) {
+        report.claude = limits.claude
+        report.codex = limits.codex
+        hasLoaded = true
     }
 }
 
@@ -718,6 +743,9 @@ final class IslandPanelModels {
     /// Background features that follow the island's on/off state and settings.
     func bind(to island: DynamicIslandViewModel) {
         clipboard.bind(to: island)
+        aiUsage.warmUp { [weak island] in
+            island?.isEnabled == true && island?.preferences.visiblePanels.contains(.aiAgents) == true
+        }
         eventReminders.bind(to: island)
         weather.bind(to: island)
         focus.bind(to: island)

@@ -43,6 +43,7 @@ private final class FakeBatteryMonitor: BatteryMonitoring {
 @MainActor
 private final class FakeSystemNotificationMonitor: SystemNotificationMonitoring {
     var onBanner: ((SystemNotificationBanner) -> Void)?
+    var onNotificationCenterList: (([SystemNotificationBanner]) -> Void)?
     var isAuthorized = true
     private(set) var isStarted = false
 
@@ -51,6 +52,10 @@ private final class FakeSystemNotificationMonitor: SystemNotificationMonitoring 
 
     func emit(_ banner: SystemNotificationBanner) {
         onBanner?(banner)
+    }
+
+    func list(_ banners: [SystemNotificationBanner]) {
+        onNotificationCenterList?(banners)
     }
 }
 
@@ -351,6 +356,35 @@ private func weatherReport(_ temperature: Double = 19) -> WeatherReport {
     )
 }
 
+@MainActor
+private final class MemoryNotificationHistory: NotificationHistoryPersisting {
+    var saved: [DynamicIslandNotification] = []
+
+    func load() -> [DynamicIslandNotification] { saved }
+    func save(_ notifications: [DynamicIslandNotification]) { saved = notifications }
+}
+
+struct NotificationCenterListTests {
+    @Test func recognizesTimeLabels() {
+        for label in ["now", "2m ago", "20m ago", "1h ago", "15:38", "3:05 PM", "Yesterday", "5 dk önce", "Şimdi"] {
+            #expect(SystemNotificationMonitorService.isTimeLabel(label), "\(label)")
+        }
+        for text in ["Bash", "LinkedIn İş İlanı Uyarıları", "30 Eylül'e kadar", "1+1 BİLET FIRSATI"] {
+            #expect(!SystemNotificationMonitorService.isTimeLabel(text), "\(text)")
+        }
+    }
+
+    @Test func dropsTheListTimeLabelFromTexts() throws {
+        let banner = try #require(SystemNotificationMonitorService.makeBanner(
+            texts: ["HTalks", "15:38", "Arka Sokaklar'ı kaç para karşılığı izlersiniz?"],
+            description: "YouTube, HTalks"
+        ))
+        #expect(banner.appName == "YouTube")
+        #expect(banner.title == "HTalks")
+        #expect(banner.message == "Arka Sokaklar'ı kaç para karşılığı izlersiniz?")
+    }
+}
+
 extension DynamicIslandViewModelTests {
     @Test func focusIndicatorFollowsFocusOnlyWhileTheSettingIsOn() {
         let focus = FakeFocusStatus()
@@ -365,6 +399,43 @@ extension DynamicIslandViewModelTests {
         let onMonitor = FocusIndicatorMonitor(service: focus)
         onMonitor.bind(to: on)
         #expect(on.mode == .compactFocus)
+    }
+
+    @Test func notificationCenterListFillsHistoryWithoutBannersAndPersists() {
+        let store = MemoryNotificationHistory()
+        let viewModel = DynamicIslandViewModel(
+            nowPlayingService: nowPlaying,
+            batteryMonitor: battery,
+            systemNotifications: systemNotifications,
+            historyStore: store,
+            settings: StubIslandSettings()
+        )
+        viewModel.presenter = presenter
+        viewModel.start()
+
+        systemNotifications.emit(SystemNotificationBanner(appName: "Slack", title: "Can", message: "Selam"))
+        viewModel.dismissNotification()
+        systemNotifications.list([
+            SystemNotificationBanner(appName: "Gmail", title: "Yeni ilan", message: nil),
+            SystemNotificationBanner(appName: "Slack", title: "Can", message: "Selam"),
+            SystemNotificationBanner(appName: "Messages", title: "Akbank", message: "Fırsat")
+        ])
+
+        #expect(viewModel.activeNotification == nil)
+        #expect(viewModel.notificationHistory.map(\.title) == ["Can", "Yeni ilan", "Akbank"])
+        #expect(store.saved.count == 3)
+
+        let relaunched = DynamicIslandViewModel(
+            nowPlayingService: nowPlaying,
+            batteryMonitor: battery,
+            systemNotifications: systemNotifications,
+            historyStore: store,
+            settings: StubIslandSettings()
+        )
+        #expect(relaunched.notificationHistory.map(\.title) == ["Can", "Yeni ilan", "Akbank"])
+
+        relaunched.clearNotificationHistory()
+        #expect(store.saved.isEmpty)
     }
 
     @Test func idleContentOutranksTheFocusMoonAndMusicOutranksWeather() {
@@ -813,5 +884,50 @@ struct MeetingLinkTests {
         event.meetingLink = MeetingLink(url)
         let action = EventReminderMonitor.banner(for: event, now: now).action
         #expect(action?.url.absoluteString == "https://meet.google.com/abc-defg-hij")
+    }
+}
+
+struct ClaudeSpendScannerTests {
+    private func line(
+        id: String,
+        model: String = "claude-opus-5",
+        input: Int = 10,
+        output: Int = 20,
+        time: String = "2026-09-29T10:00:00.000Z"
+    ) -> String {
+        #"{"parentUuid":"x","message":{"model":"\#(model)","id":"\#(id)","type":"message","role":"assistant","content":[{"type":"text","text":"about \"usage\":{ and } braces"}],"usage":{"input_tokens":\#(input),"cache_creation_input_tokens":100,"cache_read_input_tokens":1000,"cache_creation":{"ephemeral_1h_input_tokens":100},"output_tokens":\#(output)}},"type":"assistant","timestamp":"\#(time)"}"#
+    }
+
+    @Test func readsUsageWithoutDecodingTheWholeLine() throws {
+        let usage = try #require(ClaudeTranscriptScanner.usage(in: Data(line(id: "msg_1").utf8)))
+        #expect(usage.messageID == "msg_1")
+        #expect(usage.model == "claude-opus-5")
+        #expect(usage.input == 10 && usage.output == 20 && usage.cacheWrite == 100 && usage.cacheRead == 1000)
+    }
+
+    @Test func ignoresUserLines() {
+        let user = #"{"message":{"role":"user","content":"the \"usage\":{\"input_tokens\":5} field"},"type":"user","#
+            + #""timestamp":"2026-09-29T10:00:00Z"}"#
+        #expect(ClaudeTranscriptScanner.usage(in: Data(user.utf8)) == nil)
+    }
+
+    @Test func extendsTotalsFromAppendedLinesOnlyAndSkipsRepeatedMessages() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let price: (String) -> TokenRates = { _ in TokenRates(input: 1, output: 1, cacheWrite: 1, cacheRead: 1) }
+
+        var summary = TranscriptSpendSummary.empty
+        let first = line(id: "msg_1") + "\n" + line(id: "msg_1") + "\n" + #"{"partial":"#
+        summary.consume(Data(first.utf8), calendar: calendar, rates: price)
+        #expect(summary.days.count == 1)
+        #expect(summary.days.first?.tokens == 1130)
+        // The unfinished last line is left for the next read.
+        #expect(summary.parsedOffset == first.utf8.count - #"{"partial":"#.utf8.count)
+
+        let appended = line(id: "msg_1") + "\n" + line(id: "msg_2", time: "2026-09-30T01:00:00Z") + "\n"
+        summary.consume(Data(appended.utf8), calendar: calendar, rates: price)
+        #expect(summary.days.count == 2)
+        #expect(summary.days.map(\.tokens) == [1130, 1130])
+        #expect(abs((summary.days.first?.cost ?? 0) - 1130.0 / 1_000_000) < 1e-12)
     }
 }

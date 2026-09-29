@@ -16,6 +16,10 @@ nonisolated struct SystemNotificationBanner: Equatable, Sendable {
 @MainActor
 protocol SystemNotificationMonitoring: AnyObject {
     var onBanner: ((SystemNotificationBanner) -> Void)? { get set }
+    /// Everything listed while the full Notification Center is open, newest
+    /// first — including notifications that never showed as a banner (e.g.
+    /// during a Focus). Not announced; meant for the history.
+    var onNotificationCenterList: (([SystemNotificationBanner]) -> Void)? { get set }
     var isAuthorized: Bool { get }
     func start()
     func stop()
@@ -33,6 +37,7 @@ protocol SystemNotificationMonitoring: AnyObject {
 @MainActor
 final class SystemNotificationMonitorService: SystemNotificationMonitoring {
     var onBanner: ((SystemNotificationBanner) -> Void)?
+    var onNotificationCenterList: (([SystemNotificationBanner]) -> Void)?
 
     private let scanQueue = DispatchQueue(
         label: "com.ahmetbugraozcan.screenshotapp.notifications.scan",
@@ -198,7 +203,12 @@ final class SystemNotificationMonitorService: SystemNotificationMonitoring {
 
         let newBanners = banners.filter { !previous.contains($0.signature) }
 
-        guard !newBanners.isEmpty, newBanners.count <= Self.maxNewBannersPerScan else { return }
+        guard !newBanners.isEmpty else { return }
+
+        guard newBanners.count <= Self.maxNewBannersPerScan else {
+            onNotificationCenterList?(banners)
+            return
+        }
 
         newBanners.forEach { onBanner?($0) }
     }
@@ -242,8 +252,9 @@ final class SystemNotificationMonitorService: SystemNotificationMonitoring {
         }
     }
 
-    nonisolated private static func makeBanner(texts: [String], description: String?) -> SystemNotificationBanner? {
-        var texts = texts
+    nonisolated static func makeBanner(texts: [String], description: String?) -> SystemNotificationBanner? {
+        // Notification Center's list adds a time label ("2m ago", "15:38").
+        var texts = texts.filter { !isTimeLabel($0) }
         var appName: String?
 
         if let description {
@@ -275,6 +286,17 @@ final class SystemNotificationMonitorService: SystemNotificationMonitoring {
             title: title,
             message: message.isEmpty ? nil : message
         )
+    }
+
+    private static let timeLabelPattern = try? NSRegularExpression(
+        pattern: #"^(now|şimdi|yesterday|dün|\d+\s?(s|m|min|h|d|w|sn|dk|sa|g|hf)\.?( ago| önce)?|\d{1,2}[:.]\d{2}(\s?[ap]\.?m\.?)?)$"#,
+        options: [.caseInsensitive]
+    )
+
+    nonisolated static func isTimeLabel(_ text: String) -> Bool {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.count <= 12, let timeLabelPattern else { return false }
+        return timeLabelPattern.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
     }
 
     nonisolated private static func collectNotificationGroups(

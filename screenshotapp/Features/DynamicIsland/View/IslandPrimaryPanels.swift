@@ -650,6 +650,9 @@ struct AIAgentsPanelView: View {
 
                 HStack(spacing: 8) {
                     spendCard
+                        // Spend follows the limits; show its shape until the scan is done.
+                        .redacted(reason: model.hasLoadedSpend ? [] : .placeholder)
+                        .animation(.easeOut(duration: 0.2), value: model.hasLoadedSpend)
                     activityCard
                 }
                 .frame(height: 92)

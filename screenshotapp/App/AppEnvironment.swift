@@ -55,6 +55,7 @@ final class AppEnvironment: ObservableObject {
             batteryMonitor: BatteryMonitorService(),
             systemNotifications: SystemNotificationMonitorService(),
             timer: islandTimer,
+            historyStore: NotificationHistoryFileStore(),
             settings: settings
         )
         let islandActions = Self.makeIslandActions(

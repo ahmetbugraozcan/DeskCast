@@ -60,19 +60,39 @@ nonisolated struct AIUsageReport: Equatable, Sendable {
 nonisolated final class AIUsageService: @unchecked Sendable {
     private let fileManager = FileManager.default
     private let lock = NSLock()
-    /// Per-transcript aggregates keyed by path, reused while mtime/size match.
-    private var transcriptCache: [String: TranscriptSummary] = [:]
+    /// Per-transcript totals keyed by path; extended as files grow and saved
+    /// to `cacheURL` so a relaunch doesn't re-read every transcript.
+    private var transcriptCache: [String: TranscriptSpendSummary]?
+    private let cacheURL: URL
+
+    init(cacheURL: URL? = nil) {
+        self.cacheURL = cacheURL ?? FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("DeskCast", isDirectory: true)
+            .appendingPathComponent("ClaudeSpendCache.json")
+    }
 
     private var homeURL: URL {
         fileManager.homeDirectoryForCurrentUser
     }
 
     func load() async -> AIUsageReport {
+        var report = await loadLimits()
+        report.dailySpend = loadSpend()
+        return report
+    }
+
+    /// Plan limits only: a few small files, so the panel can show them
+    /// before the (slower) spend scan finishes.
+    func loadLimits() async -> AIUsageReport {
         var report = AIUsageReport()
         report.claude = await claudeUsage()
         report.codex = codexUsage()
-        report.dailySpend = claudeDailySpend()
         return report
+    }
+
+    /// Last seven days of Claude Code spend, oldest first.
+    func loadSpend() -> [AIDailySpend] {
+        claudeDailySpend()
     }
 
     // MARK: - Claude limits
@@ -157,32 +177,37 @@ nonisolated final class AIUsageService: @unchecked Sendable {
 
     // MARK: - Claude spend
 
-    private struct TranscriptSummary {
-        let modificationDate: Date
-        let size: Int
-        /// Keyed by start of day.
-        let days: [Date: AIDailySpend]
-    }
-
     private func claudeDailySpend() -> [AIDailySpend] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         guard let firstDay = calendar.date(byAdding: .day, value: -6, to: today) else { return [] }
 
-        var totals: [Date: AIDailySpend] = [:]
         let projectsURL = homeURL.appendingPathComponent(".claude/projects")
+        let urls = files(in: projectsURL, extensions: ["jsonl"], maxDepth: 3, modifiedAfter: firstDay)
 
-        for url in files(in: projectsURL, extensions: ["jsonl"], maxDepth: 3, modifiedAfter: firstDay) {
-            guard let summary = transcriptSummary(for: url) else { continue }
+        lock.lock()
+        defer { lock.unlock() }
 
-            for (day, spend) in summary.days where day >= firstDay {
-                var total = totals[day] ?? AIDailySpend(day: day, cost: 0, tokens: 0, cacheReadTokens: 0)
-                total.cost += spend.cost
-                total.tokens += spend.tokens
-                total.cacheReadTokens += spend.cacheReadTokens
-                totals[day] = total
+        let previous = transcriptCache ?? loadCache()
+        var cache: [String: TranscriptSpendSummary] = [:]
+        var totals: [Date: AIDailySpend] = [:]
+
+        for url in urls {
+            let cached = previous[url.path]
+            guard let summary = transcriptSummary(for: url, cached: cached, calendar: calendar) else { continue }
+            cache[url.path] = summary
+
+            for day in summary.days where day.day >= firstDay {
+                var total = totals[day.day] ?? AIDailySpend(day: day.day, cost: 0, tokens: 0, cacheReadTokens: 0)
+                total.cost += day.cost
+                total.tokens += day.tokens
+                total.cacheReadTokens += day.cacheReadTokens
+                totals[day.day] = total
             }
         }
+
+        transcriptCache = cache
+        if cache != previous { saveCache(cache) }
 
         return (0..<7).compactMap { offset in
             guard let day = calendar.date(byAdding: .day, value: offset, to: firstDay) else { return nil }
@@ -190,73 +215,45 @@ nonisolated final class AIUsageService: @unchecked Sendable {
         }
     }
 
-    private func transcriptSummary(for url: URL) -> TranscriptSummary? {
+    /// Reads only what was appended since the cached summary; a file that
+    /// shrank or was replaced is read again from the start.
+    private func transcriptSummary(for url: URL, cached: TranscriptSpendSummary?, calendar: Calendar) -> TranscriptSpendSummary? {
         let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+        guard let modificationDate = values?.contentModificationDate, let size = values?.fileSize else { return nil }
 
-        guard let modificationDate = values?.contentModificationDate, let size = values?.fileSize else {
-            return nil
-        }
-
-        lock.lock()
-        let cached = transcriptCache[url.path]
-        lock.unlock()
-
-        if let cached, cached.modificationDate == modificationDate, cached.size == size {
+        if let cached, cached.modificationDate == modificationDate, cached.fileSize == size {
             return cached
         }
 
-        guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return nil }
-
-        let calendar = Calendar.current
-        var days: [Date: AIDailySpend] = [:]
-        // Streaming writes one line per content block, all carrying the same
-        // message usage; count each message once.
-        var seenMessageIDs = Set<String>()
-        let usageMarker = Data("\"usage\"".utf8)
-
-        for line in data.split(separator: UInt8(ascii: "\n")) where line.range(of: usageMarker) != nil {
-            guard
-                let json = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
-                json["type"] as? String == "assistant",
-                let message = json["message"] as? [String: Any],
-                let usage = message["usage"] as? [String: Any],
-                let timestamp = (json["timestamp"] as? String).flatMap(Self.parseISODate)
-            else {
-                continue
+        var summary = cached.flatMap { $0.parsedOffset <= size ? $0 : nil } ?? .empty
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        do {
+            try handle.seek(toOffset: UInt64(summary.parsedOffset))
+            if let chunk = try handle.readToEnd() {
+                summary.consume(chunk, calendar: calendar) { model in
+                    let price = ModelPrice.forModel(model)
+                    return TokenRates(input: price.input, output: price.output, cacheWrite: price.cacheWrite, cacheRead: price.cacheRead)
+                }
             }
-
-            if let id = message["id"] as? String {
-                guard seenMessageIDs.insert(id).inserted else { continue }
-            }
-
-            func tokens(_ key: String) -> Int { (usage[key] as? NSNumber)?.intValue ?? 0 }
-
-            let input = tokens("input_tokens")
-            let output = tokens("output_tokens")
-            let cacheWrite = tokens("cache_creation_input_tokens")
-            let cacheRead = tokens("cache_read_input_tokens")
-            let price = ModelPrice.forModel(message["model"] as? String ?? "")
-
-            let cost = (Double(input) * price.input
-                + Double(output) * price.output
-                + Double(cacheWrite) * price.cacheWrite
-                + Double(cacheRead) * price.cacheRead) / 1_000_000
-
-            let day = calendar.startOfDay(for: timestamp)
-            var spend = days[day] ?? AIDailySpend(day: day, cost: 0, tokens: 0, cacheReadTokens: 0)
-            spend.cost += cost
-            spend.tokens += input + output + cacheWrite + cacheRead
-            spend.cacheReadTokens += cacheRead
-            days[day] = spend
+        } catch {
+            return nil
         }
-
-        let summary = TranscriptSummary(modificationDate: modificationDate, size: size, days: days)
-
-        lock.lock()
-        transcriptCache[url.path] = summary
-        lock.unlock()
-
+        summary.modificationDate = modificationDate
+        summary.fileSize = size
         return summary
+    }
+
+    private func loadCache() -> [String: TranscriptSpendSummary] {
+        guard let data = try? Data(contentsOf: cacheURL),
+              let cache = try? JSONDecoder().decode([String: TranscriptSpendSummary].self, from: data) else { return [:] }
+        return cache
+    }
+
+    private func saveCache(_ cache: [String: TranscriptSpendSummary]) {
+        guard let data = try? JSONEncoder().encode(cache) else { return }
+        try? fileManager.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: cacheURL, options: .atomic)
     }
 
     /// API list prices in USD per million tokens. Cache writes are billed at
@@ -371,7 +368,7 @@ nonisolated final class AIUsageService: @unchecked Sendable {
                 continue
             }
 
-            let lineDate = (json["timestamp"] as? String).flatMap(Self.parseISODate) ?? Date()
+            let lineDate = (json["timestamp"] as? String).flatMap(ClaudeTranscriptScanner.parseISODate) ?? Date()
 
             func window(_ key: String) -> AIUsageWindow? {
                 guard let value = limits[key] as? [String: Any],
@@ -467,23 +464,5 @@ nonisolated final class AIUsageService: @unchecked Sendable {
         files(in: directory, extensions: extensions, maxDepth: maxDepth, modifiedAfter: .distantPast)
             .compactMap { (try? $0.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate }
             .max()
-    }
-
-    // ISO8601DateFormatter is thread-safe; shared because transcripts have
-    // thousands of timestamps.
-    nonisolated(unsafe) private static let fractionalDateFormatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
-    }()
-
-    nonisolated(unsafe) private static let plainDateFormatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        return formatter
-    }()
-
-    private static func parseISODate(_ string: String) -> Date? {
-        fractionalDateFormatter.date(from: string) ?? plainDateFormatter.date(from: string)
     }
 }
