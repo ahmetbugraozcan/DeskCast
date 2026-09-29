@@ -9,6 +9,7 @@ enum IslandPanel: String, CaseIterable, Identifiable {
     case nowPlaying
     case captures
     case files
+    case clipboard
     case system
     case tools
     case calendar
@@ -29,6 +30,7 @@ enum IslandPanel: String, CaseIterable, Identifiable {
         case .nowPlaying: "island.panel.nowPlaying"
         case .captures: "island.panel.captures"
         case .files: "island.panel.files"
+        case .clipboard: "island.panel.clipboard"
         case .system: "island.panel.system"
         case .tools: "island.panel.tools"
         case .calendar: "island.panel.calendar"
@@ -48,6 +50,7 @@ enum IslandPanel: String, CaseIterable, Identifiable {
         case .nowPlaying: "music.note"
         case .captures: "camera.viewfinder"
         case .files: "tray"
+        case .clipboard: "doc.on.clipboard"
         case .system: "gauge.with.dots.needle.50percent"
         case .tools: "square.grid.2x2"
         case .calendar: "calendar"
@@ -78,6 +81,7 @@ enum IslandPanel: String, CaseIterable, Identifiable {
         case .nowPlaying: .m
         case .captures: .s
         case .files: .f
+        case .clipboard: .k
         case .system: .i
         case .tools: .t
         case .calendar: .a

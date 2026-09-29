@@ -473,3 +473,10 @@
 "menu.dropShelf.count.one" = "Rafta %ld öğe";
 "menu.dropShelf.count.other" = "Rafta %ld öğe";
 "island.timer.addMinute" = "+1 dk";
+"island.panel.clipboard" = "Pano";
+"island.clipboard.empty" = "Henüz bir şey kopyalanmadı";
+"island.clipboard.emptyMessage" = "Kopyaladığın metin, bağlantı, görsel ve dosyalar burada görünür. Yalnızca bellekte tutulur; kaydı durdurmak için bu paneli gizle.";
+"island.clipboard.pasteHelp" = "Kullandığın uygulamaya yapıştırmak için tıkla";
+"island.clipboard.clear" = "Pano geçmişini temizle";
+"island.clipboard.files" = "%ld dosya";
+"island.clipboard.image" = "Görsel · %ld × %ld";

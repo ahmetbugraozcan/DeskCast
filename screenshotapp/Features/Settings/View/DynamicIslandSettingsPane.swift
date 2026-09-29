@@ -67,6 +67,7 @@ struct DynamicIslandSettingsPane: View {
 
                 displaySection
                 spotifySection
+                    .onAppear { spotifyAccount.loadConnectionState() }
             }
             .disabled(!isEnabled)
             .opacity(isEnabled ? 1 : 0.5)

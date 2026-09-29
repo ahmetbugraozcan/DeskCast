@@ -67,6 +67,7 @@ struct DynamicIslandView: View {
         .nowPlaying: 214,
         .captures: 196,
         .files: 208,
+        .clipboard: 262,
         .system: 300,
         .tools: 196,
         .calendar: 244,

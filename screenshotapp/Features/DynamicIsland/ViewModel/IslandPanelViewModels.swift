@@ -590,7 +590,8 @@ final class IslandPanelModels {
     let timer: IslandTimerViewModel
     let controls = ControlsViewModel()
     let camera = CameraMirrorViewModel()
-    let spotify: SpotifyAccountViewModel
+    let clipboard = ClipboardHistoryViewModel()
+    let spotify = SpotifyAccountViewModel()
     let extras: NowPlayingExtrasViewModel
     let screenshots: ScreenshotShelfViewModel
     let dropShelf: DropShelfViewModel
@@ -598,13 +599,11 @@ final class IslandPanelModels {
 
     init(
         timer: IslandTimerViewModel,
-        spotify: SpotifyAccountViewModel,
         screenshots: ScreenshotShelfViewModel,
         dropShelf: DropShelfViewModel,
         actions: IslandToolActions
     ) {
         self.timer = timer
-        self.spotify = spotify
         extras = NowPlayingExtrasViewModel(account: spotify)
         self.screenshots = screenshots
         self.dropShelf = dropShelf

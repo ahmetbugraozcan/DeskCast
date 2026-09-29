@@ -40,10 +40,30 @@ nonisolated final class SpotifyService: @unchecked Sendable {
 
     private let lock = NSLock()
     private var tokens: SpotifyTokens?
+    private var hasLoadedTokens = false
     private var listener: NWListener?
 
-    init() {
-        tokens = Self.loadTokens()
+    /// The keychain is read lazily: a read can wait on a keychain access prompt
+    /// (e.g. after the app's signature changed), which must never block launch
+    /// or the main thread.
+    init() {}
+
+    /// Reads stored tokens once, off the main thread.
+    func loadStoredTokensIfNeeded() async {
+        lock.lock()
+        let needsLoad = !hasLoadedTokens
+        hasLoadedTokens = true
+        lock.unlock()
+
+        guard needsLoad else { return }
+
+        let loaded = await Task.detached(priority: .utility) { Self.loadTokens() }.value
+
+        lock.lock()
+        if tokens == nil {
+            tokens = loaded
+        }
+        lock.unlock()
     }
 
     var isConnected: Bool {
@@ -96,6 +116,7 @@ nonisolated final class SpotifyService: @unchecked Sendable {
     func disconnect() {
         lock.lock()
         tokens = nil
+        hasLoadedTokens = true
         lock.unlock()
         Self.deleteTokens()
     }
@@ -225,6 +246,8 @@ nonisolated final class SpotifyService: @unchecked Sendable {
     }
 
     private func validAccessToken(clientID: String, forceRefresh: Bool = false) async throws -> String {
+        await loadStoredTokensIfNeeded()
+
         lock.lock()
         let current = tokens
         lock.unlock()

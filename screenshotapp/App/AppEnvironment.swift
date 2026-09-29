@@ -68,20 +68,19 @@ final class AppEnvironment: ObservableObject {
             screenRecorder: screenRecorder,
             dropShelf: dropShelf
         )
-        let spotifyAccount = SpotifyAccountViewModel()
         let islandPanels = IslandPanelModels(
             timer: islandTimer,
-            spotify: spotifyAccount,
             screenshots: screenshotShelf,
             dropShelf: dropShelf,
             actions: islandActions
         )
+        islandPanels.clipboard.bind(to: dynamicIsland)
 
         self.dropShelf = dropShelf
         self.screenRecorder = screenRecorder
         self.screenshotShelf = screenshotShelf
         self.dynamicIsland = dynamicIsland
-        self.spotifyAccount = spotifyAccount
+        spotifyAccount = islandPanels.spotify
         appUpdate = AppUpdateService()
 
         // Wire presentation coordinators and hand them to the view models.

@@ -10,7 +10,9 @@ final class SpotifyAccountViewModel: ObservableObject {
         }
     }
 
-    @Published private(set) var isConnected: Bool
+    @Published private(set) var isConnected = false
+    /// Stored tokens have been read; until then `isConnected` is unknown.
+    @Published private(set) var hasLoadedConnection = false
     @Published private(set) var isConnecting = false
     @Published private(set) var errorMessage: String?
 
@@ -19,7 +21,22 @@ final class SpotifyAccountViewModel: ObservableObject {
     init(service: SpotifyService = SpotifyService()) {
         self.service = service
         clientID = UserDefaults.standard.string(forKey: DynamicIslandSettings.Keys.spotifyClientID) ?? ""
-        isConnected = service.isConnected
+    }
+
+    /// Reads the stored connection (keychain) on first need, off the main thread.
+    func loadConnectionState(then completion: (() -> Void)? = nil) {
+        guard !hasLoadedConnection else {
+            completion?()
+            return
+        }
+
+        let service = service
+        Task {
+            await service.loadStoredTokensIfNeeded()
+            isConnected = service.isConnected
+            hasLoadedConnection = true
+            completion?()
+        }
     }
 
     var hasClientID: Bool {
@@ -45,6 +62,7 @@ final class SpotifyAccountViewModel: ObservableObject {
             }
 
             isConnected = service.isConnected
+            hasLoadedConnection = true
             isConnecting = false
         }
     }
@@ -126,6 +144,14 @@ final class NowPlayingExtrasViewModel: ObservableObject {
             queue = []
             queueIssue = .notSpotify
             queueState = .unavailable
+            return
+        }
+
+        guard account.hasLoadedConnection else {
+            queueState = .loading
+            account.loadConnectionState { [weak self] in
+                self?.loadQueue(for: nowPlaying)
+            }
             return
         }
 

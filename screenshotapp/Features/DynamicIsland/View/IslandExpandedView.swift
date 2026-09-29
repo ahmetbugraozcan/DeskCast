@@ -100,6 +100,14 @@ struct IslandExpandedView: View {
                     action: { store.clearNotificationHistory() }
                 )
             }
+        case .clipboard:
+            if !panels.clipboard.entries.isEmpty {
+                IslandIconButton(
+                    systemImage: "trash",
+                    help: AppLocalization.string("island.clipboard.clear"),
+                    action: { panels.clipboard.clear() }
+                )
+            }
         default:
             EmptyView()
         }
@@ -124,6 +132,8 @@ struct IslandExpandedView: View {
             CapturesPanelView(shelf: panels.screenshots, actions: panels.actions)
         case .files:
             FilesPanelView(store: store, dropShelf: panels.dropShelf, actions: panels.actions)
+        case .clipboard:
+            ClipboardPanelView(model: panels.clipboard)
         case .system:
             SystemPanelView(model: panels.system)
         case .tools:

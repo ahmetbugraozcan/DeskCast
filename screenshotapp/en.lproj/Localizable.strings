@@ -473,3 +473,10 @@
 "menu.dropShelf.count.one" = "%ld item on the shelf";
 "menu.dropShelf.count.other" = "%ld items on the shelf";
 "island.timer.addMinute" = "+1 min";
+"island.panel.clipboard" = "Clipboard";
+"island.clipboard.empty" = "Nothing copied yet";
+"island.clipboard.emptyMessage" = "Text, links, images and files you copy show up here. Kept in memory only; hide this panel to stop recording.";
+"island.clipboard.pasteHelp" = "Click to paste into the app you were using";
+"island.clipboard.clear" = "Clear clipboard history";
+"island.clipboard.files" = "%ld files";
+"island.clipboard.image" = "Image · %ld × %ld";
