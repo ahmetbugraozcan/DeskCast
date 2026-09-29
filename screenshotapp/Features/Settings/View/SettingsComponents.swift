@@ -84,6 +84,21 @@ struct SettingsPickerRow<Content: View>: View {
     }
 }
 
+/// A segmented picker sized to its segments and aligned to the trailing edge.
+struct SettingsSegmentedRow<Content: View>: View {
+    let title: String
+    @ViewBuilder var picker: Content
+
+    var body: some View {
+        SettingsControlRow(title: title) {
+            picker
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .fixedSize()
+        }
+    }
+}
+
 struct SettingsToggleRow: View {
     let title: String
     @Binding var isOn: Bool

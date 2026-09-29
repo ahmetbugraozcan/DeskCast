@@ -643,63 +643,53 @@ private extension SettingsView {
 
             VStack(alignment: .leading, spacing: 24) {
                 SettingsControlSection(title: AppLocalization.string("Recording")) {
-                    SettingsPickerRow(title: AppLocalization.string("Default mode")) {
+                    SettingsSegmentedRow(title: AppLocalization.string("Default mode")) {
                         Picker(AppLocalization.string("Default mode"), selection: $videoDefaultModeRaw) {
                             Text(AppLocalization.string("Full Screen"))
                                 .tag(ScreenRecordingMode.entireScreen.rawValue)
                             Text(AppLocalization.string("Selected Area"))
                                 .tag(ScreenRecordingMode.selectedArea.rawValue)
                         }
-                        .pickerStyle(.segmented)
-                        .frame(width: 260)
                     }
 
                     SettingsSectionDivider()
 
-                    SettingsPickerRow(title: AppLocalization.string("Quality")) {
+                    SettingsSegmentedRow(title: AppLocalization.string("Quality")) {
                         Picker(AppLocalization.string("Quality"), selection: $videoQualityRaw) {
                             ForEach(ScreenRecordingQuality.allCases) { quality in
                                 Text(ScreenRecordingControlView.qualityTitle(quality)).tag(quality.rawValue)
                             }
                         }
-                        .pickerStyle(.segmented)
-                        .frame(width: 260)
                     }
 
                     SettingsSectionDivider()
 
-                    SettingsPickerRow(title: AppLocalization.string("Codec")) {
+                    SettingsSegmentedRow(title: AppLocalization.string("Codec")) {
                         Picker(AppLocalization.string("Codec"), selection: $videoCodecRaw) {
                             ForEach(ScreenRecordingCodec.allCases) { codec in
                                 Text(ScreenRecordingControlView.codecTitle(codec)).tag(codec.rawValue)
                             }
                         }
-                        .pickerStyle(.segmented)
-                        .frame(width: 180)
                     }
 
                     SettingsSectionDivider()
 
-                    SettingsPickerRow(title: AppLocalization.string("Frame rate")) {
+                    SettingsSegmentedRow(title: AppLocalization.string("Frame rate")) {
                         Picker(AppLocalization.string("Frame rate"), selection: $videoFrameRate) {
                             ForEach(ScreenRecordingFrameRate.allCases) { frameRate in
                                 Text("\(frameRate.rawValue)").tag(frameRate.rawValue)
                             }
                         }
-                        .pickerStyle(.segmented)
-                        .frame(width: 220)
                     }
 
                     SettingsSectionDivider()
 
-                    SettingsPickerRow(title: AppLocalization.string("Countdown")) {
+                    SettingsSegmentedRow(title: AppLocalization.string("Countdown")) {
                         Picker(AppLocalization.string("Countdown"), selection: $videoCountdownSeconds) {
                             ForEach(ScreenRecordingSettings.countdownOptions, id: \.self) { seconds in
                                 Text(ScreenRecordingControlView.countdownTitle(seconds)).tag(seconds)
                             }
                         }
-                        .pickerStyle(.segmented)
-                        .frame(width: 180)
                     }
 
                     SettingsSectionDivider()
