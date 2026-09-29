@@ -689,6 +689,7 @@ final class IslandPanelModels {
     let aiUsage = AIUsageViewModel()
     let calendar = CalendarViewModel()
     let downloads = DownloadsViewModel()
+    let devices = DevicesViewModel()
     let timer: IslandTimerViewModel
     let controls = ControlsViewModel()
     let camera = CameraMirrorViewModel()

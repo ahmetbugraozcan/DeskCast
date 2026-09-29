@@ -581,3 +581,15 @@
 "scrollCapture.height" = "%ld pt tall";
 "scrollCapture.done" = "Scrolling capture added (%ld pt tall)";
 "scrollCapture.failed" = "Could not capture the area";
+
+/* Devices panel */
+"island.panel.devices" = "Devices";
+"island.devices.loading" = "Looking for devices…";
+"island.devices.empty" = "No Bluetooth devices connected";
+"island.devices.emptyMessage" = "Connected AirPods, keyboards and mice show their battery here.";
+"island.devices.allowBluetooth" = "Show mouse & keyboard battery";
+"island.devices.bluetoothDenied" = "Allow Bluetooth in Settings for more devices";
+"island.devices.left" = "L";
+"island.devices.right" = "R";
+"island.devices.case" = "Case";
+"island.devices.noLevel" = "No battery info";

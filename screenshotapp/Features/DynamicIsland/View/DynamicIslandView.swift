@@ -78,7 +78,8 @@ struct DynamicIslandView: View {
         .camera: 290,
         .downloads: 262,
         .scratchpad: 224,
-        .aiAgents: 300
+        .aiAgents: 300,
+        .devices: 244
     ]
 
     private static var maxExpandedContentHeight: CGFloat {

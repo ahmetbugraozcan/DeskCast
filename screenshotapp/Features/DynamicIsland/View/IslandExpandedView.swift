@@ -147,12 +147,25 @@ struct IslandExpandedView: View {
             TimerPanelView(timer: panels.timer, stopwatch: panels.stopwatch)
         case .camera:
             CameraPanelView(model: panels.camera)
+        case .downloads, .scratchpad, .aiAgents, .devices:
+            utilityPanelContent(panel)
+        }
+    }
+
+    /// Split from `panelContent` to keep each switch readable.
+    @ViewBuilder
+    private func utilityPanelContent(_ panel: IslandPanel) -> some View {
+        switch panel {
         case .downloads:
             DownloadsPanelView(model: panels.downloads)
         case .scratchpad:
             ScratchpadPanelView()
         case .aiAgents:
             AIAgentsPanelView(model: panels.aiUsage)
+        case .devices:
+            DevicesPanelView(model: panels.devices)
+        default:
+            EmptyView()
         }
     }
 }

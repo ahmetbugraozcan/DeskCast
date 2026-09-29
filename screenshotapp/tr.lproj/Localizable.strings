@@ -581,3 +581,15 @@
 "scrollCapture.height" = "%ld pt yükseklik";
 "scrollCapture.done" = "Kaydırmalı yakalama eklendi (%ld pt)";
 "scrollCapture.failed" = "Alan yakalanamadı";
+
+/* Devices panel */
+"island.panel.devices" = "Cihazlar";
+"island.devices.loading" = "Cihazlar aranıyor…";
+"island.devices.empty" = "Bağlı Bluetooth cihazı yok";
+"island.devices.emptyMessage" = "Bağlı AirPods, klavye ve farelerin pil durumu burada görünür.";
+"island.devices.allowBluetooth" = "Fare ve klavye pilini göster";
+"island.devices.bluetoothDenied" = "Daha fazla cihaz için Ayarlar'da Bluetooth'a izin verin";
+"island.devices.left" = "Sol";
+"island.devices.right" = "Sağ";
+"island.devices.case" = "Kutu";
+"island.devices.noLevel" = "Pil bilgisi yok";
