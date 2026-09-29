@@ -5,7 +5,7 @@ import Testing
 @testable import screenshotapp
 
 @MainActor
-private final class FakeNowPlayingService: NowPlayingProviding {
+final class FakeNowPlayingService: NowPlayingProviding {
     var onChange: ((NowPlayingInfo?) -> Void)?
     private(set) var isStarted = false
     private(set) var sentCommands: [(MediaCommand, NowPlayingSource)] = []
@@ -26,7 +26,7 @@ private final class FakeNowPlayingService: NowPlayingProviding {
 }
 
 @MainActor
-private final class FakeBatteryMonitor: BatteryMonitoring {
+final class FakeBatteryMonitor: BatteryMonitoring {
     var onChange: ((BatteryStatus) -> Void)?
     var status: BatteryStatus?
 
@@ -41,7 +41,7 @@ private final class FakeBatteryMonitor: BatteryMonitoring {
 }
 
 @MainActor
-private final class FakeSystemNotificationMonitor: SystemNotificationMonitoring {
+final class FakeSystemNotificationMonitor: SystemNotificationMonitoring {
     var onBanner: ((SystemNotificationBanner) -> Void)?
     var onNotificationCenterList: (([SystemNotificationBanner]) -> Void)?
     var isAuthorized = true
@@ -60,7 +60,7 @@ private final class FakeSystemNotificationMonitor: SystemNotificationMonitoring 
 }
 
 @MainActor
-private final class FakeIslandPresenter: DynamicIslandPresenting {
+final class FakeIslandPresenter: DynamicIslandPresenting {
     var isVisible = true
     private(set) var refreshCount = 0
     private(set) var hideCount = 0
@@ -70,7 +70,7 @@ private final class FakeIslandPresenter: DynamicIslandPresenting {
 }
 
 @MainActor
-private struct StubIslandSettings: DynamicIslandSettingsReading, ToolboxSettingsReading {
+struct StubIslandSettings: DynamicIslandSettingsReading, ToolboxSettingsReading {
     var isEnabled = true
     var snapshot = DynamicIslandSettingsSnapshot(hoverDelay: 0, panelShortcutsEnabled: false)
 
@@ -461,8 +461,9 @@ struct DynamicIslandViewModelTests {
 
         viewModel.togglePlayPause()
 
-        #expect(nowPlaying.sentCommands.count == 1)
-        #expect(nowPlaying.sentCommands.first?.0 == .togglePlayPause)
+        #expect(nowPlaying.sentCommands.map(\.0) == [.pause] && viewModel.nowPlaying?.isPlaying == false)
+        // A reading taken before the pause landed doesn't flip the button back.
+        nowPlaying.emit(track("a", isPlaying: true))
         #expect(viewModel.nowPlaying?.isPlaying == false)
     }
 }

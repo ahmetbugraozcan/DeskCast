@@ -75,9 +75,10 @@ final class SystemNowPlayingBridge {
     }
 
     func send(_ command: MediaCommand) {
-        // MRCommand values: 2 = toggle play/pause, 4 = next, 5 = previous.
+        // MRCommand values: 0 = play, 1 = pause, 4 = next, 5 = previous.
         let value = switch command {
-        case .togglePlayPause: 2
+        case .play: 0
+        case .pause: 1
         case .nextTrack: 4
         case .previousTrack: 5
         }

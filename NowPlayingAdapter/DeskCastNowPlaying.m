@@ -219,6 +219,13 @@ void deskcast_now_playing_watch(void) {
     exit(0);
 }
 
+/// MRMediaRemoteSendCommand hands the command to mediaremoted
+/// asynchronously; exiting right away could drop it before it's delivered.
+static void finishSending(BOOL sent) {
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.3, false);
+    exit(sent ? 0 : 1);
+}
+
 __attribute__((visibility("default")))
 void deskcast_now_playing_send(void) {
     @autoreleasepool {
@@ -227,12 +234,12 @@ void deskcast_now_playing_send(void) {
         if (seek) {
             // MRCommand 24 = seekToPlaybackPosition; browsers only accept this form.
             NSDictionary *options = @{ @"kMRMediaRemoteOptionPlaybackPosition": @(atof(seek)) };
-            if (sendCommand && sendCommand(24, options)) { exit(0); }
+            if (sendCommand && sendCommand(24, options)) { finishSending(YES); }
             if (setElapsed) { setElapsed(atof(seek)); }
-            exit(0);
+            finishSending(YES);
         }
         const char *command = getenv("DESKCAST_NP_COMMAND");
         if (!command || !sendCommand) { exit(1); }
-        exit(sendCommand(atoi(command), nil) ? 0 : 1);
+        finishSending(sendCommand(atoi(command), nil));
     }
 }

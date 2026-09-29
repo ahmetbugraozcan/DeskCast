@@ -90,7 +90,10 @@ nonisolated struct NowPlayingSource: Hashable, Sendable {
 }
 
 enum MediaCommand: Sendable {
-    case togglePlayPause
+    /// Explicit play/pause rather than a toggle, so a stale reading can't
+    /// make the button do the opposite of what it shows.
+    case play
+    case pause
     case nextTrack
     case previousTrack
 }

@@ -71,6 +71,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     private var defaultsObserver: AnyCancellable?
     private var timerObserver: AnyCancellable?
     private var pointerEnteredSinceForcedOpen = false
+    /// The play state a play/pause press asked for, until a reading confirms it.
+    private var expectedPlayback: ExpectedPlayback?
     /// After the collapse button, ignore hover until the pointer leaves once.
     private var suppressesHoverUntilExit = false
     private var hasRegisteredShortcuts = false
@@ -85,6 +87,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     static let pausedMediaLinger: TimeInterval = 300
     private static let hoverEndDelay: Duration = .milliseconds(160)
     static let actionBannerSeconds = 15
+    private static let playbackSettleSeconds: TimeInterval = 2
     /// Compact confirmations only need a glance.
     static let compactToastSeconds = 2
     private static let lowBatteryThresholds = [20, 10]
@@ -377,17 +380,6 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     // MARK: - Panels
 
-    func select(_ panel: IslandPanel) {
-        contentBeforeActivity = nil
-        expandedContent = .panel(panel)
-        UserDefaults.standard.set(panel.rawValue, forKey: Self.lastPanelKey)
-    }
-
-    func showLauncher() {
-        contentBeforeActivity = nil
-        expandedContent = expandedContent == .launcher ? lastPanelContent : .launcher
-    }
-
     /// Opens the island on a panel (side buttons, shortcuts); toggles closed when
     /// that panel is already showing.
     func open(_ panel: IslandPanel) {
@@ -466,13 +458,6 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         }
 
         return visible.contains(.nowPlaying) ? .nowPlaying : (visible.first ?? .nowPlaying)
-    }
-
-    func togglePlayPause() {
-        guard let nowPlaying else { return }
-        nowPlayingService.send(.togglePlayPause, to: nowPlaying.source)
-        // Optimistic flip; the next player notification confirms it.
-        self.nowPlaying = nowPlaying.togglingPlayback()
     }
 
     func nextTrack() {
@@ -594,8 +579,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     // MARK: - Sources
 
-    private func handleNowPlayingChange(_ info: NowPlayingInfo?) {
+    private func handleNowPlayingChange(_ reading: NowPlayingInfo?) {
         let previous = nowPlaying
+        let info = settlingPlayback(of: reading)
         nowPlaying = info
         pruneActivityChoice()
 
@@ -1121,3 +1107,69 @@ extension DynamicIslandViewModel {
     }
 }
 #endif
+
+/// The play state a play/pause press asked for, for one track.
+private struct ExpectedPlayback {
+    let key: String
+    let isPlaying: Bool
+    let until: Date
+}
+
+extension DynamicIslandViewModel {
+    // MARK: - Panels
+
+    func select(_ panel: IslandPanel) {
+        keepOpenWhileResizing()
+        contentBeforeActivity = nil
+        expandedContent = .panel(panel)
+        UserDefaults.standard.set(panel.rawValue, forKey: Self.lastPanelKey)
+    }
+
+    func showLauncher() {
+        keepOpenWhileResizing()
+        contentBeforeActivity = nil
+        expandedContent = expandedContent == .launcher ? lastPanelContent : .launcher
+    }
+
+    /// Switching pages resizes the open island (and moves the chips under it),
+    /// which can leave the pointer outside. A hover-opened island would close
+    /// then, so it stays open like a click-open: until an outside click, or
+    /// the pointer enters and leaves again.
+    fileprivate func keepOpenWhileResizing() {
+        guard mode == .expanded, !isForcedOpen, !isPinned else { return }
+        isForcedOpen = true
+        pointerEnteredSinceForcedOpen = false
+    }
+
+    // MARK: - Playback
+
+    func togglePlayPause() {
+        guard let nowPlaying else { return }
+        nowPlayingService.send(nowPlaying.isPlaying ? .pause : .play, to: nowPlaying.source)
+        // Optimistic flip, held for a moment: readings taken before the command
+        // landed would otherwise flip the button back and forth.
+        let flipped = nowPlaying.togglingPlayback()
+        expectedPlayback = ExpectedPlayback(
+            key: flipped.cacheKey,
+            isPlaying: flipped.isPlaying,
+            until: Date().addingTimeInterval(Self.playbackSettleSeconds)
+        )
+        self.nowPlaying = flipped
+    }
+
+    /// Keeps the state a play/pause press asked for over readings that still
+    /// show the old one, until a reading agrees or the press is a while ago.
+    fileprivate func settlingPlayback(of reading: NowPlayingInfo?) -> NowPlayingInfo? {
+        guard let expected = expectedPlayback, let reading, reading.cacheKey == expected.key else {
+            expectedPlayback = nil
+            return reading
+        }
+
+        guard reading.isPlaying != expected.isPlaying, Date() < expected.until else {
+            expectedPlayback = nil
+            return reading
+        }
+
+        return reading.togglingPlayback()
+    }
+}

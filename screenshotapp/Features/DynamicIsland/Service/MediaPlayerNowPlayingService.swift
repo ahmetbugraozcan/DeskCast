@@ -475,7 +475,8 @@ final class MediaPlayerNowPlayingService: NowPlayingProviding {
 
     nonisolated private static func commandScript(_ command: MediaCommand, for player: MediaPlayerApp) -> String {
         let verb = switch command {
-        case .togglePlayPause: "playpause"
+        case .play: "play"
+        case .pause: "pause"
         case .nextTrack: "next track"
         case .previousTrack: "previous track"
         }
