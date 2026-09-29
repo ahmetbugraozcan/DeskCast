@@ -390,7 +390,7 @@
 "island.scratchpad.count" = "%ld karakter";
 "island.settings.sideButtons" = "Yan düğmeleri göster";
 "island.settings.panelShortcuts" = "Panel kısayolları (⌥⌘ + harf)";
-"island.settings.panelShortcutsHint" = "Bir paneli her yerden açar; örneğin Şu An Çalıyor için ⌥⌘M. Bu açıkken ⌥⌘D, sistemin Dock gizleme kısayolunun yerini alır.";
+"island.settings.panelShortcutsHint" = "Bir paneli her yerden açar; örneğin Şu An Çalıyor için ⌥⌘M. Bu açıkken bu tuşlar diğer uygulamalarda çalışmaz (örneğin ⌥⌘R, Dock gizleme için ⌥⌘D).";
 
 /* Dynamic Island: lyrics, per-app volume */
 "island.nowPlaying.lyrics" = "Şarkı sözleri";

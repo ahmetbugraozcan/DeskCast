@@ -230,7 +230,9 @@ enum DynamicIslandSettings {
     static let defaultDisplayTarget = IslandDisplayTarget.automatic
     static let defaultShowsInCaptures = true
     static let defaultShowsOutline = false
-    static let defaultPanelShortcutsEnabled = true
+    /// Off by default: global ⌥⌘-letter hotkeys take those keys away from every
+    /// other app (⌥⌘R in Safari or Xcode would open the Timer instead).
+    static let defaultPanelShortcutsEnabled = false
     static let defaultShowsSideButtons = true
     static let defaultNotificationDurationSeconds = 4
     static var defaultWeatherUnit: WeatherUnit { .localeDefault }

@@ -390,7 +390,7 @@
 "island.scratchpad.count" = "%ld characters";
 "island.settings.sideButtons" = "Show side buttons";
 "island.settings.panelShortcuts" = "Panel shortcuts (⌥⌘ + letter)";
-"island.settings.panelShortcutsHint" = "Opens a panel from anywhere, e.g. ⌥⌘M for Now Playing. ⌥⌘D replaces the system's Dock hiding shortcut while this is on.";
+"island.settings.panelShortcutsHint" = "Opens a panel from anywhere, e.g. ⌥⌘M for Now Playing. While this is on, these keys stop working in other apps (e.g. ⌥⌘R, ⌥⌘D for hiding the Dock).";
 
 /* Dynamic Island: lyrics, per-app volume */
 "island.nowPlaying.lyrics" = "Lyrics";
