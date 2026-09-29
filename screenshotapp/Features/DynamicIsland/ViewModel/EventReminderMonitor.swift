@@ -90,7 +90,7 @@ final class EventReminderMonitor {
         "\(event.id)|\(event.start.timeIntervalSinceReferenceDate)"
     }
 
-    private static func banner(for event: IslandCalendarEvent, now: Date) -> DynamicIslandNotification {
+    static func banner(for event: IslandCalendarEvent, now: Date) -> DynamicIslandNotification {
         let minutes = max(Int((event.start.timeIntervalSince(now) / 60).rounded(.up)), 1)
         var banner = DynamicIslandNotification(
             caption: AppLocalization.string("island.panel.calendar"),
@@ -104,6 +104,15 @@ final class EventReminderMonitor {
             style: .info
         )
         banner.sourceAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal")
+
+        if let link = event.meetingLink {
+            banner.action = DynamicIslandNotificationAction(
+                title: AppLocalization.string("island.calendar.join"),
+                systemImage: "video.fill",
+                url: link.url
+            )
+        }
+
         return banner
     }
 }

@@ -28,6 +28,14 @@ struct DynamicIslandNotification: Identifiable {
     var mediaKey: String?
     /// App to open when the banner is clicked.
     var sourceAppURL: URL?
+    /// Optional button on the banner (e.g. "Join" for a meeting link).
+    var action: DynamicIslandNotificationAction?
+}
+
+struct DynamicIslandNotificationAction: Equatable {
+    let title: String
+    let systemImage: String
+    let url: URL
 }
 
 /// What the island is currently showing; drives size and content.

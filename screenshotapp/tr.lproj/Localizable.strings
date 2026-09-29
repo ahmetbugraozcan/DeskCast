@@ -488,3 +488,6 @@
 "menu.tile.pickColor" = "Renk";
 "menu.recentColors" = "Son Renkler";
 "shortcuts.pickColor" = "Renk seç:";
+
+/* Meeting links */
+"island.calendar.join" = "Katıl";

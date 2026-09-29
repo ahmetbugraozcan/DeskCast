@@ -70,6 +70,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// How long a paused track stays in the closed island.
     static let pausedMediaLinger: TimeInterval = 300
     private static let hoverEndDelay: Duration = .milliseconds(160)
+    static let actionBannerSeconds = 15
     private static let lowBatteryThresholds = [20, 10]
     private static let maxHistoryCount = 30
     private static let lastPanelKey = "dynamicIsland.lastPanel"
@@ -543,7 +544,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     private func scheduleDismiss(of notification: DynamicIslandNotification) {
         notificationDismissTask?.cancel()
 
-        let duration = Duration.seconds(preferences.notificationDurationSeconds)
+        // Banners with a button (e.g. "Join") stay long enough to reach it.
+        let seconds = preferences.notificationDurationSeconds
+        let duration = Duration.seconds(notification.action == nil ? seconds : max(seconds, Self.actionBannerSeconds))
         let id = notification.id
 
         notificationDismissTask = Task { [weak self] in
@@ -881,6 +884,21 @@ extension DynamicIslandViewModel {
                     style: .system
                 )
             )
+        }
+
+        if let title = defaults.string(forKey: "DeskCastDemoMeeting"),
+           let url = URL(string: "https://meet.google.com/abc-defg-hij") {
+            let start = Date().addingTimeInterval(4 * 60)
+            let event = IslandCalendarEvent(
+                id: "demo-meeting",
+                title: title,
+                start: start,
+                end: start.addingTimeInterval(1800),
+                isAllDay: false,
+                color: .systemBlue,
+                meetingLink: MeetingLink(url)
+            )
+            post(EventReminderMonitor.banner(for: event, now: Date()))
         }
 
         if let rawPanel = defaults.string(forKey: "DeskCastDemoPanel") {

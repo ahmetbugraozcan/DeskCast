@@ -706,3 +706,54 @@ struct EventReminderTests {
         #expect(EventReminderMonitor(calendar: calendar).takeDueEvents(at: now).isEmpty)
     }
 }
+
+struct MeetingLinkTests {
+    @Test func findsKnownMeetingLinksInEventFields() {
+        let zoom = MeetingLink.find(url: nil, location: "Zoom: https://us02web.zoom.us/j/123456789?pwd=abc", notes: nil)
+        #expect(zoom?.service == .zoom)
+        #expect(zoom?.url.absoluteString == "https://us02web.zoom.us/j/123456789?pwd=abc")
+
+        let meet = MeetingLink.find(url: nil, location: nil, notes: "Agenda: https://docs.google.com/x\nJoin: https://meet.google.com/abc-defg-hij")
+        #expect(meet?.service == .googleMeet)
+
+        let teams = MeetingLink.find(
+            url: URL(string: "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc"),
+            location: nil,
+            notes: nil
+        )
+        #expect(teams?.service == .teams)
+    }
+
+    @Test func ignoresOrdinaryLinks() {
+        #expect(MeetingLink.find(url: URL(string: "https://zoom.us/pricing"), location: "Room 4", notes: "https://example.com") == nil)
+        #expect(MeetingLink.find(url: nil, location: "https://meet.google.com/", notes: nil) == nil)
+    }
+
+    @Test func eventURLWinsOverNotes() {
+        let link = MeetingLink.find(
+            url: URL(string: "https://acme.webex.com/meet/jane"),
+            location: nil,
+            notes: "https://meet.google.com/abc-defg-hij"
+        )
+        #expect(link?.service == .webex)
+    }
+
+    @MainActor
+    @Test func reminderBannerOffersJoinForMeetings() throws {
+        let now = Date(timeIntervalSinceReferenceDate: 50_000)
+        var event = IslandCalendarEvent(
+            id: "standup",
+            title: "Standup",
+            start: now.addingTimeInterval(240),
+            end: now.addingTimeInterval(1_800),
+            isAllDay: false,
+            color: .systemBlue
+        )
+        #expect(EventReminderMonitor.banner(for: event, now: now).action == nil)
+
+        let url = try #require(URL(string: "https://meet.google.com/abc-defg-hij"))
+        event.meetingLink = MeetingLink(url)
+        let action = EventReminderMonitor.banner(for: event, now: now).action
+        #expect(action?.url.absoluteString == "https://meet.google.com/abc-defg-hij")
+    }
+}

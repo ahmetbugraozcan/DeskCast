@@ -488,3 +488,6 @@
 "menu.tile.pickColor" = "Color";
 "menu.recentColors" = "Recent Colors";
 "shortcuts.pickColor" = "Pick color:";
+
+/* Meeting links */
+"island.calendar.join" = "Join";

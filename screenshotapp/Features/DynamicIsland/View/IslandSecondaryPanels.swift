@@ -472,6 +472,21 @@ struct CalendarPanelView: View {
             }
 
             Spacer()
+
+            if let link = event.meetingLink {
+                Button {
+                    NSWorkspace.shared.open(link.url)
+                } label: {
+                    Label(AppLocalization.string("island.calendar.join"), systemImage: "video.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(Color.green.opacity(0.85), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .help(link.service.displayName.isEmpty ? link.url.absoluteString : link.service.displayName)
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

@@ -287,7 +287,10 @@ struct DynamicIslandView: View {
             }
         case .notification:
             if let notification = store.activeNotification {
-                NotificationBannerView(notification: notification, geometry: geometry)
+                NotificationBannerView(notification: notification, geometry: geometry) { url in
+                    NSWorkspace.shared.open(url)
+                    store.dismissNotification()
+                }
                     .id(notification.id)
                     .transition(Self.contentTransition)
             }
@@ -497,6 +500,7 @@ struct PlaybackProgressView: View {
 struct NotificationBannerView: View {
     let notification: DynamicIslandNotification
     let geometry: DynamicIslandGeometry
+    var performAction: (URL) -> Void = { _ in }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -526,7 +530,20 @@ struct NotificationBannerView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if let progress = notification.progress {
+            if let action = notification.action {
+                Button {
+                    performAction(action.url)
+                } label: {
+                    Label(action.title, systemImage: action.systemImage)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(Color.green, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .fixedSize()
+            } else if let progress = notification.progress {
                 ProgressRingView(progress: progress, tint: notification.style.tint)
                     .frame(width: 26, height: 26)
             } else if notification.style == .media {

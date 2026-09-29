@@ -8,6 +8,8 @@ struct IslandCalendarEvent: Identifiable, Equatable {
     let end: Date
     let isAllDay: Bool
     let color: NSColor
+    /// Video call link from the event's URL, location or notes.
+    var meetingLink: MeetingLink?
 }
 
 enum CalendarAccessState: Equatable {
@@ -56,7 +58,8 @@ final class CalendarService {
                     start: event.startDate,
                     end: event.endDate,
                     isAllDay: event.isAllDay,
-                    color: event.calendar?.color ?? .systemBlue
+                    color: event.calendar?.color ?? .systemBlue,
+                    meetingLink: MeetingLink.find(url: event.url, location: event.location, notes: event.notes)
                 )
             }
     }
