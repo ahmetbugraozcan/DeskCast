@@ -82,7 +82,7 @@ enum ToolboxCatalog {
         ToolboxTool(
             id: .captureOCR,
             titleKey: "Capture OCR",
-            subtitleKey: "Capture a selected region and copy recognized text.",
+            subtitleKey: "Capture a selected region and copy recognized text or QR code contents.",
             systemImage: "text.viewfinder",
             category: .screenshots,
             defaultEnabled: true,

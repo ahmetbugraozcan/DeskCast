@@ -37,6 +37,7 @@ final class AppEnvironment: ObservableObject {
             shelfCollector: dropShelf,
             capturer: ScreenshotCaptureService(),
             recognizer: OCRTextRecognitionService(),
+            barcodeReader: VisionBarcodeReadingService(),
             exporter: ScreenshotExportService(),
             finderPath: FinderPathService(),
             videoMetadata: VideoMetadataService(),

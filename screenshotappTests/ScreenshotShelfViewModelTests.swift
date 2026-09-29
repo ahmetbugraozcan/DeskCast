@@ -21,6 +21,10 @@ private struct NoopCapturer: ScreenshotCapturing {
     ) {}
 }
 
+private struct NoopBarcodeReader: BarcodeReading {
+    func payloads(in image: NSImage) async -> [String] { [] }
+}
+
 private struct NoopRecognizer: TextRecognizing {
     func recognizeText(in image: NSImage) async throws -> String { "" }
     func recognizeText(in image: NSImage, completion: @escaping (Result<String, Error>) -> Void) {}
@@ -62,6 +66,7 @@ struct ScreenshotShelfViewModelTests {
             shelfCollector: collector,
             capturer: NoopCapturer(),
             recognizer: NoopRecognizer(),
+            barcodeReader: NoopBarcodeReader(),
             exporter: NoopExporter(),
             finderPath: NoopFinderPath(),
             videoMetadata: NoopVideoMetadata(),

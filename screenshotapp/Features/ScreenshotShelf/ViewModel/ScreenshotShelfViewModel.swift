@@ -15,6 +15,7 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
     private let shelfCollector: ShelfCollecting
     private let capturer: ScreenshotCapturing
     private let recognizer: TextRecognizing
+    private let barcodeReader: BarcodeReading
     private let exporter: ScreenshotExporting
     private let finderPath: FinderPathProviding
     private let videoMetadata: VideoMetadataLoading
@@ -26,6 +27,7 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
         shelfCollector: ShelfCollecting,
         capturer: ScreenshotCapturing,
         recognizer: TextRecognizing,
+        barcodeReader: BarcodeReading,
         exporter: ScreenshotExporting,
         finderPath: FinderPathProviding,
         videoMetadata: VideoMetadataLoading,
@@ -36,6 +38,7 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
         self.shelfCollector = shelfCollector
         self.capturer = capturer
         self.recognizer = recognizer
+        self.barcodeReader = barcodeReader
         self.exporter = exporter
         self.finderPath = finderPath
         self.videoMetadata = videoMetadata
@@ -108,7 +111,7 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
 
             switch result {
             case .success(let image):
-                recognizeAndCopyText(from: image)
+                readCodesOrText(from: image)
             case .failure(let error):
                 isCapturing = false
                 handleCaptureFailure(error)
@@ -434,6 +437,25 @@ final class ScreenshotShelfViewModel: ObservableObject, VideoShelfCollecting {
             suggestedFilename: ScreenshotExportNaming.timestampedFilename(for: item.createdAt),
             failureMessage: AppLocalization.string("Could not auto-save image")
         )
+    }
+
+    /// A QR code or barcode in the selection wins over its text: copying the
+    /// code's contents is what the user wants when they select one.
+    private func readCodesOrText(from image: NSImage) {
+        let barcodeReader = barcodeReader
+
+        Task { [weak self] in
+            let payloads = await barcodeReader.payloads(in: image)
+            guard let self else { return }
+
+            guard !payloads.isEmpty else {
+                recognizeAndCopyText(from: image)
+                return
+            }
+
+            isCapturing = false
+            copyCodePayloads(payloads)
+        }
     }
 
     private func recognizeAndCopyText(from image: NSImage) {

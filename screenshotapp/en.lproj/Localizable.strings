@@ -13,7 +13,6 @@
 "Drop Shelf" = "Drop Shelf";
 "Capture a selected screen region into the floating shelf." = "Capture a selected screen region into the floating shelf.";
 "Record a selected screen region to a video file." = "Record a selected screen region to a video file.";
-"Capture a selected region and copy recognized text." = "Capture a selected region and copy recognized text.";
 "Copy the front Finder window path to the clipboard." = "Copy the front Finder window path to the clipboard.";
 "Search local images by filename and recognized text." = "Search local images by filename and recognized text.";
 "Collect dragged files, folders, links, text, and images before sending them together." = "Collect dragged files, folders, links, text, and images before sending them together.";
@@ -474,3 +473,9 @@
 "island.calendar.startsIn" = "Starts in %ld min · %@";
 
 "settings.version" = "Version %@";
+
+/* OCR: QR codes and barcodes */
+"Capture a selected region and copy recognized text or QR code contents." = "Capture a selected region and copy recognized text or QR code contents.";
+"ocr.code.copied" = "QR code copied";
+"ocr.code.linkCopied" = "Link from QR code copied";
+"ocr.codes.copied" = "%ld codes copied";

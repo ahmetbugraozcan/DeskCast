@@ -13,7 +13,6 @@
 "Drop Shelf" = "Bırakma Rafı";
 "Capture a selected screen region into the floating shelf." = "Seçilen ekran bölgesini yüzen rafa yakala.";
 "Record a selected screen region to a video file." = "Seçilen ekran bölgesini video dosyasına kaydet.";
-"Capture a selected region and copy recognized text." = "Seçilen bölgeyi yakala ve algılanan metni kopyala.";
 "Copy the front Finder window path to the clipboard." = "Öndeki Finder penceresinin yolunu panoya kopyala.";
 "Search local images by filename and recognized text." = "Yerel görsellerde dosya adına ve algılanan metne göre ara.";
 "Collect dragged files, folders, links, text, and images before sending them together." = "Sürüklenen dosyaları, klasörleri, bağlantıları, metinleri ve görselleri birlikte göndermeden önce topla.";
@@ -474,3 +473,9 @@
 "island.calendar.startsIn" = "%ld dk sonra · %@";
 
 "settings.version" = "Sürüm %@";
+
+/* OCR: QR codes and barcodes */
+"Capture a selected region and copy recognized text or QR code contents." = "Seçilen bölgeyi yakalayıp tanınan metni veya QR kodunun içeriğini kopyala.";
+"ocr.code.copied" = "QR kod kopyalandı";
+"ocr.code.linkCopied" = "QR koddaki bağlantı kopyalandı";
+"ocr.codes.copied" = "%ld kod kopyalandı";
