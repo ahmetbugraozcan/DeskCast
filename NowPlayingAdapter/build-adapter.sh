@@ -8,6 +8,8 @@ OUTPUT="$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/libDeskCastNowPlaying.dylib"
 
 mkdir -p "$(dirname "$OUTPUT")"
 
+# A multi-arch build (archive) makes clang write "$OUTPUT.lipo" first; it
+# is a declared output of the phase so the script sandbox allows it.
 ARCH_FLAGS=""
 for ARCH in $ARCHS; do
     ARCH_FLAGS="$ARCH_FLAGS -arch $ARCH"
@@ -22,8 +24,14 @@ xcrun --sdk macosx clang -dynamiclib -fobjc-arc -O2 \
     "$SOURCE" -o "$OUTPUT"
 
 # The app's own signature seals this file, so it must be signed first.
+# Archives are notarized, which needs a secure timestamp.
+TIMESTAMP="--timestamp=none"
+if [ "${ACTION:-}" = "install" ]; then
+    TIMESTAMP="--timestamp"
+fi
+
 if [ "${CODE_SIGNING_ALLOWED:-YES}" = "YES" ] && [ -n "${EXPANDED_CODE_SIGN_IDENTITY:-}" ]; then
-    codesign --force --sign "$EXPANDED_CODE_SIGN_IDENTITY" --options runtime --timestamp=none "$OUTPUT"
+    codesign --force --sign "$EXPANDED_CODE_SIGN_IDENTITY" --options runtime "$TIMESTAMP" "$OUTPUT"
 else
     codesign --force --sign - "$OUTPUT"
 fi
