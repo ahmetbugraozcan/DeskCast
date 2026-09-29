@@ -21,7 +21,9 @@ protocol DynamicIslandNotificationPosting: AnyObject {
 
 @MainActor
 final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationPosting {
-    @Published private(set) var nowPlaying: NowPlayingInfo?
+    @Published private(set) var nowPlaying: NowPlayingInfo? {
+        didSet { notePlaybackStateChange(from: oldValue) }
+    }
     @Published private(set) var activeNotification: DynamicIslandNotification?
     @Published private(set) var isHovering = false
     /// The pointer has rested on the island for the hover delay.
@@ -52,6 +54,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     private var hoverActivationTask: Task<Void, Never>?
     private var lastBatteryStatus: BatteryStatus?
     private var hasReceivedNowPlaying = false
+    /// When playback last went from playing to paused.
+    private var pausedAt: Date?
+    private var pausedLingerTask: Task<Void, Never>?
     private var defaultsObserver: AnyCancellable?
     private var timerObserver: AnyCancellable?
     private var pointerEnteredSinceForcedOpen = false
@@ -62,6 +67,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     let timer: IslandTimerViewModel
 
     private static let maxQueuedNotifications = 4
+    /// How long a paused track stays in the closed island.
+    static let pausedMediaLinger: TimeInterval = 300
     private static let hoverEndDelay: Duration = .milliseconds(160)
     private static let lowBatteryThresholds = [20, 10]
     private static let maxHistoryCount = 30
@@ -176,10 +183,6 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     var availablePlayers: [MediaPlayerApp] {
         MediaPlayerApp.allCases.filter(\.isRunning)
-    }
-
-    var hasMedia: Bool {
-        preferences.idleContent == .music && nowPlaying != nil
     }
 
     // MARK: - Interaction (driven by the panel coordinator / view)
@@ -452,25 +455,6 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     func previousTrack() {
         guard let nowPlaying else { return }
         nowPlayingService.send(.previousTrack, to: nowPlaying.source)
-    }
-
-    func seek(to seconds: TimeInterval) {
-        guard let nowPlaying else { return }
-        nowPlayingService.seek(to: seconds, in: nowPlaying.source)
-        self.nowPlaying = nowPlaying.seeking(to: seconds)
-    }
-
-    /// Sets the playing player's own volume; only scripted players have one.
-    func setPlayerVolume(_ volume: Double) {
-        guard var nowPlaying, let player = nowPlaying.player else { return }
-
-        let clamped = min(max(volume, 0), 1)
-        // Players take whole percents; skip drag steps that change nothing.
-        guard Int((clamped * 100).rounded()) != nowPlaying.volume.map({ Int(($0 * 100).rounded()) }) else { return }
-
-        nowPlayingService.setVolume(clamped, for: player)
-        nowPlaying.volume = clamped
-        self.nowPlaying = nowPlaying
     }
 
     func openPlayer(_ player: MediaPlayerApp? = nil) {
@@ -751,6 +735,59 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         } else {
             presenter?.refresh()
         }
+    }
+}
+
+// MARK: - Media
+
+extension DynamicIslandViewModel {
+    /// Music in the closed island: while playing, and for a while after a
+    /// pause. A long-paused session (e.g. a forgotten video tab, which stays
+    /// in the system now playing session) doesn't keep the island wide.
+    var hasMedia: Bool {
+        guard preferences.idleContent == .music, let nowPlaying else { return false }
+        guard !nowPlaying.isPlaying else { return true }
+        guard let pausedAt else { return false }
+        return Date().timeIntervalSince(pausedAt) < Self.pausedMediaLinger
+    }
+
+    private func notePlaybackStateChange(from oldValue: NowPlayingInfo?) {
+        let wasPlaying = oldValue?.isPlaying == true
+        let isPlaying = nowPlaying?.isPlaying == true
+
+        if isPlaying {
+            pausedAt = nil
+            pausedLingerTask?.cancel()
+            pausedLingerTask = nil
+        } else if wasPlaying {
+            pausedAt = Date()
+            pausedLingerTask?.cancel()
+            // Re-render once the linger ends so the closed island shrinks.
+            pausedLingerTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(Self.pausedMediaLinger))
+                guard !Task.isCancelled else { return }
+                self?.objectWillChange.send()
+            }
+        }
+    }
+
+    func seek(to seconds: TimeInterval) {
+        guard let nowPlaying else { return }
+        nowPlayingService.seek(to: seconds, in: nowPlaying.source)
+        self.nowPlaying = nowPlaying.seeking(to: seconds)
+    }
+
+    /// Sets the playing player's own volume; only scripted players have one.
+    func setPlayerVolume(_ volume: Double) {
+        guard var nowPlaying, let player = nowPlaying.player else { return }
+
+        let clamped = min(max(volume, 0), 1)
+        // Players take whole percents; skip drag steps that change nothing.
+        guard Int((clamped * 100).rounded()) != nowPlaying.volume.map({ Int(($0 * 100).rounded()) }) else { return }
+
+        nowPlayingService.setVolume(clamped, for: player)
+        nowPlaying.volume = clamped
+        self.nowPlaying = nowPlaying
     }
 }
 

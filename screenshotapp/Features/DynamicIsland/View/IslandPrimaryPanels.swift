@@ -21,7 +21,7 @@ struct NowPlayingPanelView: View {
 
     var body: some View {
         Group {
-            if store.hasMedia, let nowPlaying = store.nowPlaying {
+            if let nowPlaying = store.nowPlaying {
                 content(nowPlaying)
                     .onChange(of: nowPlaying.cacheKey, initial: true) { _, _ in
                         if detail == .queue, nowPlaying.player != .spotify {

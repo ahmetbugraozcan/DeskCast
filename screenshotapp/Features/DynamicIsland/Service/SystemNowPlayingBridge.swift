@@ -15,6 +15,8 @@ final class SystemNowPlayingBridge {
     private(set) var isAvailable: Bool
     private var process: Process?
     private var inputPipe: Pipe?
+    /// One-shot command processes, kept alive until they exit so they're reaped.
+    private var commandProcesses: Set<Process> = []
     private var restartTask: Task<Void, Never>?
     private var quickFailures = 0
     private var startedAt = Date()
@@ -104,9 +106,15 @@ final class SystemNowPlayingBridge {
         process.environment = ProcessInfo.processInfo.environment.merging(environment) { $1 }
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
+        process.terminationHandler = { [weak self] finished in
+            Task { @MainActor in
+                self?.commandProcesses.remove(finished)
+            }
+        }
 
         do {
             try process.run()
+            commandProcesses.insert(process)
         } catch {
             Self.logger.error("Command failed to launch: \(error.localizedDescription, privacy: .public)")
         }

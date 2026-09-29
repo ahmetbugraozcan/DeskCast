@@ -585,3 +585,20 @@ struct ToolboxMenuLayoutMigrationTests {
         #expect(defaults.string(forKey: ToolboxSettings.Keys.menuLayout) == ToolboxMenuLayout.grouped.rawValue)
     }
 }
+
+extension DynamicIslandViewModelTests {
+    @Test func pausedTrackStaysInTheClosedIslandOnlyAfterPlaying() {
+        let viewModel = makeViewModel(settings: StubIslandSettings { $0.showsTrackChanges = false })
+
+        // A session that was already paused (e.g. an old video tab) stays out.
+        nowPlaying.emit(track("old", isPlaying: false))
+        #expect(viewModel.mode == .idle)
+        #expect(viewModel.nowPlaying != nil)
+
+        // Pausing something that was playing keeps it around for a while.
+        nowPlaying.emit(track("a"))
+        #expect(viewModel.mode == .compactMedia)
+        nowPlaying.emit(track("a", isPlaying: false))
+        #expect(viewModel.mode == .compactMedia)
+    }
+}
