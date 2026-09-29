@@ -16,19 +16,82 @@ struct ClipboardPanelView: View {
                 message: AppLocalization.string("island.clipboard.emptyMessage")
             )
         } else {
-            ScrollView {
-                LazyVStack(spacing: 6) {
-                    ForEach(model.entries) { entry in
-                        ClipboardRow(entry: entry, model: model)
-                            .transition(.move(edge: .top).combined(with: .opacity))
+            VStack(spacing: 8) {
+                ClipboardSearchField(model: model)
+
+                let results = model.visibleEntries
+                if results.isEmpty {
+                    IslandEmptyState(
+                        systemImage: "magnifyingglass",
+                        title: AppLocalization.string("island.clipboard.noMatches"),
+                        message: AppLocalization.string("island.clipboard.noMatchesMessage")
+                    )
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 6) {
+                            ForEach(results) { entry in
+                                ClipboardRow(entry: entry, model: model)
+                                    .transition(.move(edge: .top).combined(with: .opacity))
+                            }
+                        }
+                        .padding(.bottom, 10)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: results.map(\.id))
                     }
+                    .scrollIndicators(.never)
+                    .islandScrollFade()
                 }
-                .padding(.bottom, 10)
-                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.entries.map(\.id))
             }
-            .scrollIndicators(.never)
-            .islandScrollFade()
         }
+    }
+}
+
+/// Filters the history. Clicking it gives the island keyboard focus; picking a
+/// result hands focus back before pasting.
+private struct ClipboardSearchField: View {
+    @ObservedObject var model: ClipboardHistoryViewModel
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(IslandPalette.tertiaryText)
+
+            TextField(
+                "",
+                text: $model.query,
+                prompt: Text(AppLocalization.formatted("island.clipboard.search", model.entries.count))
+                    .foregroundStyle(IslandPalette.tertiaryText)
+            )
+            .textFieldStyle(.plain)
+            .font(.system(size: 12))
+            .foregroundStyle(.white)
+            .focused($isFocused)
+
+            if !model.query.isEmpty {
+                Button {
+                    model.query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(IslandPalette.tertiaryText)
+                }
+                .buttonStyle(.plain)
+                .help(AppLocalization.string("island.clipboard.clearSearch"))
+            }
+
+            if model.savesHistory {
+                Image(systemName: "internaldrive")
+                    .font(.system(size: 10))
+                    .foregroundStyle(IslandPalette.tertiaryText)
+                    .help(AppLocalization.string("island.clipboard.savedHint"))
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 28)
+        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(IslandPalette.card))
+        .onChange(of: isFocused) { _, focused in model.isSearchFocused = focused }
+        .onChange(of: model.isSearchFocused) { _, focused in if !focused { isFocused = false } }
     }
 }
 

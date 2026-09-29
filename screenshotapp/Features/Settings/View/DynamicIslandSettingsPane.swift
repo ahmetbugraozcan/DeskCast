@@ -28,6 +28,8 @@ struct DynamicIslandSettingsPane: View {
     private var showsBatteryEvents = DynamicIslandSettings.defaultShowsBatteryEvents
     @AppStorage(DynamicIslandSettings.Keys.showsEventReminders)
     private var showsEventReminders = DynamicIslandSettings.defaultShowsEventReminders
+    @AppStorage(DynamicIslandSettings.Keys.savesClipboardHistory)
+    private var savesClipboardHistory = DynamicIslandSettings.defaultSavesClipboardHistory
     @AppStorage(DynamicIslandSettings.Keys.hidesInFullScreen)
     private var hidesInFullScreen = DynamicIslandSettings.defaultHidesInFullScreen
     @AppStorage(DynamicIslandSettings.Keys.displayTarget)
@@ -62,6 +64,7 @@ struct DynamicIslandSettingsPane: View {
                 openingSection
                 idleSection
                 notificationsSection
+                clipboardSection
 
                 SettingsControlSection(title: AppLocalization.string("island.settings.panels")) {
                     IslandPanelListEditor()
@@ -226,6 +229,24 @@ struct DynamicIslandSettingsPane: View {
                 )
                 .labelsHidden()
             }
+        }
+    }
+
+    private var clipboardSection: some View {
+        SettingsControlSection(title: AppLocalization.string("island.settings.clipboard")) {
+            SettingsToggleRow(
+                title: AppLocalization.string("island.settings.clipboard.save"),
+                isOn: $savesClipboardHistory
+            )
+
+            Text(AppLocalization.string("island.settings.clipboard.saveInfo"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 18)
+                .padding(.top, -6)
+                .padding(.bottom, 12)
         }
     }
 

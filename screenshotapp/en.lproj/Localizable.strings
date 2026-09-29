@@ -556,3 +556,13 @@
 "videoEdit.gif.failed" = "Could not create the GIF";
 "videoEdit.gif.saved" = "Saved %@ and copied it";
 "videoEdit.missing" = "The video file is no longer on disk";
+
+/* Clipboard history search + saving */
+"island.clipboard.search" = "Search %ld items";
+"island.clipboard.noMatches" = "No matches";
+"island.clipboard.noMatchesMessage" = "Try another word. Images aren't searchable.";
+"island.clipboard.clearSearch" = "Clear search";
+"island.clipboard.savedHint" = "History is saved on this Mac";
+"island.settings.clipboard" = "Clipboard History";
+"island.settings.clipboard.save" = "Save clipboard history on this Mac";
+"island.settings.clipboard.saveInfo" = "Keeps up to 200 copied texts, links and file references between launches, in a file only your user can read. Images are never saved. Turning this off deletes the saved history. When off, history stays in memory (30 items) and is forgotten when DeskCast quits.";

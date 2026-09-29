@@ -40,6 +40,9 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
     init(store: DynamicIslandViewModel, panels: IslandPanelModels) {
         self.store = store
         self.panels = panels
+        panels.clipboard.releaseKeyboardFocus = { [weak self] in
+            self?.panel?.resignKey()
+        }
 
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
@@ -448,7 +451,13 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
     private func updateMouseInteraction() {
         guard let panel, panel.isVisible else { return }
 
-        let wantsKeyboard = store.mode == .expanded && store.expandedContent == .panel(.scratchpad)
+        // The scratchpad and the clipboard search take typing; everything else
+        // leaves keyboard focus with the app the user is working in.
+        let isExpanded = store.mode == .expanded
+        let wantsKeyboard = isExpanded
+            && (store.expandedContent == .panel(.scratchpad) || store.expandedContent == .panel(.clipboard))
+        let holdsTyping = panel.isKeyWindow
+            && (store.expandedContent == .panel(.scratchpad) || panels.clipboard.isSearchFocused)
         panel.allowsKey = wantsKeyboard
 
         if !wantsKeyboard, panel.isKeyWindow {
@@ -458,10 +467,11 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
         let location = NSEvent.mouseLocation
         openFilesForApproachingDrag(at: location, panelFrame: panel.frame)
 
-        // While the scratchpad has keyboard focus, keep the island open even if
-        // the pointer wanders off; clicking elsewhere resigns key and closes it.
+        // While the scratchpad or clipboard search has keyboard focus, keep the
+        // island open even if the pointer wanders off; clicking elsewhere
+        // resigns key and closes it.
         let isInside = hoverRects(in: panel.frame).contains { $0.contains(location) }
-            || (wantsKeyboard && panel.isKeyWindow)
+            || (wantsKeyboard && holdsTyping)
 
         panel.ignoresMouseEvents = !isInside
         store.setHovering(isInside)

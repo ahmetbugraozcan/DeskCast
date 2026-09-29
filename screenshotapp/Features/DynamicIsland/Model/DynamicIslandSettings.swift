@@ -103,6 +103,7 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     var showsSystemNotifications = DynamicIslandSettings.defaultShowsSystemNotifications
     var showsBatteryEvents = DynamicIslandSettings.defaultShowsBatteryEvents
     var showsEventReminders = DynamicIslandSettings.defaultShowsEventReminders
+    var savesClipboardHistory = DynamicIslandSettings.defaultSavesClipboardHistory
     var openMode = DynamicIslandSettings.defaultOpenMode
     var hoverDelay = DynamicIslandSettings.defaultHoverDelay
     var closeDelay = DynamicIslandSettings.defaultCloseDelay
@@ -134,6 +135,7 @@ enum DynamicIslandSettings {
         static let showsSystemNotifications = "dynamicIsland.showsSystemNotifications"
         static let showsBatteryEvents = "dynamicIsland.showsBatteryEvents"
         static let showsEventReminders = "dynamicIsland.showsEventReminders"
+        static let savesClipboardHistory = "dynamicIsland.savesClipboardHistory"
         static let openMode = "dynamicIsland.openMode"
         static let hoverDelay = "dynamicIsland.hoverDelay"
         static let closeDelay = "dynamicIsland.closeDelay"
@@ -162,6 +164,8 @@ enum DynamicIslandSettings {
     static let defaultShowsSystemNotifications = true
     static let defaultShowsBatteryEvents = true
     static let defaultShowsEventReminders = true
+    /// Clipboard history is memory-only unless the user opts in to saving it.
+    static let defaultSavesClipboardHistory = false
     static let defaultOpenMode = IslandOpenMode.hover
     static let defaultHoverDelay = 0.15
     /// Grace period before an open island closes once the pointer leaves it.
@@ -198,6 +202,7 @@ enum DynamicIslandSettings {
             Keys.showsSystemNotifications: defaultShowsSystemNotifications,
             Keys.showsBatteryEvents: defaultShowsBatteryEvents,
             Keys.showsEventReminders: defaultShowsEventReminders,
+            Keys.savesClipboardHistory: defaultSavesClipboardHistory,
             Keys.openMode: defaultOpenMode.rawValue,
             Keys.hoverDelay: defaultHoverDelay,
             Keys.closeDelay: defaultCloseDelay,
@@ -224,6 +229,7 @@ enum DynamicIslandSettings {
             showsSystemNotifications: defaults.bool(forKey: Keys.showsSystemNotifications),
             showsBatteryEvents: defaults.bool(forKey: Keys.showsBatteryEvents),
             showsEventReminders: defaults.bool(forKey: Keys.showsEventReminders),
+            savesClipboardHistory: defaults.bool(forKey: Keys.savesClipboardHistory),
             openMode: enumValue(defaults, Keys.openMode, default: defaultOpenMode),
             hoverDelay: clampedHoverDelay(defaults.double(forKey: Keys.hoverDelay)),
             closeDelay: clampedCloseDelay(defaults.double(forKey: Keys.closeDelay)),

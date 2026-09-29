@@ -556,3 +556,13 @@
 "videoEdit.gif.failed" = "GIF oluşturulamadı";
 "videoEdit.gif.saved" = "%@ kaydedildi ve kopyalandı";
 "videoEdit.missing" = "Video dosyası artık diskte değil";
+
+/* Clipboard history search + saving */
+"island.clipboard.search" = "%ld öğede ara";
+"island.clipboard.noMatches" = "Eşleşme yok";
+"island.clipboard.noMatchesMessage" = "Başka bir kelime deneyin. Görseller aranamaz.";
+"island.clipboard.clearSearch" = "Aramayı temizle";
+"island.clipboard.savedHint" = "Geçmiş bu Mac'e kaydediliyor";
+"island.settings.clipboard" = "Pano Geçmişi";
+"island.settings.clipboard.save" = "Pano geçmişini bu Mac'e kaydet";
+"island.settings.clipboard.saveInfo" = "Kopyalanan en fazla 200 metin, bağlantı ve dosya referansını, yalnızca sizin kullanıcınızın okuyabildiği bir dosyada uygulama kapansa da saklar. Görseller hiçbir zaman kaydedilmez. Bu seçeneği kapatmak kayıtlı geçmişi siler. Kapalıyken geçmiş bellekte kalır (30 öğe) ve DeskCast kapanınca unutulur.";
