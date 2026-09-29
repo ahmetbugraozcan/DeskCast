@@ -43,7 +43,7 @@ final class WeatherViewModel: ObservableObject, IslandPanelActivating {
                 WeatherSettings(
                     city: preferences.weatherCity,
                     unit: preferences.weatherUnit,
-                    showsInClosedIsland: isEnabled && preferences.idleContent == .weather
+                    showsInClosedIsland: isEnabled && [.weather, .automatic].contains(preferences.idleContent)
                 )
             }
             .removeDuplicates()

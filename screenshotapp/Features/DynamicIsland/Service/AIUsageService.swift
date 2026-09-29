@@ -107,6 +107,14 @@ nonisolated final class AIUsageService: @unchecked Sendable {
     private static let sessionLength: TimeInterval = 5 * 3600
     private static let weekLength: TimeInterval = 7 * 86_400
 
+    /// Just the 5-hour limit used (0...1), for the closed island: one small
+    /// file read, no transcript scan.
+    func claudeSessionUsage(now: Date = Date()) -> Double? {
+        let historyURL = homeURL.appendingPathComponent("Library/Application Support/Claude/plan-usage-history.json")
+        guard let data = try? Data(contentsOf: historyURL) else { return nil }
+        return Self.claudePlanUsage(from: data, now: now)?.session?.usedFraction
+    }
+
     private func claudeUsage() async -> AIAgentUsage {
         var usage = AIAgentUsage()
         let projectsURL = homeURL.appendingPathComponent(".claude/projects")

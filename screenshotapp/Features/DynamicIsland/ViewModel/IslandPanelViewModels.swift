@@ -724,6 +724,7 @@ final class IslandPanelModels {
     let clipboard = ClipboardHistoryViewModel()
     let stopwatch = IslandStopwatchViewModel()
     let eventReminders = EventReminderMonitor()
+    let idleInfo = IdleInfoMonitor()
     let extras = NowPlayingExtrasViewModel()
     let screenshots: ScreenshotShelfViewModel
     let dropShelf: DropShelfViewModel
@@ -748,6 +749,7 @@ final class IslandPanelModels {
             island?.isEnabled == true && island?.preferences.visiblePanels.contains(.aiAgents) == true
         }
         eventReminders.bind(to: island)
+        idleInfo.bind(to: island)
         weather.bind(to: island)
         focus.bind(to: island)
         agents.bind(to: island)

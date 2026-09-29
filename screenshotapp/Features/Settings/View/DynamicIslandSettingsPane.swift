@@ -202,6 +202,8 @@ struct DynamicIslandSettingsPane: View {
                 systemImage: \.systemImage
             )
 
+            hint("island.settings.idle.automaticHint")
+
             SettingsSectionDivider()
 
             SettingsToggleRow(
@@ -364,7 +366,10 @@ private struct IslandOptionCards<Option: Identifiable & Hashable>: View {
     let systemImage: (Option) -> String
 
     var body: some View {
-        HStack(spacing: 8) {
+        // More than four options wrap onto a second row.
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: min(options.count, 4))
+
+        LazyVGrid(columns: columns, spacing: 8) {
             ForEach(options) { option in
                 let isSelected = option == selection
 

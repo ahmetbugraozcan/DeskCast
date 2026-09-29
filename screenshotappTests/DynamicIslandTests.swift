@@ -468,7 +468,7 @@ private final class FakeFocusStatus: FocusStatusProviding {
 }
 
 @MainActor
-private func weatherReport(_ temperature: Double = 19) -> WeatherReport {
+func weatherReport(_ temperature: Double = 19) -> WeatherReport {
     WeatherReport(
         place: WeatherPlace(name: "Istanbul", country: nil, latitude: 41, longitude: 29),
         unit: .celsius,

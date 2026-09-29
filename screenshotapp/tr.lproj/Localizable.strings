@@ -625,6 +625,12 @@
 /* Weather */
 "island.panel.weather" = "Hava Durumu";
 "island.settings.idle.weather" = "Hava durumu";
+"island.settings.idle.automatic" = "Otomatik";
+"island.settings.idle.nextEvent" = "Sıradaki etkinlik";
+"island.settings.idle.claudeUsage" = "Claude limiti";
+"island.settings.idle.automaticHint" = "Otomatik, müzik çalarken müziği; yoksa bir saat içindeki toplantıyı, %70'i geçen Claude 5 saatlik limitini, düşük pili ve sonra hava durumunu gösterir. Etkinlikler için Takvim izni gerekir (Takvim panelini bir kez aç); Claude limiti Claude uygulamasından okunur.";
+"island.idle.inMinutes" = "%ld dk";
+"island.idle.claudeUsage" = "Claude 5 saatlik limitin %%%ld kısmı kullanıldı";
 "island.settings.weather" = "Hava Durumu";
 "island.settings.weather.city" = "Şehir";
 "island.settings.weather.cityPlaceholder" = "ör. İstanbul";

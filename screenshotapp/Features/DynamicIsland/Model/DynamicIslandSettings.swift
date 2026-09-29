@@ -32,29 +32,47 @@ enum IslandOpenMode: String, CaseIterable, Identifiable {
 
 /// What the closed island shows when nothing else is going on.
 enum IslandIdleContent: String, CaseIterable, Identifiable {
+    /// Music while playing, then whatever matters most right now (see
+    /// `DynamicIslandViewModel.idleMode`).
+    case automatic
     case nothing
-    case battery
     case music
     /// Weather for the city set in Settings; music still wins while playing.
     case weather
+    case battery
+    /// The next timed calendar event today (needs Calendar access).
+    case nextEvent
+    /// Claude's 5-hour plan limit, as the Claude app records it.
+    case claudeUsage
 
     var id: String { rawValue }
 
+    /// Playing music takes the closed island over this content.
+    var yieldsToMusic: Bool {
+        self != .nothing && self != .battery
+    }
+
     var titleKey: String {
         switch self {
+        case .automatic: "island.settings.idle.automatic"
         case .nothing: "island.settings.idle.nothing"
-        case .battery: "island.settings.idle.battery"
         case .music: "island.settings.idle.music"
         case .weather: "island.settings.idle.weather"
+        case .battery: "island.settings.idle.battery"
+        case .nextEvent: "island.settings.idle.nextEvent"
+        case .claudeUsage: "island.settings.idle.claudeUsage"
         }
     }
 
     var systemImage: String {
         switch self {
+        case .automatic: "wand.and.stars"
         case .nothing: "capsule"
-        case .battery: "battery.75percent"
         case .music: "music.note"
         case .weather: "cloud.sun"
+        case .battery: "battery.75percent"
+        case .nextEvent: "calendar"
+        case .claudeUsage: "asterisk"
         }
     }
 }
@@ -174,6 +192,7 @@ struct DynamicIslandSettingsSnapshot: Equatable {
 enum DynamicIslandSettings {
     enum Keys {
         static let idleContent = "dynamicIsland.idleContent"
+        static let idleAutomaticMigrated = "dynamicIsland.idleAutomaticMigrated"
         static let showsTrackChanges = "dynamicIsland.showsTrackChanges"
         static let showsAppNotifications = "dynamicIsland.showsAppNotifications"
         static let showsSystemNotifications = "dynamicIsland.showsSystemNotifications"
@@ -211,7 +230,7 @@ enum DynamicIslandSettings {
     static let closeDelayRange = 0.1...2.0
     static let agentFinishMinimumRange = 1...30
 
-    static let defaultIdleContent = IslandIdleContent.music
+    static let defaultIdleContent = IslandIdleContent.automatic
     /// Off by default: playback goes straight to compact music. When on, each
     /// new song shows briefly in the closed island's wings.
     static let defaultShowsTrackChanges = false
@@ -258,6 +277,17 @@ enum DynamicIslandSettings {
         defaults.register(
             defaults: defaultValues.merging([Keys.scratchpadText: "", Keys.weatherCity: ""]) { current, _ in current }
         )
+        migrateIdleContentToAutomatic(in: defaults)
+    }
+
+    /// "Music" was the default before Automatic, which also shows music while
+    /// it plays; move it over once, after which a picked option sticks.
+    static func migrateIdleContentToAutomatic(in defaults: UserDefaults) {
+        guard !defaults.bool(forKey: Keys.idleAutomaticMigrated) else { return }
+        defaults.set(true, forKey: Keys.idleAutomaticMigrated)
+        if defaults.string(forKey: Keys.idleContent) == IslandIdleContent.music.rawValue {
+            defaults.removeObject(forKey: Keys.idleContent)
+        }
     }
 
     static func resetToDefaults(in defaults: UserDefaults = .standard) {

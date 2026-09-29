@@ -194,7 +194,8 @@ struct DynamicIslandView: View {
             // No camera housing to clear: symbol and message side by side.
             let content = (notch.height - 12) + 8 + CompactToastView.textWidth(toastText ?? "") + 20
             return CGSize(width: content + ears, height: notch.height)
-        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent, .compactToast:
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactEvent, .compactClaude, .compactFocus,
+             .compactAgent, .compactToast:
             // Music with a running timer shows the countdown on the right wing.
             let sideWidth = switch mode {
             case .compactMedia where !combinesTimer: notch.height + 18
@@ -220,7 +221,8 @@ struct DynamicIslandView: View {
     static func cornerMetrics(for mode: DynamicIslandMode) -> (top: CGFloat, bottom: CGFloat) {
         switch mode {
         case .idle: return (top: 6, bottom: 9)
-        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent, .compactToast:
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactEvent, .compactClaude, .compactFocus,
+             .compactAgent, .compactToast:
             return (top: 6, bottom: 13)
         case .notification: return (top: 12, bottom: 24)
         case .expanded: return (top: 14, bottom: 30)
@@ -332,19 +334,8 @@ struct DynamicIslandView: View {
         case .compactTimer:
             CompactTimerView(timer: store.timer, showsFocus: store.isFocusActive, geometry: geometry)
                 .transition(Self.contentTransition)
-        case .compactBattery:
-            if let status = store.batteryStatus {
-                CompactBatteryView(status: status, showsFocus: store.isFocusActive, geometry: geometry)
-                    .transition(Self.contentTransition)
-            }
-        case .compactWeather:
-            if let weather = store.idleWeather {
-                CompactWeatherView(report: weather, showsFocus: store.isFocusActive, geometry: geometry)
-                    .transition(Self.contentTransition)
-            }
-        case .compactFocus:
-            CompactFocusView(geometry: geometry)
-                .transition(Self.contentTransition)
+        case .compactBattery, .compactWeather, .compactEvent, .compactClaude, .compactFocus:
+            idleContent(for: mode, geometry: geometry)
         case .compactAgent:
             CompactAgentView(
                 sessions: store.agentSessions,
@@ -371,6 +362,37 @@ struct DynamicIslandView: View {
             }
         case .expanded:
             IslandExpandedView(store: store, panels: panels, geometry: geometry, namespace: namespace)
+                .transition(Self.contentTransition)
+        }
+    }
+
+    /// Idle content in the closed island (battery, weather, next event,
+    /// Claude's limit, Focus).
+    @ViewBuilder
+    private func idleContent(for mode: DynamicIslandMode, geometry: DynamicIslandGeometry) -> some View {
+        switch mode {
+        case .compactBattery:
+            if let status = store.batteryStatus {
+                CompactBatteryView(status: status, showsFocus: store.isFocusActive, geometry: geometry)
+                    .transition(Self.contentTransition)
+            }
+        case .compactWeather:
+            if let weather = store.idleWeather {
+                CompactWeatherView(report: weather, showsFocus: store.isFocusActive, geometry: geometry)
+                    .transition(Self.contentTransition)
+            }
+        case .compactEvent:
+            if let idle = store.idleEvent {
+                CompactEventView(idle: idle, showsFocus: store.isFocusActive, geometry: geometry)
+                    .transition(Self.contentTransition)
+            }
+        case .compactClaude:
+            if let usage = store.idleClaudeUsage {
+                CompactClaudeView(usedFraction: usage, showsFocus: store.isFocusActive, geometry: geometry)
+                    .transition(Self.contentTransition)
+            }
+        default:
+            CompactFocusView(geometry: geometry)
                 .transition(Self.contentTransition)
         }
     }

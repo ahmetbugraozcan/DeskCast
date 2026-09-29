@@ -59,6 +59,10 @@ enum DynamicIslandMode: Equatable {
     case compactTimer
     case compactBattery
     case compactWeather
+    /// The next calendar event (idle content).
+    case compactEvent
+    /// Claude's 5-hour plan limit (idle content).
+    case compactClaude
     case compactFocus
     case compactAgent
     case compactToast
@@ -68,7 +72,8 @@ enum DynamicIslandMode: Equatable {
     /// The closed island showing something beside the camera.
     var isCompact: Bool {
         switch self {
-        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactFocus, .compactAgent, .compactToast: true
+        case .compactMedia, .compactTimer, .compactBattery, .compactWeather, .compactEvent, .compactClaude, .compactFocus,
+             .compactAgent, .compactToast: true
         case .idle, .notification, .expanded: false
         }
     }

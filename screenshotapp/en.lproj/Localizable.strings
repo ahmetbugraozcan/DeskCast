@@ -625,6 +625,12 @@
 /* Weather */
 "island.panel.weather" = "Weather";
 "island.settings.idle.weather" = "Weather";
+"island.settings.idle.automatic" = "Automatic";
+"island.settings.idle.nextEvent" = "Next event";
+"island.settings.idle.claudeUsage" = "Claude limit";
+"island.settings.idle.automaticHint" = "Automatic shows music while it plays, then a meeting within the hour, Claude's 5-hour limit past 70%, low battery, then the weather. Events need Calendar access (open the Calendar panel once); Claude's limit comes from the Claude app.";
+"island.idle.inMinutes" = "%ld min";
+"island.idle.claudeUsage" = "Claude 5-hour limit %ld%% used";
 "island.settings.weather" = "Weather";
 "island.settings.weather.city" = "City";
 "island.settings.weather.cityPlaceholder" = "e.g. Istanbul";

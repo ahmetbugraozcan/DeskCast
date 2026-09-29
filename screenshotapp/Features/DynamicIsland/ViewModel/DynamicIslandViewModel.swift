@@ -44,6 +44,11 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// Current weather for the closed island, pushed by `WeatherViewModel`
     /// while the idle content is weather.
     @Published private(set) var idleWeather: WeatherReport?
+    /// The next timed calendar event, kept by `IdleInfoMonitor` while idle
+    /// content may show it.
+    @Published private(set) var idleEvent: IdleCalendarEvent?
+    /// Claude's 5-hour plan limit used (0...1), kept by `IdleInfoMonitor`.
+    @Published private(set) var idleClaudeUsage: Double?
     /// A Focus is on and the Focus indicator setting is on.
     @Published private(set) var isFocusActive = false
     /// Claude Code / Codex turns in progress, oldest first.
@@ -185,12 +190,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         case nil: break
         }
 
-        if preferences.idleContent == .battery, batteryStatus != nil {
-            return .compactBattery
-        }
-
-        if preferences.idleContent == .weather, idleWeather != nil {
-            return .compactWeather
+        if let idleMode {
+            return idleMode
         }
 
         if isFocusActive {
@@ -709,7 +710,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             hasReceivedNowPlaying = false
         }
 
-        if isEnabled && (preferences.showsBatteryEvents || preferences.idleContent == .battery) {
+        if isEnabled && (preferences.showsBatteryEvents || [.battery, .automatic].contains(preferences.idleContent)) {
             batteryMonitor.start()
             lastBatteryStatus = lastBatteryStatus ?? batteryMonitor.currentStatus()
         } else {
@@ -754,8 +755,8 @@ extension DynamicIslandViewModel {
     /// pause. A long-paused session (e.g. a forgotten video tab, which stays
     /// in the system now playing session) doesn't keep the island wide.
     var hasMedia: Bool {
-        // Weather in the closed island steps aside while music plays.
-        guard [.music, .weather].contains(preferences.idleContent), let nowPlaying else { return false }
+        // Other idle content steps aside while music plays.
+        guard preferences.idleContent.yieldsToMusic, let nowPlaying else { return false }
         guard !nowPlaying.isPlaying else { return true }
         guard let pausedAt else { return false }
         return Date().timeIntervalSince(pausedAt) < Self.pausedMediaLinger
@@ -853,6 +854,16 @@ extension DynamicIslandViewModel {
     func updateIdleWeather(_ report: WeatherReport?) {
         guard idleWeather != report else { return }
         idleWeather = report
+    }
+
+    func updateIdleEvent(_ event: IdleCalendarEvent?) {
+        guard idleEvent != event else { return }
+        idleEvent = event
+    }
+
+    func updateIdleClaudeUsage(_ usedFraction: Double?) {
+        guard idleClaudeUsage != usedFraction else { return }
+        idleClaudeUsage = usedFraction
     }
 
     func clearNotificationHistory() {
