@@ -461,7 +461,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ahmetbugraozcan.screenshotapp;
 				PRODUCT_MODULE_NAME = screenshotapp;
 				PRODUCT_NAME = DeskCast;
@@ -506,7 +506,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ahmetbugraozcan.screenshotapp;
 				PRODUCT_MODULE_NAME = screenshotapp;
 				PRODUCT_NAME = DeskCast;

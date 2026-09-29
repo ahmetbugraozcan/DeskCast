@@ -421,8 +421,8 @@
 "island.settings.agents.showHint" = "Claude Code ve Codex'i bu Mac'te tuttukları kayıtlardan izler. Hiçbir şey Mac'inizden çıkmaz.";
 "island.settings.agents.finishAlerts" = "Uzun bir görev bitince haber ver";
 "island.settings.agents.finishMinimum" = "%ld dk'dan uzun görevler için";
-"island.settings.agents.fullBanner" = "Büyük bildirim olarak göster";
-"island.settings.agents.fullBannerHint" = "Kapalıyken kapalı adanın kanatlarında kısa bir not çıkar. Açıkken proje adı ve sürenin yazdığı bir bildirim açılır.";
+"island.settings.fullBanners" = "Uyarıları büyük bildirim olarak göster";
+"island.settings.fullBannersHint" = "Kapalıyken timer, pil, AI ajanı bitti ve toplantı uyarıları kapalı adanın kanatlarında kısaca görünür. Katıl bağlantısı olan toplantılar ve diğer uygulamaların bildirimleri her zaman büyük açılır.";
 "island.agents.finished" = "%@ bitirdi";
 "island.agents.minutes" = "%ld dk";
 "island.agents.working" = "%@ çalışıyor";

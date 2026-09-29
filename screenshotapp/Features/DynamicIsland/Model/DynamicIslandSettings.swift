@@ -163,7 +163,7 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     var showsAgentActivity = DynamicIslandSettings.defaultShowsAgentActivity
     var agentFinishAlerts = DynamicIslandSettings.defaultAgentFinishAlerts
     var agentFinishMinimumMinutes = DynamicIslandSettings.defaultAgentFinishMinimumMinutes
-    var agentFinishFullBanner = DynamicIslandSettings.defaultAgentFinishFullBanner
+    var fullBanners = DynamicIslandSettings.defaultFullBanners
 
     /// Panels shown in the launcher, in the user's order.
     var visiblePanels: [IslandPanel] {
@@ -203,7 +203,7 @@ enum DynamicIslandSettings {
         static let showsAgentActivity = "dynamicIsland.showsAgentActivity"
         static let agentFinishAlerts = "dynamicIsland.agentFinishAlerts"
         static let agentFinishMinimumMinutes = "dynamicIsland.agentFinishMinimumMinutes"
-        static let agentFinishFullBanner = "dynamicIsland.agentFinishFullBanner"
+        static let fullBanners = "dynamicIsland.fullBanners"
     }
 
     static let notificationDurationRange = 2...10
@@ -247,9 +247,10 @@ enum DynamicIslandSettings {
     static let defaultAgentFinishAlerts = true
     /// Only turns at least this long announce that they finished.
     static let defaultAgentFinishMinimumMinutes = 2
-    /// Off by default: "finished" peeks in the closed island's wings, like a
-    /// new song; on, it opens the full banner with the project and duration.
-    static let defaultAgentFinishFullBanner = false
+    /// Off by default: DeskCast's own alerts (timer, battery, finished agent,
+    /// meetings without a link) peek in the closed island's wings, like a new
+    /// song; on, they open the full banner.
+    static let defaultFullBanners = false
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
         // Scratchpad text and the weather city are user content, so they're
@@ -295,7 +296,7 @@ enum DynamicIslandSettings {
             Keys.showsAgentActivity: defaultShowsAgentActivity,
             Keys.agentFinishAlerts: defaultAgentFinishAlerts,
             Keys.agentFinishMinimumMinutes: defaultAgentFinishMinimumMinutes,
-            Keys.agentFinishFullBanner: defaultAgentFinishFullBanner
+            Keys.fullBanners: defaultFullBanners
         ]
     }
 
@@ -332,7 +333,7 @@ enum DynamicIslandSettings {
             showsAgentActivity: defaults.bool(forKey: Keys.showsAgentActivity),
             agentFinishAlerts: defaults.bool(forKey: Keys.agentFinishAlerts),
             agentFinishMinimumMinutes: clampedAgentFinishMinimum(defaults.integer(forKey: Keys.agentFinishMinimumMinutes)),
-            agentFinishFullBanner: defaults.bool(forKey: Keys.agentFinishFullBanner)
+            fullBanners: defaults.bool(forKey: Keys.fullBanners)
         )
     }
 

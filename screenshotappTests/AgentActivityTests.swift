@@ -95,18 +95,34 @@ struct AgentTranscriptStateTests {
 }
 
 @MainActor
-struct AgentFinishBannerTests {
+struct IslandAlertTests {
     private let session = AgentSession(id: "/tmp/a.jsonl", kind: .claude, project: "deskcast", startedAt: Date())
 
-    @Test func finishedPeeksInTheWingsUnlessTheFullBannerIsOn() {
-        let peek = AgentActivityMonitor.banner(for: session, duration: 600, fullBanner: false)
-        #expect(peek.isCompact)
-        #expect(peek.message == nil)
-
-        let banner = AgentActivityMonitor.banner(for: session, duration: 600, fullBanner: true)
-        #expect(!banner.isCompact)
+    @Test func alertsPeekInTheWingsUnlessFullBannersAreOn() {
+        let banner = AgentActivityMonitor.banner(for: session, duration: 600)
         #expect(banner.caption == "deskcast")
         #expect(banner.message == AppLocalization.formatted("island.agents.minutes", 10))
+
+        let compact = DynamicIslandViewModel(
+            nowPlayingService: FakeNowPlayingService(),
+            batteryMonitor: FakeBatteryMonitor(),
+            systemNotifications: FakeSystemNotificationMonitor(),
+            settings: StubIslandSettings()
+        )
+        compact.start()
+        compact.postAlert(banner, peek: banner.title)
+        #expect(compact.activeNotification?.isCompact == true)
+        #expect(compact.activeNotification.map(CompactToastView.text(of:)) == banner.title)
+
+        let full = DynamicIslandViewModel(
+            nowPlayingService: FakeNowPlayingService(),
+            batteryMonitor: FakeBatteryMonitor(),
+            systemNotifications: FakeSystemNotificationMonitor(),
+            settings: StubIslandSettings { $0.fullBanners = true }
+        )
+        full.start()
+        full.postAlert(banner, peek: banner.title)
+        #expect(full.activeNotification?.isCompact == false)
     }
 }
 

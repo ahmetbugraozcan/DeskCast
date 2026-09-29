@@ -82,7 +82,7 @@ final class EventReminderMonitor {
         let now = Date()
 
         for event in takeDueEvents(at: now) {
-            island?.post(Self.banner(for: event, now: now))
+            island?.postReminder(Self.banner(for: event, now: now))
         }
     }
 

@@ -24,8 +24,8 @@ struct DynamicIslandSettingsPane: View {
     private var agentFinishAlerts = DynamicIslandSettings.defaultAgentFinishAlerts
     @AppStorage(DynamicIslandSettings.Keys.agentFinishMinimumMinutes)
     private var agentFinishMinimumMinutes = DynamicIslandSettings.defaultAgentFinishMinimumMinutes
-    @AppStorage(DynamicIslandSettings.Keys.agentFinishFullBanner)
-    private var agentFinishFullBanner = DynamicIslandSettings.defaultAgentFinishFullBanner
+    @AppStorage(DynamicIslandSettings.Keys.fullBanners)
+    private var fullBanners = DynamicIslandSettings.defaultFullBanners
     @AppStorage(DynamicIslandSettings.Keys.idleContent)
     private var idleContent = DynamicIslandSettings.defaultIdleContent
     @AppStorage(DynamicIslandSettings.Keys.showsTrackChanges)
@@ -238,16 +238,6 @@ struct DynamicIslandSettingsPane: View {
                     .labelsHidden()
             }
             .disabled(!agentFinishAlerts)
-
-            SettingsSectionDivider()
-
-            SettingsToggleRow(
-                title: AppLocalization.string("island.settings.agents.fullBanner"),
-                isOn: $agentFinishFullBanner
-            )
-            .disabled(!agentFinishAlerts)
-
-            hint("island.settings.agents.fullBannerHint")
         }
     }
 
@@ -293,6 +283,15 @@ struct DynamicIslandSettingsPane: View {
                 )
                 .labelsHidden()
             }
+
+            SettingsSectionDivider()
+
+            SettingsToggleRow(
+                title: AppLocalization.string("island.settings.fullBanners"),
+                isOn: $fullBanners
+            )
+
+            hint("island.settings.fullBannersHint")
         }
     }
 

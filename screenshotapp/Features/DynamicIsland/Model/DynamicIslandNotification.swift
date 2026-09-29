@@ -33,6 +33,17 @@ struct DynamicIslandNotification: Identifiable {
     /// A quick confirmation (e.g. "Saved to DeskCast") shown in the closed
     /// island's wings instead of a full banner.
     var isCompact = false
+    /// What a compact peek says, when not its message or title.
+    var peekText: String?
+
+    /// The same alert as a short peek in the closed island's wings.
+    func asPeek(showing text: String) -> DynamicIslandNotification {
+        var peek = self
+        peek.isCompact = true
+        peek.peekText = text
+        peek.action = nil
+        return peek
+    }
 }
 
 struct DynamicIslandNotificationAction: Equatable {

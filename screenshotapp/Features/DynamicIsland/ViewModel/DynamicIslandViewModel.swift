@@ -133,14 +133,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             DispatchQueue.main.async { self?.pruneActivityChoice() }
         }
         self.timer.onFinish = { [weak self] in
-            self?.post(
-                DynamicIslandNotification(
-                    title: AppLocalization.string("island.timer.finished"),
-                    message: nil,
-                    systemImage: "timer",
-                    style: .warning
-                )
-            )
+            let title = AppLocalization.string("island.timer.finished")
+            self?.postAlert(DynamicIslandNotification(title: title, message: nil, systemImage: "timer", style: .warning), peek: title)
         }
 
         defaultsObserver = NotificationCenter.default.publisher(
@@ -658,15 +652,18 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
         let progress = Double(status.level) / 100
 
+        let level = AppLocalization.formatted("Battery at %ld%%", status.level)
+
         if status.isPluggedIn != previous.isPluggedIn {
-            post(
+            postAlert(
                 DynamicIslandNotification(
                     title: AppLocalization.string(status.isPluggedIn ? "Charging" : "On Battery"),
-                    message: AppLocalization.formatted("Battery at %ld%%", status.level),
+                    message: level,
                     systemImage: status.isPluggedIn ? "battery.100percent.bolt" : "battery.75percent",
                     style: .battery,
                     progress: progress
-                )
+                ),
+                peek: level
             )
             return
         }
@@ -678,14 +675,15 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
         }
 
         if crossedThreshold {
-            post(
+            postAlert(
                 DynamicIslandNotification(
                     title: AppLocalization.string("Low Battery"),
-                    message: AppLocalization.formatted("Battery at %ld%%", status.level),
+                    message: level,
                     systemImage: "battery.25percent",
                     style: .warning,
                     progress: progress
-                )
+                ),
+                peek: level
             )
         }
     }
@@ -1094,7 +1092,7 @@ extension DynamicIslandViewModel {
                 color: .systemBlue,
                 meetingLink: MeetingLink(url)
             )
-            post(EventReminderMonitor.banner(for: event, now: Date()))
+            postReminder(EventReminderMonitor.banner(for: event, now: Date()))
         }
 
         if let rawPanel = defaults.string(forKey: "DeskCastDemoPanel") {
@@ -1173,5 +1171,24 @@ extension DynamicIslandViewModel {
         }
 
         return reading.togglingPlayback()
+    }
+}
+
+// MARK: - Alerts
+
+extension DynamicIslandViewModel {
+    /// DeskCast's own alerts peek in the closed island's wings unless the user
+    /// asked for full banners.
+    func postAlert(_ banner: DynamicIslandNotification, peek text: String) {
+        post(preferences.fullBanners ? banner : banner.asPeek(showing: text))
+    }
+
+    /// A meeting with a Join button keeps its banner so the button can be clicked.
+    func postReminder(_ banner: DynamicIslandNotification) {
+        if banner.action == nil {
+            postAlert(banner, peek: banner.title)
+        } else {
+            post(banner)
+        }
     }
 }

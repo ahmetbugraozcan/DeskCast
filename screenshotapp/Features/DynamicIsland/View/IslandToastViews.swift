@@ -37,7 +37,7 @@ struct CompactToastView: View {
     private static let maxTextWidth: CGFloat = 150
 
     static func text(of notification: DynamicIslandNotification) -> String {
-        notification.message ?? notification.title
+        notification.peekText ?? notification.message ?? notification.title
     }
 
     /// The message's width on the right wing, which sizes the island.
