@@ -42,6 +42,11 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
         self.panels = panels
         panels.clipboard.releaseKeyboardFocus = { [weak self] in
             self?.panel?.resignKey()
+            // A non-activating panel giving up key status doesn't hand typing
+            // back; the app the user was in (still frontmost) must take it.
+            if let frontmost = NSWorkspace.shared.frontmostApplication, frontmost != .current {
+                frontmost.activate()
+            }
         }
 
         screenObserver = NotificationCenter.default.addObserver(

@@ -872,19 +872,36 @@ extension DynamicIslandViewModel {
     }
 
     /// Adds what the open Notification Center lists and the history lacks,
-    /// without showing banners for it.
+    /// without showing banners for it, and moves entries imported earlier
+    /// back to the time the list gives them.
     func importNotificationCenterList(_ banners: [SystemNotificationBanner]) {
         guard isEnabled, preferences.showsSystemNotifications else { return }
-        let known = Set(notificationHistory.map(Self.historySignature))
-        let now = Date()
-        // Listed newest first; older items get slightly older times so the
-        // order survives sorting.
-        let imported = banners.enumerated().compactMap { index, banner -> DynamicIslandNotification? in
-            let notification = Self.systemNotification(from: banner, date: now.addingTimeInterval(-Double(index + 1)))
-            return known.contains(Self.historySignature(notification)) ? nil : notification
+        var indexBySignature: [String: Int] = [:]
+        for (index, notification) in notificationHistory.enumerated().reversed() {
+            indexBySignature[Self.historySignature(notification)] = index
         }
-        guard !imported.isEmpty else { return }
-        notificationHistory = (notificationHistory + imported).sorted { $0.date > $1.date }
+        let now = Date()
+        var changed = false
+        // Listed newest first; items without a time (or sharing one) get
+        // slightly older times so the order survives sorting.
+        for (index, banner) in banners.enumerated() {
+            let offset = Double(index + 1)
+            let date = banner.postedAt.map { $0.addingTimeInterval(-offset / 1_000) } ?? now.addingTimeInterval(-offset)
+            let notification = Self.systemNotification(from: banner, date: date)
+            if let known = indexBySignature[Self.historySignature(notification)] {
+                // Only a real time corrects an entry, and only when it is
+                // clearly off (the list rounds to minutes).
+                if banner.postedAt != nil, notificationHistory[known].date.timeIntervalSince(date) > 120 {
+                    notificationHistory[known].date = date
+                    changed = true
+                }
+            } else {
+                notificationHistory.append(notification)
+                changed = true
+            }
+        }
+        guard changed else { return }
+        notificationHistory.sort { $0.date > $1.date }
         trimAndSaveHistory()
     }
 

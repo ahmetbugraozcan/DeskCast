@@ -373,7 +373,7 @@
 "island.calendar.noEvents" = "Yaklaşan etkinlik yok";
 "island.calendar.allDay" = "Tüm gün";
 "island.notifications.empty" = "Bildirim yok";
-"island.notifications.emptyMessage" = "Adada gösterilen bildirimler burada saklanır.";
+"island.notifications.emptyMessage" = "Adada gösterilen bildirimler burada saklanır. Odak sırasında gelenleri eklemek için Bildirim Merkezi'ni bir kez açın.";
 "island.notifications.clear" = "Bildirimleri temizle";
 "island.timer.minutes" = "%ld dk";
 "island.timer.start" = "Başlat";

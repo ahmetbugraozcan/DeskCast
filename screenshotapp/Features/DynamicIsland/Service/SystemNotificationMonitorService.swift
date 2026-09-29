@@ -6,6 +6,9 @@ nonisolated struct SystemNotificationBanner: Equatable, Sendable {
     let appName: String?
     let title: String
     let message: String?
+    /// When Notification Center's list says it arrived ("2m ago", "15:38");
+    /// banners on screen don't carry a time.
+    var postedAt: Date?
 
     /// Stable identity used to tell a new banner from one still on screen.
     var signature: String {
@@ -252,8 +255,13 @@ final class SystemNotificationMonitorService: SystemNotificationMonitoring {
         }
     }
 
-    nonisolated static func makeBanner(texts: [String], description: String?) -> SystemNotificationBanner? {
+    nonisolated static func makeBanner(
+        texts: [String],
+        description: String?,
+        now: Date = Date()
+    ) -> SystemNotificationBanner? {
         // Notification Center's list adds a time label ("2m ago", "15:38").
+        let postedAt = texts.first(where: isTimeLabel).flatMap { date(fromTimeLabel: $0, now: now) }
         var texts = texts.filter { !isTimeLabel($0) }
         var appName: String?
 
@@ -284,7 +292,8 @@ final class SystemNotificationMonitorService: SystemNotificationMonitoring {
         return SystemNotificationBanner(
             appName: appName,
             title: title,
-            message: message.isEmpty ? nil : message
+            message: message.isEmpty ? nil : message,
+            postedAt: postedAt
         )
     }
 
@@ -297,6 +306,37 @@ final class SystemNotificationMonitorService: SystemNotificationMonitoring {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard text.count <= 12, let timeLabelPattern else { return false }
         return timeLabelPattern.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
+    }
+
+    /// The moment a list time label stands for: relative labels count back
+    /// from `now`, a clock time is today's (yesterday's if still ahead).
+    nonisolated static func date(fromTimeLabel label: String, now: Date = Date()) -> Date? {
+        let text = label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let calendar = Calendar.current
+        if text == "now" || text == "şimdi" { return now }
+        if text == "yesterday" || text == "dün" { return calendar.date(byAdding: .day, value: -1, to: now) }
+
+        let parts = text.split(whereSeparator: { !$0.isNumber && !$0.isLetter }).map(String.init)
+        if text.contains(":") || text.range(of: #"^\d{1,2}\.\d{2}"#, options: .regularExpression) != nil {
+            guard parts.count >= 2, var hour = Int(parts[0]), let minute = Int(parts[1]) else { return nil }
+            let suffix = parts.dropFirst(2).joined()
+            if suffix.hasPrefix("p"), hour < 12 { hour += 12 }
+            if suffix.hasPrefix("a"), hour == 12 { hour = 0 }
+            guard let today = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: now) else { return nil }
+            return today > now ? calendar.date(byAdding: .day, value: -1, to: today) : today
+        }
+
+        guard let amount = Int(text.prefix { $0.isNumber }) else { return nil }
+        let unit = text.drop { $0.isNumber || $0 == " " }.prefix { $0.isLetter }
+        let seconds: Double? = switch unit {
+        case "s", "sn": 1
+        case "m", "min", "dk": 60
+        case "h", "sa": 3_600
+        case "d", "g": 86_400
+        case "w", "hf": 604_800
+        default: nil
+        }
+        return seconds.map { now.addingTimeInterval(-Double(amount) * $0) }
     }
 
     nonisolated private static func collectNotificationGroups(

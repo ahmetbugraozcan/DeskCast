@@ -383,6 +383,29 @@ struct NotificationCenterListTests {
         #expect(banner.title == "HTalks")
         #expect(banner.message == "Arka Sokaklar'ı kaç para karşılığı izlersiniz?")
     }
+
+    @Test func turnsListTimeLabelsIntoDates() throws {
+        let calendar = Calendar.current
+        let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 9, day: 29, hour: 17, minute: 30)))
+        let date = { SystemNotificationMonitorService.date(fromTimeLabel: $0, now: now) }
+
+        #expect(date("now") == now)
+        #expect(date("2m ago") == now.addingTimeInterval(-120))
+        #expect(date("5 dk önce") == now.addingTimeInterval(-300))
+        #expect(date("1h ago") == now.addingTimeInterval(-3_600))
+        #expect(date("15:38") == calendar.date(bySettingHour: 15, minute: 38, second: 0, of: now))
+        #expect(date("3:05 PM") == calendar.date(bySettingHour: 15, minute: 5, second: 0, of: now))
+        // A clock time still ahead today was yesterday.
+        let yesterday = try #require(calendar.date(byAdding: .day, value: -1, to: now))
+        #expect(date("18:10") == calendar.date(bySettingHour: 18, minute: 10, second: 0, of: yesterday))
+
+        let banner = try #require(SystemNotificationMonitorService.makeBanner(
+            texts: ["Can", "20m ago", "Selam"],
+            description: "Slack, Can",
+            now: now
+        ))
+        #expect(banner.postedAt == now.addingTimeInterval(-1_200))
+    }
 }
 
 extension DynamicIslandViewModelTests {
@@ -436,6 +459,23 @@ extension DynamicIslandViewModelTests {
 
         relaunched.clearNotificationHistory()
         #expect(store.saved.isEmpty)
+    }
+
+    @Test func notificationCenterListTimesPlaceAndCorrectHistory() {
+        let viewModel = makeViewModel()
+        let now = Date()
+
+        systemNotifications.list([SystemNotificationBanner(appName: "Messages", title: "Akbank", message: "Fırsat")])
+        #expect(viewModel.notificationHistory.first?.date ?? .distantPast > now.addingTimeInterval(-60))
+
+        systemNotifications.list([
+            SystemNotificationBanner(appName: "Gmail", title: "Yeni ilan", message: nil, postedAt: now.addingTimeInterval(-600)),
+            SystemNotificationBanner(appName: "Messages", title: "Akbank", message: "Fırsat", postedAt: now.addingTimeInterval(-3_600))
+        ])
+
+        #expect(viewModel.notificationHistory.map(\.title) == ["Yeni ilan", "Akbank"])
+        let akbank = viewModel.notificationHistory.last?.date ?? .distantFuture
+        #expect(abs(akbank.timeIntervalSince(now.addingTimeInterval(-3_600))) < 1)
     }
 
     @Test func idleContentOutranksTheFocusMoonAndMusicOutranksWeather() {

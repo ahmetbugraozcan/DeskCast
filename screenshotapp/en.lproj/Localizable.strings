@@ -373,7 +373,7 @@
 "island.calendar.noEvents" = "No upcoming events";
 "island.calendar.allDay" = "All day";
 "island.notifications.empty" = "No notifications";
-"island.notifications.emptyMessage" = "Notifications shown in the island are kept here.";
+"island.notifications.emptyMessage" = "Notifications shown in the island are kept here. Open Notification Center once to add ones that arrived during a Focus.";
 "island.notifications.clear" = "Clear notifications";
 "island.timer.minutes" = "%ld min";
 "island.timer.start" = "Start";
