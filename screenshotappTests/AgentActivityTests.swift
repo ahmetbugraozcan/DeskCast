@@ -95,6 +95,39 @@ struct AgentTranscriptStateTests {
 }
 
 @MainActor
+struct AgentActivityServiceTests {
+    /// Codex keeps its transcript open while it writes, which FSEvents doesn't
+    /// report until the file is closed.
+    @Test func codexWritesToAnOpenTranscriptAreSeen() async throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let folder = home.appendingPathComponent(".codex/sessions/2026/09/29", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        let file = folder.appendingPathComponent("rollout-test.jsonl")
+        try Data(#"{"type":"session_meta","payload":{"cwd":"/Users/me/app"}}"#.utf8 + [0x0A]).write(to: file)
+        let handle = try FileHandle(forWritingTo: file)
+        defer { try? handle.close() }
+
+        let service = AgentActivityService(home: home)
+        var sessions: [AgentSession] = []
+        service.onUpdate = { sessions = $0 }
+        service.start()
+        defer { service.stop() }
+
+        try await Task.sleep(for: .milliseconds(300))
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data(#"{"type":"event_msg","payload":{"type":"task_started"}}"#.utf8 + [0x0A]))
+
+        for _ in 0..<50 where sessions.isEmpty {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        #expect(sessions.map(\.kind) == [.codex])
+        #expect(sessions.first?.project == "app")
+    }
+}
+
+@MainActor
 final class FakeAgentActivity: AgentActivityProviding {
     var onUpdate: (@MainActor @Sendable ([AgentSession]) -> Void)?
     var onFinish: (@MainActor @Sendable (AgentSession, TimeInterval) -> Void)?

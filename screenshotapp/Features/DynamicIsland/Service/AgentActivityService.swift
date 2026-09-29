@@ -14,7 +14,9 @@ nonisolated protocol AgentActivityProviding: AnyObject {
 
 /// Watches `~/.claude/projects` and `~/.codex/sessions` with FSEvents and
 /// reads each changed transcript from where it left off, so only new lines
-/// are parsed. A turn whose transcript hasn't changed for half an hour
+/// are parsed. FSEvents reports content changes only when a file is closed,
+/// and Codex keeps its transcript open while it writes, so Codex transcripts
+/// are polled as well. A turn whose transcript hasn't changed for half an hour
 /// (e.g. the agent was killed) no longer counts as working.
 nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked Sendable {
     var onUpdate: (@MainActor @Sendable ([AgentSession]) -> Void)?
@@ -32,6 +34,8 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
     // Everything below is confined to `queue`.
     private var stream: FSEventStreamRef?
     private var sweepTimer: DispatchSourceTimer?
+    private var pollTimer: DispatchSourceTimer?
+    private var pollCount = 0
     private var transcripts: [String: Transcript] = [:]
     private var published: [AgentSession] = []
     private var isRunning = false
@@ -44,6 +48,10 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
     /// megabytes of tool output within one turn).
     private static let initialTailBytes: UInt64 = 512 * 1024
     private static let maxInitialTailBytes: UInt64 = 32 * 1024 * 1024
+    private static let pollInterval: TimeInterval = 2
+    /// Every this many polls, looks for Codex transcripts written to again
+    /// (a resumed thread appends to its original, older file).
+    private static let pollsPerDiscovery = 5
 
     init(home: URL = FileManager.default.homeDirectoryForCurrentUser) {
         roots = [
@@ -55,6 +63,7 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
     deinit {
         stopStream()
         sweepTimer?.cancel()
+        pollTimer?.cancel()
     }
 
     func start() {
@@ -64,6 +73,7 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
             loadRecentTranscripts()
             startStream()
             startSweep()
+            startPolling()
             publish()
         }
     }
@@ -75,6 +85,8 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
             stopStream()
             sweepTimer?.cancel()
             sweepTimer = nil
+            pollTimer?.cancel()
+            pollTimer = nil
             transcripts = [:]
             publish()
         }
@@ -83,41 +95,74 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
     // MARK: - Reading
 
     private func loadRecentTranscripts() {
+        for root in roots {
+            loadRecentTranscripts(in: root, skippingKnown: false)
+        }
+    }
+
+    private func loadRecentTranscripts(in root: (url: URL, kind: AgentKind), skippingKnown: Bool) {
         let cutoff = Date().addingTimeInterval(-Self.staleAfter)
         let keys: [URLResourceKey] = [.contentModificationDateKey, .fileSizeKey, .isRegularFileKey]
 
-        for root in roots {
-            guard let enumerator = FileManager.default.enumerator(
-                at: root.url,
-                includingPropertiesForKeys: keys,
-                options: [.skipsHiddenFiles]
-            ) else {
+        guard let enumerator = FileManager.default.enumerator(
+            at: root.url,
+            includingPropertiesForKeys: keys,
+            options: [.skipsHiddenFiles]
+        ) else {
+            return
+        }
+
+        for case let url as URL in enumerator where Self.isTranscript(url.path) {
+            if skippingKnown, transcripts[url.path] != nil { continue }
+
+            guard let values = try? url.resourceValues(forKeys: Set(keys)),
+                  values.isRegularFile == true,
+                  let modified = values.contentModificationDate,
+                  modified > cutoff else {
                 continue
             }
 
-            for case let url as URL in enumerator where Self.isTranscript(url.path) {
-                guard let values = try? url.resourceValues(forKeys: Set(keys)),
-                      values.isRegularFile == true,
-                      let modified = values.contentModificationDate,
-                      modified > cutoff else {
-                    continue
-                }
+            let size = UInt64(values.fileSize ?? 0)
+            var tail = Self.initialTailBytes
 
-                let size = UInt64(values.fileSize ?? 0)
-                var tail = Self.initialTailBytes
+            while true {
+                let start = size > tail ? size - tail : 0
+                var transcript = Transcript(state: AgentTranscriptState(kind: root.kind), offset: start, lastWrite: modified)
+                // Past lines only restore state; their endings aren't news.
+                read(url.path, into: &transcript, startsMidLine: start > 0, announces: false)
+                transcripts[url.path] = transcript
 
-                while true {
-                    let start = size > tail ? size - tail : 0
-                    var transcript = Transcript(state: AgentTranscriptState(kind: root.kind), offset: start, lastWrite: modified)
-                    // Past lines only restore state; their endings aren't news.
-                    read(url.path, into: &transcript, startsMidLine: start > 0, announces: false)
-                    transcripts[url.path] = transcript
-
-                    guard !transcript.state.hasSeenTurnBoundary, start > 0, tail < Self.maxInitialTailBytes else { break }
-                    tail *= 4
-                }
+                guard !transcript.state.hasSeenTurnBoundary, start > 0, tail < Self.maxInitialTailBytes else { break }
+                tail *= 4
             }
         }
+    }
+
+    /// Reads Codex transcripts that grew since the last read.
+    private func pollCodex() {
+        guard isRunning else { return }
+
+        pollCount += 1
+        if pollCount.isMultiple(of: Self.pollsPerDiscovery) {
+            for root in roots where root.kind == .codex {
+                loadRecentTranscripts(in: root, skippingKnown: true)
+            }
+        }
+
+        for (path, known) in transcripts where known.state.kind == .codex {
+            guard let attributes = try? FileManager.default.attributesOfItem(atPath: path),
+                  let size = (attributes[.size] as? NSNumber)?.uint64Value,
+                  size != known.offset else {
+                continue
+            }
+
+            var transcript = known
+            transcript.lastWrite = attributes[.modificationDate] as? Date ?? Date()
+            read(path, into: &transcript, startsMidLine: false, announces: true)
+            transcripts[path] = transcript
+        }
+
+        publish()
     }
 
     private func handleChanges(_ paths: [String]) {
@@ -218,6 +263,16 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
         }
         timer.resume()
         sweepTimer = timer
+    }
+
+    private func startPolling() {
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + Self.pollInterval, repeating: Self.pollInterval, leeway: .milliseconds(500))
+        timer.setEventHandler { [weak self] in
+            self?.pollCodex()
+        }
+        timer.resume()
+        pollTimer = timer
     }
 
     // MARK: - FSEvents
