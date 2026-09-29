@@ -148,6 +148,7 @@ struct IslandIconButton: View {
         }
         .buttonStyle(IslandPressButtonStyle())
         .help(help ?? "")
+        .accessibilityLabel(help ?? "")
     }
 }
 

@@ -474,6 +474,7 @@ private struct MenuPanelIconButton: View {
         }
         .buttonStyle(.plain)
         .help(help)
+        .accessibilityLabel(help)
         .onHover { isHovered = $0 }
     }
 }
