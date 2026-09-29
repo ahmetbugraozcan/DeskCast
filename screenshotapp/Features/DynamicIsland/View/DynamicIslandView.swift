@@ -41,8 +41,10 @@ struct DynamicIslandView: View {
     @ObservedObject var store: DynamicIslandViewModel
     let panels: IslandPanelModels
     @Namespace private var namespace
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     static let shadowPadding: CGFloat = 26
+    static let hoverGrowScale: CGFloat = 1.06
     static let expandedMinimumWidth: CGFloat = 560
     static let notificationContentHeight: CGFloat = 60
     static let notificationMinimumWidth: CGFloat = 380
@@ -191,6 +193,9 @@ struct DynamicIslandView: View {
         // On displays without a notch the idle island disappears; the hover
         // region at the top center still reveals it.
         let isShapeVisible = (mode != .idle || geometry.hasNotch) && !store.hidesCollapsedIsland
+        // The closed island swells slightly under the pointer before it opens.
+        let growsOnHover = store.isHovering && !reduceMotion
+            && [.idle, .compactMedia, .compactTimer, .compactBattery].contains(mode)
 
         ZStack(alignment: .topLeading) {
             ZStack(alignment: .top) {
@@ -208,6 +213,8 @@ struct DynamicIslandView: View {
             .contentShape(shape)
             .shadow(color: .black.opacity(mode == .idle ? 0 : 0.38), radius: mode == .expanded ? 18 : 10, y: 6)
             .opacity(isShapeVisible ? 1 : 0)
+            .scaleEffect(growsOnHover ? Self.hoverGrowScale : 1, anchor: .top)
+            .animation(.spring(response: 0.28, dampingFraction: 0.7), value: growsOnHover)
             .onTapGesture {
                 store.handleTap()
             }
