@@ -483,3 +483,4 @@
 "island.stopwatch.title" = "Stopwatch";
 "island.stopwatch.lap" = "Lap";
 "island.stopwatch.lapNumber" = "Lap %ld";
+"Finder Path" = "Finder Path";
