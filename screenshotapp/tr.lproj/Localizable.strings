@@ -283,7 +283,7 @@
 "Battery at %ld%%" = "Pil %%%ld";
 "Now Playing" = "Şimdi Çalıyor";
 "Show the playing song" = "Çalan şarkıyı göster";
-"Announce track changes" = "Parça değişimlerini bildir";
+"Briefly show each new song" = "Her yeni şarkıyı kısaca göster";
 "Notifications" = "Bildirimler";
 "Show DeskCast notifications in the island" = "DeskCast bildirimlerini adada göster";
 "Show charging and low battery alerts" = "Şarj ve düşük pil uyarılarını göster";

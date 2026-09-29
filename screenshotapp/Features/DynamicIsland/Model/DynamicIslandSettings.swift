@@ -210,7 +210,9 @@ enum DynamicIslandSettings {
     static let agentFinishMinimumRange = 1...30
 
     static let defaultIdleContent = IslandIdleContent.music
-    static let defaultShowsTrackChanges = true
+    /// Off by default: playback goes straight to compact music. When on, each
+    /// new song shows briefly in the closed island's wings.
+    static let defaultShowsTrackChanges = false
     static let defaultShowsAppNotifications = true
     static let defaultShowsSystemNotifications = true
     static let defaultShowsBatteryEvents = true

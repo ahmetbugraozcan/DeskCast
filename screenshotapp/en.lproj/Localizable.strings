@@ -283,7 +283,7 @@
 "Battery at %ld%%" = "Battery at %ld%%";
 "Now Playing" = "Now Playing";
 "Show the playing song" = "Show the playing song";
-"Announce track changes" = "Announce track changes";
+"Briefly show each new song" = "Briefly show each new song";
 "Notifications" = "Notifications";
 "Show DeskCast notifications in the island" = "Show DeskCast notifications in the island";
 "Show charging and low battery alerts" = "Show charging and low battery alerts";

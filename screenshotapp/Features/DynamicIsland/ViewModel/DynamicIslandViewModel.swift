@@ -612,14 +612,16 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             return
         }
 
+        // A brief peek in the closed island's wings, not a full banner.
         var banner = DynamicIslandNotification(
             title: info.title.isEmpty ? info.source.displayName : info.title,
-            message: info.artist.isEmpty ? info.album : info.artist,
+            message: nil,
             systemImage: "music.note",
             style: .media,
             image: info.artwork
         )
         banner.mediaKey = info.cacheKey
+        banner.isCompact = true
         post(banner)
     }
 

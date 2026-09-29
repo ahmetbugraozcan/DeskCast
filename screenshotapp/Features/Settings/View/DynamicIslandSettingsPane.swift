@@ -203,7 +203,7 @@ struct DynamicIslandSettingsPane: View {
             SettingsSectionDivider()
 
             SettingsToggleRow(
-                title: AppLocalization.string("Announce track changes"),
+                title: AppLocalization.string("Briefly show each new song"),
                 isOn: $showsTrackChanges
             )
 

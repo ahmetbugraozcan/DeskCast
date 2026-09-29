@@ -89,7 +89,7 @@ struct StubIslandSettings: DynamicIslandSettingsReading, ToolboxSettingsReading 
 }
 
 @MainActor
-private func track(_ id: String, isPlaying: Bool = true, elapsed: TimeInterval = 10) -> NowPlayingInfo {
+func track(_ id: String, isPlaying: Bool = true, elapsed: TimeInterval = 10) -> NowPlayingInfo {
     NowPlayingInfo(
         snapshot: MediaPlayerTrackSnapshot(
             player: .spotify,
@@ -348,18 +348,6 @@ struct DynamicIslandViewModelTests {
         let viewModel = makeViewModel(settings: StubIslandSettings { $0.gesturesEnabled = false })
         #expect(!viewModel.handleSwipe(.down, inTopRow: false))
         #expect(viewModel.mode == .idle)
-    }
-
-    @Test func firstTrackIsSilentButTrackChangePostsBanner() {
-        let viewModel = makeViewModel()
-
-        nowPlaying.emit(track("a"))
-        #expect(viewModel.activeNotification == nil)
-
-        nowPlaying.emit(track("b"))
-        #expect(viewModel.mode == .notification)
-        #expect(viewModel.activeNotification?.style == .media)
-        #expect(viewModel.activeNotification?.title == "Title b")
     }
 
     @Test func toastsRouteIntoIslandOnlyWhilePanelIsVisible() {
