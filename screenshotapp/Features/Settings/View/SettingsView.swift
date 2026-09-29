@@ -133,6 +133,9 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.sidebar)
+            .safeAreaInset(edge: .bottom) {
+                SettingsSidebarFooter()
+            }
             // Settings has no reason to collapse its sidebar; dropping the
             // toggle also removes the empty toolbar row above every page.
             .toolbar(removing: .sidebarToggle)
@@ -785,10 +788,7 @@ private struct MenuLayoutSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(AppLocalization.string("Layout"))
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 4)
+            SettingsSectionHeader(title: AppLocalization.string("Layout"))
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 16) {
@@ -814,7 +814,7 @@ private struct MenuLayoutSection: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+            .settingsCard()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -890,10 +890,7 @@ struct ToolCategorySection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 4)
+            SettingsSectionHeader(title: title)
 
             VStack(spacing: 10) {
                 ForEach(tools) { tool in
@@ -936,13 +933,13 @@ private struct ToolSettingsRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
-                Image(systemName: tool.systemImage)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(isEnabled ? Color.accentColor : Color.secondary)
-                    .frame(width: 34, height: 34)
-                    .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 8))
+                SettingsIconTile(
+                    systemImage: tool.systemImage,
+                    tint: isEnabled ? tool.settingsTint : .gray,
+                    size: 34
+                )
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(tool.title)
@@ -960,8 +957,16 @@ private struct ToolSettingsRow: View {
                     .toggleStyle(.switch)
                     .labelsHidden()
             }
+            .padding(14)
 
-            HStack(spacing: 12) {
+            Divider()
+                .opacity(0.6)
+
+            HStack(spacing: 8) {
+                Image(systemName: "menubar.rectangle")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+
                 Text(AppLocalization.string("Show in menu"))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(isEnabled ? .secondary : .tertiary)
@@ -970,13 +975,16 @@ private struct ToolSettingsRow: View {
 
                 Toggle("", isOn: showInMenuBinding)
                     .toggleStyle(.switch)
+                    .controlSize(.small)
                     .labelsHidden()
             }
-            .padding(.leading, 46)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color.primary.opacity(0.025))
             .disabled(!isEnabled)
         }
-        .padding(14)
-        .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .settingsCard()
         .opacity(isEnabled ? 1 : 0.58)
         .animation(.snappy(duration: 0.16), value: isEnabled)
         .onChange(of: isEnabled) { _, newValue in
@@ -984,5 +992,33 @@ private struct ToolSettingsRow: View {
                 showInMenu = false
             }
         }
+    }
+}
+
+/// App icon, name and version pinned under the Settings sidebar.
+private struct SettingsSidebarFooter: View {
+    private var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 30, height: 30)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(AppConstants.displayName)
+                    .font(.system(size: 12.5, weight: .semibold))
+                Text(AppLocalization.formatted("settings.version", version))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 }

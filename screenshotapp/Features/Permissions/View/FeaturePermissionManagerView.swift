@@ -7,10 +7,7 @@ struct FeaturePermissionManagerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(AppLocalization.string("Permissions"))
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 4)
+            SettingsSectionHeader(title: AppLocalization.string("Permissions"))
 
             VStack(spacing: 10) {
                 ForEach(permissions) { permission in
@@ -67,7 +64,7 @@ private struct PermissionSettingsRow: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(statusTint)
                     .frame(width: 34, height: 34)
-                    .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 8))
+                    .background(statusTint.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(permission.title)
@@ -82,9 +79,12 @@ private struct PermissionSettingsRow: View {
                 Spacer()
 
                 Label(status.title, systemImage: status.systemImage)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11.5, weight: .semibold))
                     .foregroundStyle(statusTint)
                     .labelStyle(.titleAndIcon)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(statusTint.opacity(0.14), in: Capsule())
             }
 
             HStack(spacing: 8) {
@@ -114,7 +114,7 @@ private struct PermissionSettingsRow: View {
             }
         }
         .padding(14)
-        .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+        .settingsCard()
     }
 
     private var statusTint: Color {

@@ -49,7 +49,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
         case .videoRecording: .red
         case .dropShelf: .orange
         case .finderPath: .cyan
-        case .dynamicIsland: Color(white: 0.32)
+        case .dynamicIsland: .pink
         case .shortcuts: .gray
         case .about: .indigo
         }
@@ -89,6 +89,8 @@ private struct SettingsPane<Content: View>: View {
         ScrollView {
             content
                 .formStyle(.grouped)
+                // No focus ring on whichever control happens to be first.
+                .focusEffectDisabled()
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .padding(.horizontal, 28)
                 .padding(.vertical, 22)
@@ -103,23 +105,74 @@ struct SettingsPage<Content: View>: View {
 
     var body: some View {
         SettingsPane {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(spacing: 14) {
-                    SettingsIconTile(systemImage: section.systemImage, tint: section.tint, size: 42)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(section.title)
-                            .font(.title2.weight(.semibold))
-                        Text(section.subtitle)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.horizontal, 4)
+            VStack(alignment: .leading, spacing: 22) {
+                SettingsPageHeader(section: section)
 
                 content
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+/// Tinted banner at the top of every page: the section's icon, title and
+/// subtitle over a soft gradient, with a large faded symbol as decoration.
+private struct SettingsPageHeader: View {
+    let section: SettingsSection
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+
+        HStack(spacing: 16) {
+            SettingsIconTile(systemImage: section.systemImage, tint: section.tint, size: 52)
+                .shadow(color: section.tint.opacity(0.45), radius: 10, y: 4)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(section.title)
+                    .font(.system(size: 22, weight: .bold))
+                Text(section.subtitle)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack(alignment: .trailing) {
+                LinearGradient(
+                    colors: [section.tint.opacity(0.32), section.tint.opacity(0.06)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                Image(systemName: section.systemImage)
+                    .font(.system(size: 96, weight: .semibold))
+                    .foregroundStyle(section.tint.opacity(0.14))
+                    .rotationEffect(.degrees(-12))
+                    .offset(x: 18, y: 10)
+                    .accessibilityHidden(true)
+            }
+            .clipShape(shape)
+        }
+        .overlay(shape.strokeBorder(section.tint.opacity(0.25), lineWidth: 1))
+    }
+}
+
+extension ToolboxToolID {
+    /// Icon tile color for the tool's card in Settings.
+    var settingsTint: Color {
+        switch self {
+        case .captureSelectedArea: .purple
+        case .captureVideo: .red
+        case .captureOCR: .teal
+        case .copyFinderPath: .cyan
+        case .imageSearch: .blue
+        case .dropShelf: .orange
+        case .dynamicIsland: .pink
         }
     }
 }

@@ -472,3 +472,5 @@
 "island.controls.keepAwake.off" = "Turn off";
 "island.settings.eventReminders" = "Remind me 5 minutes before calendar events";
 "island.calendar.startsIn" = "Starts in %ld min · %@";
+
+"settings.version" = "Version %@";
