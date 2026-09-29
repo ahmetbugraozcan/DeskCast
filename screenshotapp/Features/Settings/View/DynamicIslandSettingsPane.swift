@@ -9,6 +9,8 @@ struct DynamicIslandSettingsPane: View {
     private var openMode = DynamicIslandSettings.defaultOpenMode
     @AppStorage(DynamicIslandSettings.Keys.hoverDelay)
     private var hoverDelay = DynamicIslandSettings.defaultHoverDelay
+    @AppStorage(DynamicIslandSettings.Keys.closeDelay)
+    private var closeDelay = DynamicIslandSettings.defaultCloseDelay
     @AppStorage(DynamicIslandSettings.Keys.gesturesEnabled)
     private var gesturesEnabled = DynamicIslandSettings.defaultGesturesEnabled
     @AppStorage(DynamicIslandSettings.Keys.hapticsEnabled)
@@ -84,6 +86,7 @@ struct DynamicIslandSettingsPane: View {
         .onAppear {
             notificationDurationSeconds = DynamicIslandSettings.clampedNotificationDuration(notificationDurationSeconds)
             hoverDelay = DynamicIslandSettings.clampedHoverDelay(hoverDelay)
+            closeDelay = DynamicIslandSettings.clampedCloseDelay(closeDelay)
         }
         .onChange(of: notificationDurationSeconds) { _, newValue in
             notificationDurationSeconds = DynamicIslandSettings.clampedNotificationDuration(newValue)
@@ -110,6 +113,15 @@ struct DynamicIslandSettingsPane: View {
                     .frame(width: 190)
             }
             .disabled(!openMode.expandsOnHover)
+
+            SettingsSectionDivider()
+
+            SettingsControlRow(
+                title: AppLocalization.formatted("island.settings.closeDelay", closeDelay)
+            ) {
+                Slider(value: $closeDelay, in: DynamicIslandSettings.closeDelayRange, step: 0.1)
+                    .frame(width: 190)
+            }
 
             SettingsSectionDivider()
 

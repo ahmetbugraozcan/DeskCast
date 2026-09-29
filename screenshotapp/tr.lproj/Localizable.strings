@@ -424,6 +424,7 @@
 "island.settings.open.hover" = "Üzerine gelince genişlet";
 "island.settings.open.hiddenUntilHover" = "Üzerine gelene kadar gizle";
 "island.settings.hoverDelay" = "Etkinleştirme süresi: %.2f sn";
+"island.settings.closeDelay" = "Kapanma gecikmesi: %.1f sn";
 "island.settings.gestures" = "Ada hareketleri";
 "island.settings.gesturesHint" = "Açmak için adanın üzerinde aşağı kaydırın, kapatmak için üst satırda yukarı kaydırın; parçayı değiştirmek için müziğin üzerinde yana kaydırın. Listeler kendi kaydırmasını korur.";
 "island.settings.haptics" = "Dokunsal geri bildirim";

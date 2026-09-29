@@ -424,6 +424,7 @@
 "island.settings.open.hover" = "Expand on hover";
 "island.settings.open.hiddenUntilHover" = "Hidden until hover";
 "island.settings.hoverDelay" = "Hover delay: %.2f s";
+"island.settings.closeDelay" = "Close delay: %.1f s";
 "island.settings.gestures" = "Island gestures";
 "island.settings.gesturesHint" = "Swipe down on the island to open it, swipe up on its top row to close it, and swipe sideways over music to change the track. Lists keep their own scrolling.";
 "island.settings.haptics" = "Haptic feedback";

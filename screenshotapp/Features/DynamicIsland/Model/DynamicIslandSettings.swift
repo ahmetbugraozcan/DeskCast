@@ -105,6 +105,7 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     var showsEventReminders = DynamicIslandSettings.defaultShowsEventReminders
     var openMode = DynamicIslandSettings.defaultOpenMode
     var hoverDelay = DynamicIslandSettings.defaultHoverDelay
+    var closeDelay = DynamicIslandSettings.defaultCloseDelay
     var reopenTarget = DynamicIslandSettings.defaultReopenTarget
     var gesturesEnabled = DynamicIslandSettings.defaultGesturesEnabled
     var hapticsEnabled = DynamicIslandSettings.defaultHapticsEnabled
@@ -135,6 +136,7 @@ enum DynamicIslandSettings {
         static let showsEventReminders = "dynamicIsland.showsEventReminders"
         static let openMode = "dynamicIsland.openMode"
         static let hoverDelay = "dynamicIsland.hoverDelay"
+        static let closeDelay = "dynamicIsland.closeDelay"
         static let reopenTarget = "dynamicIsland.reopenTarget"
         static let gesturesEnabled = "dynamicIsland.gesturesEnabled"
         static let hapticsEnabled = "dynamicIsland.hapticsEnabled"
@@ -154,6 +156,7 @@ enum DynamicIslandSettings {
 
     static let notificationDurationRange = 2...10
     static let hoverDelayRange = 0.0...1.0
+    static let closeDelayRange = 0.1...2.0
 
     static let defaultIdleContent = IslandIdleContent.music
     static let defaultShowsTrackChanges = true
@@ -163,6 +166,8 @@ enum DynamicIslandSettings {
     static let defaultShowsEventReminders = true
     static let defaultOpenMode = IslandOpenMode.hover
     static let defaultHoverDelay = 0.15
+    /// Grace period before an open island closes once the pointer leaves it.
+    static let defaultCloseDelay = 0.5
     static let defaultReopenTarget = IslandReopenTarget.lastPanel
     static let defaultGesturesEnabled = true
     static let defaultHapticsEnabled = true
@@ -204,6 +209,7 @@ enum DynamicIslandSettings {
             Keys.showsEventReminders: defaultShowsEventReminders,
             Keys.openMode: defaultOpenMode.rawValue,
             Keys.hoverDelay: defaultHoverDelay,
+            Keys.closeDelay: defaultCloseDelay,
             Keys.reopenTarget: defaultReopenTarget.rawValue,
             Keys.gesturesEnabled: defaultGesturesEnabled,
             Keys.hapticsEnabled: defaultHapticsEnabled,
@@ -229,6 +235,7 @@ enum DynamicIslandSettings {
             showsEventReminders: defaults.bool(forKey: Keys.showsEventReminders),
             openMode: enumValue(defaults, Keys.openMode, default: defaultOpenMode),
             hoverDelay: clampedHoverDelay(defaults.double(forKey: Keys.hoverDelay)),
+            closeDelay: clampedCloseDelay(defaults.double(forKey: Keys.closeDelay)),
             reopenTarget: enumValue(defaults, Keys.reopenTarget, default: defaultReopenTarget),
             gesturesEnabled: defaults.bool(forKey: Keys.gesturesEnabled),
             hapticsEnabled: defaults.bool(forKey: Keys.hapticsEnabled),
@@ -253,6 +260,11 @@ enum DynamicIslandSettings {
     static func clampedHoverDelay(_ value: Double) -> Double {
         guard value.isFinite else { return defaultHoverDelay }
         return min(max(value, hoverDelayRange.lowerBound), hoverDelayRange.upperBound)
+    }
+
+    static func clampedCloseDelay(_ value: Double) -> Double {
+        guard value.isFinite else { return defaultCloseDelay }
+        return min(max(value, closeDelayRange.lowerBound), closeDelayRange.upperBound)
     }
 
     /// Keeps the stored order's known panels, drops unknown or repeated ones,

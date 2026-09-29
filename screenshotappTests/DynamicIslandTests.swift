@@ -340,6 +340,12 @@ struct NowPlayingInfoTests {
         #expect(info.progress(at: muchLater) == 1)
     }
 
+    @Test func closeDelayIsClamped() {
+        #expect(DynamicIslandSettings.clampedCloseDelay(0) == DynamicIslandSettings.closeDelayRange.lowerBound)
+        #expect(DynamicIslandSettings.clampedCloseDelay(9) == DynamicIslandSettings.closeDelayRange.upperBound)
+        #expect(DynamicIslandSettings.clampedCloseDelay(.nan) == DynamicIslandSettings.defaultCloseDelay)
+    }
+
     @Test func notificationDurationIsClamped() {
         #expect(DynamicIslandSettings.clampedNotificationDuration(0) == DynamicIslandSettings.notificationDurationRange.lowerBound)
         #expect(DynamicIslandSettings.clampedNotificationDuration(99) == DynamicIslandSettings.notificationDurationRange.upperBound)

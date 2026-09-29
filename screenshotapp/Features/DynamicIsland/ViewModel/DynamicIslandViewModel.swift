@@ -214,10 +214,12 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             return
         }
 
-        // A short grace period keeps the island from snapping shut when the
-        // pointer brushes the edge while moving between controls.
+        // A grace period keeps the island from snapping shut when the pointer
+        // brushes the edge while moving between controls; an open island
+        // waits the user's close delay.
+        let delay: Duration = mode == .expanded ? .seconds(preferences.closeDelay) : Self.hoverEndDelay
         hoverEndTask = Task { [weak self] in
-            try? await Task.sleep(for: Self.hoverEndDelay)
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled, let self else { return }
             self.hoverEndTask = nil
             self.isHovering = false
