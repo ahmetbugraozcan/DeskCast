@@ -18,6 +18,7 @@ struct DeskCastApp: App {
     @StateObject private var screenshotStore: ScreenshotShelfViewModel
     @StateObject private var dropShelfStore: DropShelfViewModel
     @StateObject private var dynamicIslandStore: DynamicIslandViewModel
+    @StateObject private var colorPickerStore: ColorPickerViewModel
     @AppStorage(ToolboxSettings.Keys.menuLayout)
     private var menuLayoutRaw = ToolboxSettings.defaultMenuLayout.rawValue
     @AppStorage(ToolboxSettings.Keys.language)
@@ -34,6 +35,10 @@ struct DeskCastApp: App {
     private var captureOCREnabled = ToolboxSettings.defaultCaptureOCREnabled
     @AppStorage(ToolboxSettings.Keys.captureOCRShowInMenu)
     private var captureOCRShowInMenu = ToolboxSettings.defaultCaptureOCRShowInMenu
+    @AppStorage(ToolboxSettings.Keys.pickColorEnabled)
+    private var pickColorEnabled = ToolboxSettings.defaultPickColorEnabled
+    @AppStorage(ToolboxSettings.Keys.pickColorShowInMenu)
+    private var pickColorShowInMenu = ToolboxSettings.defaultPickColorShowInMenu
     @AppStorage(ToolboxSettings.Keys.copyFinderPathEnabled)
     private var copyFinderPathEnabled = ToolboxSettings.defaultCopyFinderPathEnabled
     @AppStorage(ToolboxSettings.Keys.copyFinderPathShowInMenu)
@@ -60,6 +65,7 @@ struct DeskCastApp: App {
         _screenshotStore = StateObject(wrappedValue: environment.screenshotShelf)
         _dropShelfStore = StateObject(wrappedValue: environment.dropShelf)
         _dynamicIslandStore = StateObject(wrappedValue: environment.dynamicIsland)
+        _colorPickerStore = StateObject(wrappedValue: environment.colorPicker)
     }
 
     var body: some Scene {
@@ -71,6 +77,7 @@ struct DeskCastApp: App {
                 recorder: screenRecorderStore,
                 dropShelf: dropShelfStore,
                 island: dynamicIslandStore,
+                colorPicker: colorPickerStore,
                 visibility: menuPanelVisibility,
                 actions: menuPanelActions
             )
@@ -209,6 +216,15 @@ struct DeskCastApp: App {
                 Label(ToolboxToolID.captureOCR.title, systemImage: ToolboxToolID.captureOCR.systemImage)
             }
             .disabled(screenshotStore.isCapturing)
+        }
+
+        if shouldShowPickColorInMenu {
+            Button {
+                colorPickerStore.pickColor()
+            } label: {
+                Label(ToolboxToolID.pickColor.title, systemImage: ToolboxToolID.pickColor.systemImage)
+            }
+            .disabled(colorPickerStore.isPicking)
         }
 
         if shouldShowImageSearchInMenu {
@@ -355,6 +371,7 @@ struct DeskCastApp: App {
             captureSelectedArea: shouldShowCaptureSelectedAreaInMenu,
             captureVideo: shouldShowCaptureVideoInMenu,
             captureOCR: shouldShowCaptureOCRInMenu,
+            pickColor: shouldShowPickColorInMenu,
             imageSearch: shouldShowImageSearchInMenu,
             copyFinderPath: shouldShowCopyFinderPathInMenu,
             dropShelf: shouldShowDropShelfInMenu,
@@ -401,6 +418,7 @@ struct DeskCastApp: App {
         shouldShowCaptureSelectedAreaInMenu
             || shouldShowCaptureVideoInMenu
             || shouldShowCaptureOCRInMenu
+            || shouldShowPickColorInMenu
             || shouldShowImageSearchInMenu
     }
 
@@ -414,6 +432,10 @@ struct DeskCastApp: App {
 
     private var shouldShowCaptureOCRInMenu: Bool {
         captureOCREnabled && captureOCRShowInMenu
+    }
+
+    private var shouldShowPickColorInMenu: Bool {
+        pickColorEnabled && pickColorShowInMenu
     }
 
     private var shouldShowCopyFinderPathInMenu: Bool {

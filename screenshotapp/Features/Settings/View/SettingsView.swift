@@ -108,6 +108,11 @@ struct SettingsView: View {
     @AppStorage(DropShelfSettings.Keys.shakeSensitivity)
     private var dropShelfShakeSensitivity = DropShelfSettings.defaultShakeSensitivity
 
+    @AppStorage(ColorPickerSettings.Keys.copyFormat)
+    private var colorCopyFormatRaw = ColorPickerSettings.defaultCopyFormat.rawValue
+    @AppStorage(ToolboxSettings.Keys.pickColorEnabled)
+    private var pickColorEnabled = ToolboxSettings.defaultPickColorEnabled
+
     @AppStorage(ToolboxSettings.Keys.dropShelfEnabled)
     private var dropShelfEnabled = ToolboxSettings.defaultDropShelfEnabled
     @AppStorage(ToolboxSettings.Keys.captureVideoEnabled)
@@ -235,7 +240,7 @@ struct SettingsView: View {
         SettingsPage(section: .screenshots) {
             ToolCategorySection(
                 title: AppLocalization.string("Tools"),
-                tools: [.captureSelectedArea, .captureOCR, .imageSearch]
+                tools: [.captureSelectedArea, .captureOCR, .pickColor, .imageSearch]
             )
 
             FeaturePermissionManagerView(
@@ -244,6 +249,17 @@ struct SettingsView: View {
             )
 
             VStack(alignment: .leading, spacing: 24) {
+                SettingsControlSection(title: AppLocalization.string("Pick Color")) {
+                    SettingsSegmentedRow(title: AppLocalization.string("colorPicker.format")) {
+                        Picker(AppLocalization.string("colorPicker.format"), selection: $colorCopyFormatRaw) {
+                            ForEach(ColorCopyFormat.allCases) { format in
+                                Text(format.title).tag(format.rawValue)
+                            }
+                        }
+                    }
+                    .disabled(!pickColorEnabled)
+                }
+
                 SettingsControlSection(title: AppLocalization.string("Preview")) {
                     SettingsPickerRow(title: AppLocalization.string("Position")) {
                         Picker(AppLocalization.string("Position"), selection: $previewPositionRaw) {
@@ -528,6 +544,12 @@ struct SettingsView: View {
                         name: .captureSelectedArea
                     )
 
+                    KeyboardShortcuts.Recorder(
+                        AppLocalization.string("shortcuts.pickColor"),
+                        name: .pickColor
+                    )
+                    .disabled(!pickColorEnabled)
+
                 }
 
                 Section(AppLocalization.string("Video Recording")) {
@@ -613,8 +635,9 @@ struct SettingsView: View {
 
     private func resetScreenshotSettings() {
         ScreenshotShelfSettings.resetToDefaults()
-        ToolboxSettings.resetTools([.captureSelectedArea, .captureOCR, .imageSearch])
-        KeyboardShortcuts.reset(.captureSelectedArea)
+        ToolboxSettings.resetTools([.captureSelectedArea, .captureOCR, .pickColor, .imageSearch])
+        UserDefaults.standard.set(ColorPickerSettings.defaultCopyFormat.rawValue, forKey: ColorPickerSettings.Keys.copyFormat)
+        KeyboardShortcuts.reset(.captureSelectedArea, .pickColor)
     }
 
     private func resetFinderPathSettings() {

@@ -30,6 +30,7 @@ enum ToolboxToolID: String, CaseIterable, Identifiable {
     case captureSelectedArea
     case captureVideo
     case captureOCR
+    case pickColor
     case copyFinderPath
     case imageSearch
     case dropShelf
@@ -89,6 +90,15 @@ enum ToolboxCatalog {
             defaultShowInMenu: true
         ),
         ToolboxTool(
+            id: .pickColor,
+            titleKey: "Pick Color",
+            subtitleKey: "Pick a color anywhere on screen and copy it as HEX, RGB, HSL or SwiftUI.",
+            systemImage: "eyedropper.halffull",
+            category: .screenshots,
+            defaultEnabled: true,
+            defaultShowInMenu: true
+        ),
+        ToolboxTool(
             id: .copyFinderPath,
             titleKey: "Copy Finder Path",
             subtitleKey: "Copy the front Finder window path to the clipboard.",
@@ -143,6 +153,8 @@ enum ToolboxSettings {
         static let captureVideoShowInMenu = ToolboxToolID.captureVideo.showInMenuKey
         static let captureOCREnabled = ToolboxToolID.captureOCR.enabledKey
         static let captureOCRShowInMenu = ToolboxToolID.captureOCR.showInMenuKey
+        static let pickColorEnabled = ToolboxToolID.pickColor.enabledKey
+        static let pickColorShowInMenu = ToolboxToolID.pickColor.showInMenuKey
         static let copyFinderPathEnabled = ToolboxToolID.copyFinderPath.enabledKey
         static let copyFinderPathShowInMenu = ToolboxToolID.copyFinderPath.showInMenuKey
         static let imageSearchEnabled = ToolboxToolID.imageSearch.enabledKey
@@ -161,6 +173,8 @@ enum ToolboxSettings {
     static let defaultCaptureVideoShowInMenu = ToolboxToolID.captureVideo.defaultShowInMenu
     static let defaultCaptureOCREnabled = ToolboxToolID.captureOCR.defaultEnabled
     static let defaultCaptureOCRShowInMenu = ToolboxToolID.captureOCR.defaultShowInMenu
+    static let defaultPickColorEnabled = ToolboxToolID.pickColor.defaultEnabled
+    static let defaultPickColorShowInMenu = ToolboxToolID.pickColor.defaultShowInMenu
     static let defaultCopyFinderPathEnabled = ToolboxToolID.copyFinderPath.defaultEnabled
     static let defaultCopyFinderPathShowInMenu = ToolboxToolID.copyFinderPath.defaultShowInMenu
     static let defaultImageSearchEnabled = ToolboxToolID.imageSearch.defaultEnabled

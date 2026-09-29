@@ -8,19 +8,20 @@ struct MenuBarPanelVisibility {
     var captureSelectedArea: Bool
     var captureVideo: Bool
     var captureOCR: Bool
+    var pickColor: Bool
     var imageSearch: Bool
     var copyFinderPath: Bool
     var dropShelf: Bool
     var dynamicIsland: Bool
 
     var toolCount: Int {
-        [captureSelectedArea, captureVideo, captureOCR, imageSearch, copyFinderPath, dropShelf, dynamicIsland]
+        [captureSelectedArea, captureVideo, captureOCR, pickColor, imageSearch, copyFinderPath, dropShelf, dynamicIsland]
             .filter { $0 }
             .count
     }
 
     var hasTools: Bool {
-        captureSelectedArea || captureVideo || captureOCR || imageSearch || copyFinderPath || dropShelf || dynamicIsland
+        toolCount > 0
     }
 }
 
@@ -38,6 +39,7 @@ struct MenuBarPanelView: View {
     @ObservedObject var recorder: ScreenRecordingViewModel
     @ObservedObject var dropShelf: DropShelfViewModel
     @ObservedObject var island: DynamicIslandViewModel
+    @ObservedObject var colorPicker: ColorPickerViewModel
     let visibility: MenuBarPanelVisibility
     let actions: MenuBarPanelActions
 
@@ -62,6 +64,10 @@ struct MenuBarPanelView: View {
 
             if !screenshots.screenshots.isEmpty {
                 recentCaptures
+            }
+
+            if visibility.pickColor, !colorPicker.recentColors.isEmpty {
+                recentColors
             }
 
             if visibility.dropShelf, !dropShelf.items.isEmpty {
@@ -104,7 +110,7 @@ struct MenuBarPanelView: View {
     // MARK: - Tools
 
     private var toolGrid: some View {
-        // Four columns once a third row would hold a lone tile.
+        // Four columns once three columns would leave a ragged third row.
         let columnCount = visibility.toolCount > 6 ? 4 : 3
 
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columnCount), spacing: 8) {
@@ -137,6 +143,18 @@ struct MenuBarPanelView: View {
                     runAfterDismiss { screenshots.captureOCRTextFromSelectedArea() }
                 }
                 .disabled(screenshots.isCapturing)
+            }
+
+            if visibility.pickColor {
+                MenuPanelTile(
+                    title: AppLocalization.string("menu.tile.pickColor"),
+                    systemImage: "eyedropper.halffull",
+                    tint: .indigo,
+                    shortcut: .pickColor
+                ) {
+                    runAfterDismiss { colorPicker.pickColor() }
+                }
+                .disabled(colorPicker.isPicking)
             }
 
             if visibility.imageSearch {
@@ -335,6 +353,43 @@ struct MenuBarPanelView: View {
             Divider()
 
             Button(AppLocalization.string("Remove"), role: .destructive) { screenshots.remove(item) }
+        }
+    }
+
+    // MARK: - Colors
+
+    private var recentColors: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                sectionTitle(AppLocalization.string("menu.recentColors"))
+
+                Spacer()
+
+                Button(AppLocalization.string("Clear All")) {
+                    colorPicker.clearRecentColors()
+                }
+                .buttonStyle(.link)
+                .font(.system(size: 11))
+            }
+
+            HStack(spacing: 6) {
+                ForEach(colorPicker.recentColors) { color in
+                    Button {
+                        colorPicker.copy(color)
+                    } label: {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color(nsColor: color.nsColor))
+                            .frame(width: 30, height: 24)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .strokeBorder(.primary.opacity(0.15), lineWidth: 0.5)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help(color.formatted(colorPicker.copyFormat))
+                    .accessibilityLabel(color.hex)
+                }
+            }
         }
     }
 

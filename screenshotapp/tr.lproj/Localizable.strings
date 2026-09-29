@@ -479,3 +479,12 @@
 "ocr.code.copied" = "QR kod kopyalandı";
 "ocr.code.linkCopied" = "QR koddaki bağlantı kopyalandı";
 "ocr.codes.copied" = "%ld kod kopyalandı";
+
+/* Color picker */
+"Pick Color" = "Renk Seç";
+"Pick a color anywhere on screen and copy it as HEX, RGB, HSL or SwiftUI." = "Ekranın herhangi bir yerinden renk al ve HEX, RGB, HSL veya SwiftUI olarak kopyala.";
+"colorPicker.copied" = "%@ kopyalandı";
+"colorPicker.format" = "Kopyalama biçimi";
+"menu.tile.pickColor" = "Renk";
+"menu.recentColors" = "Son Renkler";
+"shortcuts.pickColor" = "Renk seç:";

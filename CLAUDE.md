@@ -8,7 +8,8 @@ A macOS menu-bar utility toolbox. It bundles several small productivity tools be
 
 - **Capture Selected Area** — `screencapture`-based region capture into a floating media shelf.
 - **Capture Video** — full-display or resizable selected-area recording through ScreenCaptureKit and DeskCast's own recorder panel, with system-audio/microphone options. Completed videos join screenshots in the same shelf.
-- **Capture OCR** — capture a region and copy recognized text (Vision).
+- **Capture OCR** — capture a region and copy recognized text, or the contents of QR codes/barcodes in it (Vision).
+- **Pick Color** — system loupe (`NSColorSampler`, no Screen Recording permission) copies the picked color as HEX/RGB/HSL/SwiftUI; the last 8 colors show in the menu panel.
 - **Copy Finder Path** — copy the front Finder window's path via AppleScript.
 - **Search Images** — index and search local images by filename + recognized text.
 - **Drop Shelf** — a floating shelf that collects dragged files/folders/links/text/images to send together.
@@ -51,7 +52,7 @@ Each feature threads a value through **all** of these; when you add or change a 
 3. `@AppStorage` use sites (menu in `DeskCastApp.swift`, `SettingsView`).
 4. Menu-visibility logic — a tool shows only when `enabled && showInMenu` (see the `shouldShow*InMenu` computed vars). Disabled tools must never remain visible via `showInMenu`; `resetTools` enforces `enabled && showInMenu`.
 
-There are five settings namespaces: `ToolboxSettings` (which tools/layout/language), `ScreenshotShelfSettings`, `ScreenRecordingSettings`, `DropShelfSettings`, and `DynamicIslandSettings`. Defaults are registered at launch in `AppEnvironment` and again inside the relevant view models.
+There are six settings namespaces: `ToolboxSettings` (which tools/layout/language), `ScreenshotShelfSettings`, `ScreenRecordingSettings`, `DropShelfSettings`, `DynamicIslandSettings`, and `ColorPickerSettings`. Defaults are registered at launch in `AppEnvironment` and again inside the relevant view models.
 
 ## Localization
 

@@ -479,3 +479,12 @@
 "ocr.code.copied" = "QR code copied";
 "ocr.code.linkCopied" = "Link from QR code copied";
 "ocr.codes.copied" = "%ld codes copied";
+
+/* Color picker */
+"Pick Color" = "Pick Color";
+"Pick a color anywhere on screen and copy it as HEX, RGB, HSL or SwiftUI." = "Pick a color anywhere on screen and copy it as HEX, RGB, HSL or SwiftUI.";
+"colorPicker.copied" = "Copied %@";
+"colorPicker.format" = "Copy as";
+"menu.tile.pickColor" = "Color";
+"menu.recentColors" = "Recent Colors";
+"shortcuts.pickColor" = "Pick color:";

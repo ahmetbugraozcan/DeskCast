@@ -48,6 +48,7 @@ struct SettingsRepository: SettingsProviding {
         DropShelfSettings.registerDefaults(in: defaults)
         ScreenRecordingSettings.registerDefaults(in: defaults)
         DynamicIslandSettings.registerDefaults(in: defaults)
+        ColorPickerSettings.registerDefaults(in: defaults)
         ToolboxSettings.registerDefaults(in: defaults)
     }
 

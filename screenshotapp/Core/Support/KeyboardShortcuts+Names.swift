@@ -9,6 +9,8 @@ extension KeyboardShortcuts.Name {
 
     nonisolated static let captureVideo = Self("captureVideo")
 
+    nonisolated static let pickColor = Self("pickColor")
+
     nonisolated static let openDropShelf = Self(
         "openDropShelf",
         default: .init(.d, modifiers: [.command, .shift])

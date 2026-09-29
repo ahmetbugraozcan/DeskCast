@@ -21,10 +21,12 @@ enum DemoMenuPanelWindow {
             recorder: environment.screenRecorder,
             dropShelf: environment.dropShelf,
             island: environment.dynamicIsland,
+            colorPicker: environment.colorPicker,
             visibility: MenuBarPanelVisibility(
                 captureSelectedArea: isVisible(.captureSelectedArea),
                 captureVideo: isVisible(.captureVideo),
                 captureOCR: isVisible(.captureOCR),
+                pickColor: isVisible(.pickColor),
                 imageSearch: isVisible(.imageSearch),
                 copyFinderPath: isVisible(.copyFinderPath),
                 dropShelf: isVisible(.dropShelf),
