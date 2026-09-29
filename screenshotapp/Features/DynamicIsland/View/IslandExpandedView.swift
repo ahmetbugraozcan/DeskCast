@@ -102,6 +102,14 @@ struct IslandExpandedView: View {
             }
         case .timer:
             TimerModePicker(timer: panels.timer)
+        case .weather:
+            if !panels.weather.city.isEmpty {
+                IslandIconButton(
+                    systemImage: "arrow.clockwise",
+                    help: AppLocalization.string("island.weather.refresh"),
+                    action: { panels.weather.refresh() }
+                )
+            }
         case .clipboard:
             if !panels.clipboard.entries.isEmpty {
                 IslandIconButton(
@@ -147,7 +155,7 @@ struct IslandExpandedView: View {
             TimerPanelView(timer: panels.timer, stopwatch: panels.stopwatch)
         case .camera:
             CameraPanelView(model: panels.camera)
-        case .downloads, .scratchpad, .aiAgents, .devices:
+        case .downloads, .scratchpad, .aiAgents, .devices, .weather:
             utilityPanelContent(panel)
         }
     }
@@ -164,6 +172,8 @@ struct IslandExpandedView: View {
             AIAgentsPanelView(model: panels.aiUsage)
         case .devices:
             DevicesPanelView(model: panels.devices)
+        case .weather:
+            WeatherPanelView(model: panels.weather, openSettings: panels.actions.openSettings)
         default:
             EmptyView()
         }

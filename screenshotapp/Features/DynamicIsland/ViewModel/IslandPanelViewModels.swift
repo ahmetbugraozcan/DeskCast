@@ -690,6 +690,7 @@ final class IslandPanelModels {
     let calendar = CalendarViewModel()
     let downloads = DownloadsViewModel()
     let devices = DevicesViewModel()
+    let weather = WeatherViewModel()
     let timer: IslandTimerViewModel
     let controls = ControlsViewModel()
     let camera = CameraMirrorViewModel()
@@ -717,5 +718,6 @@ final class IslandPanelModels {
     func bind(to island: DynamicIslandViewModel) {
         clipboard.bind(to: island)
         eventReminders.bind(to: island)
+        weather.bind(to: island)
     }
 }

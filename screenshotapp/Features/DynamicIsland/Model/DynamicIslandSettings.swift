@@ -35,6 +35,8 @@ enum IslandIdleContent: String, CaseIterable, Identifiable {
     case nothing
     case battery
     case music
+    /// Weather for the city set in Settings; music still wins while playing.
+    case weather
 
     var id: String { rawValue }
 
@@ -43,6 +45,7 @@ enum IslandIdleContent: String, CaseIterable, Identifiable {
         case .nothing: "island.settings.idle.nothing"
         case .battery: "island.settings.idle.battery"
         case .music: "island.settings.idle.music"
+        case .weather: "island.settings.idle.weather"
         }
     }
 
@@ -51,6 +54,7 @@ enum IslandIdleContent: String, CaseIterable, Identifiable {
         case .nothing: "capsule"
         case .battery: "battery.75percent"
         case .music: "music.note"
+        case .weather: "cloud.sun"
         }
     }
 }
@@ -120,6 +124,9 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     /// Launcher order; every panel appears exactly once.
     var panelOrder: [IslandPanel] = IslandPanel.allCases
     var hiddenPanels: Set<IslandPanel> = []
+    /// City typed in Settings; empty until the user sets one.
+    var weatherCity = ""
+    var weatherUnit = DynamicIslandSettings.defaultWeatherUnit
 
     /// Panels shown in the launcher, in the user's order.
     var visiblePanels: [IslandPanel] {
@@ -152,6 +159,8 @@ enum DynamicIslandSettings {
         static let hiddenPanels = "dynamicIsland.hiddenPanels"
         static let scratchpadText = "dynamicIsland.scratchpadText"
         static let notificationDurationSeconds = "dynamicIsland.notificationDurationSeconds"
+        static let weatherCity = "dynamicIsland.weatherCity"
+        static let weatherUnit = "dynamicIsland.weatherUnit"
     }
 
     static let notificationDurationRange = 2...10
@@ -180,11 +189,13 @@ enum DynamicIslandSettings {
     static let defaultPanelShortcutsEnabled = true
     static let defaultShowsSideButtons = true
     static let defaultNotificationDurationSeconds = 4
+    static var defaultWeatherUnit: WeatherUnit { .localeDefault }
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
-        // Scratchpad text is user content, so it's registered but never reset.
+        // Scratchpad text and the weather city are user content, so they're
+        // registered but never reset.
         defaults.register(
-            defaults: defaultValues.merging([Keys.scratchpadText: ""]) { current, _ in current }
+            defaults: defaultValues.merging([Keys.scratchpadText: "", Keys.weatherCity: ""]) { current, _ in current }
         )
     }
 
@@ -217,7 +228,8 @@ enum DynamicIslandSettings {
             Keys.showsSideButtons: defaultShowsSideButtons,
             Keys.panelOrder: IslandPanel.allCases.map(\.rawValue),
             Keys.hiddenPanels: [String](),
-            Keys.notificationDurationSeconds: defaultNotificationDurationSeconds
+            Keys.notificationDurationSeconds: defaultNotificationDurationSeconds,
+            Keys.weatherUnit: defaultWeatherUnit.rawValue
         ]
     }
 
@@ -246,7 +258,9 @@ enum DynamicIslandSettings {
                 defaults.integer(forKey: Keys.notificationDurationSeconds)
             ),
             panelOrder: normalizedPanelOrder(defaults.stringArray(forKey: Keys.panelOrder) ?? []),
-            hiddenPanels: Set((defaults.stringArray(forKey: Keys.hiddenPanels) ?? []).compactMap(IslandPanel.init(rawValue:)))
+            hiddenPanels: Set((defaults.stringArray(forKey: Keys.hiddenPanels) ?? []).compactMap(IslandPanel.init(rawValue:))),
+            weatherCity: (defaults.string(forKey: Keys.weatherCity) ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+            weatherUnit: enumValue(defaults, Keys.weatherUnit, default: defaultWeatherUnit)
         )
     }
 

@@ -63,6 +63,7 @@ struct DynamicIslandSettingsPane: View {
             VStack(alignment: .leading, spacing: 24) {
                 openingSection
                 idleSection
+                IslandWeatherSettingsSection()
                 notificationsSection
                 clipboardSection
 

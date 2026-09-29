@@ -41,6 +41,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     @Published private(set) var geometry = DynamicIslandGeometry.fallback
     @Published private(set) var isEnabled = false
     @Published private(set) var preferences: DynamicIslandSettingsSnapshot
+    /// Current weather for the closed island, pushed by `WeatherViewModel`
+    /// while the idle content is weather.
+    @Published private(set) var idleWeather: WeatherReport?
 
     weak var presenter: DynamicIslandPresenting?
 
@@ -165,6 +168,10 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
             return .compactBattery
         }
 
+        if preferences.idleContent == .weather, idleWeather != nil {
+            return .compactWeather
+        }
+
         return .idle
     }
 
@@ -175,7 +182,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// "Hidden until hover": the collapsed island is invisible; banners still show.
     var hidesCollapsedIsland: Bool {
         preferences.openMode == .hiddenUntilHover && (mode == .idle || mode == .compactMedia
-            || mode == .compactTimer || mode == .compactBattery)
+            || mode == .compactTimer || mode == .compactBattery || mode == .compactWeather)
     }
 
     var batteryStatus: BatteryStatus? {
@@ -357,20 +364,6 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
 
     func showLauncher() {
         expandedContent = expandedContent == .launcher ? lastPanelContent : .launcher
-    }
-
-    /// Saves the launcher layout edited in the island: `visibleOrder` is the
-    /// new order of shown panels, hidden ones keep their relative order after
-    /// them. At least one panel always stays visible. Applied right away so the
-    /// grid doesn't flash back to the old order before defaults notify.
-    func updatePanelLayout(visibleOrder: [IslandPanel], hidden: Set<IslandPanel>) {
-        let shown = visibleOrder.filter { !hidden.contains($0) }
-        guard !shown.isEmpty else { return }
-        let rest = preferences.panelOrder.filter { !shown.contains($0) }
-        let defaults = UserDefaults.standard
-        defaults.set((shown + rest).map(\.rawValue), forKey: DynamicIslandSettings.Keys.panelOrder)
-        defaults.set(IslandPanel.allCases.filter(hidden.contains).map(\.rawValue), forKey: DynamicIslandSettings.Keys.hiddenPanels)
-        applySettingsChange()
     }
 
     /// Opens the island on a panel (side buttons, shortcuts); toggles closed when
@@ -764,7 +757,8 @@ extension DynamicIslandViewModel {
     /// pause. A long-paused session (e.g. a forgotten video tab, which stays
     /// in the system now playing session) doesn't keep the island wide.
     var hasMedia: Bool {
-        guard preferences.idleContent == .music, let nowPlaying else { return false }
+        // Weather in the closed island steps aside while music plays.
+        guard [.music, .weather].contains(preferences.idleContent), let nowPlaying else { return false }
         guard !nowPlaying.isPlaying else { return true }
         guard let pausedAt else { return false }
         return Date().timeIntervalSince(pausedAt) < Self.pausedMediaLinger
@@ -838,6 +832,29 @@ private extension DynamicIslandViewModel {
         let hidden = preferences.hiddenPanels
         KeyboardShortcuts.enable(IslandPanel.allCases.filter { !hidden.contains($0) }.map(\.shortcutName))
         KeyboardShortcuts.disable(IslandPanel.allCases.filter { hidden.contains($0) }.map(\.shortcutName))
+    }
+}
+
+// MARK: - Launcher layout & weather
+
+extension DynamicIslandViewModel {
+    /// Saves the launcher layout edited in the island: `visibleOrder` is the
+    /// new order of shown panels, hidden ones keep their relative order after
+    /// them. At least one panel always stays visible. Applied right away so the
+    /// grid doesn't flash back to the old order before defaults notify.
+    func updatePanelLayout(visibleOrder: [IslandPanel], hidden: Set<IslandPanel>) {
+        let shown = visibleOrder.filter { !hidden.contains($0) }
+        guard !shown.isEmpty else { return }
+        let rest = preferences.panelOrder.filter { !shown.contains($0) }
+        let defaults = UserDefaults.standard
+        defaults.set((shown + rest).map(\.rawValue), forKey: DynamicIslandSettings.Keys.panelOrder)
+        defaults.set(IslandPanel.allCases.filter(hidden.contains).map(\.rawValue), forKey: DynamicIslandSettings.Keys.hiddenPanels)
+        applySettingsChange()
+    }
+
+    func updateIdleWeather(_ report: WeatherReport?) {
+        guard idleWeather != report else { return }
+        idleWeather = report
     }
 }
 
