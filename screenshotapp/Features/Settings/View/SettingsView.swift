@@ -134,10 +134,10 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 200, ideal: 210, max: 260)
             // Settings has no reason to collapse its sidebar; dropping the
             // toggle also removes the empty toolbar row above every page.
             .toolbar(removing: .sidebarToggle)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 210, max: 260)
         } detail: {
             selectedPane
         }

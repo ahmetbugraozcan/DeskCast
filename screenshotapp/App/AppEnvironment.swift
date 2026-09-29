@@ -107,6 +107,7 @@ final class AppEnvironment: ObservableObject {
         await Self.openDemoSettingsIfRequested()
         #if DEBUG
         DemoMenuPanelWindow.showIfRequested(environment: self)
+        await DebugWindowSnapshot.writeIfRequested()
         #endif
     }
 
