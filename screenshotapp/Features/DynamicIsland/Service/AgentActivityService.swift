@@ -1,5 +1,6 @@
 import CoreServices
 import Foundation
+import OSLog
 
 /// Reports Claude Code and Codex turns in progress. Callbacks arrive on the
 /// main actor.
@@ -35,9 +36,14 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
     private var published: [AgentSession] = []
     private var isRunning = false
 
+    private static let logger = Logger(subsystem: "com.ahmetbugraozcan.screenshotapp", category: "AgentActivity")
+
     static let staleAfter: TimeInterval = 30 * 60
-    /// On start, transcripts written this recently are read from their tail.
+    /// On start, transcripts written this recently are read from their tail,
+    /// growing it until a prompt or a turn's end shows up (Codex can write
+    /// megabytes of tool output within one turn).
     private static let initialTailBytes: UInt64 = 512 * 1024
+    private static let maxInitialTailBytes: UInt64 = 32 * 1024 * 1024
 
     init(home: URL = FileManager.default.homeDirectoryForCurrentUser) {
         roots = [
@@ -98,11 +104,18 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
                 }
 
                 let size = UInt64(values.fileSize ?? 0)
-                let start = size > Self.initialTailBytes ? size - Self.initialTailBytes : 0
-                var transcript = Transcript(state: AgentTranscriptState(kind: root.kind), offset: start, lastWrite: modified)
-                // Past lines only restore state; their endings aren't news.
-                read(url.path, into: &transcript, startsMidLine: start > 0, announces: false)
-                transcripts[url.path] = transcript
+                var tail = Self.initialTailBytes
+
+                while true {
+                    let start = size > tail ? size - tail : 0
+                    var transcript = Transcript(state: AgentTranscriptState(kind: root.kind), offset: start, lastWrite: modified)
+                    // Past lines only restore state; their endings aren't news.
+                    read(url.path, into: &transcript, startsMidLine: start > 0, announces: false)
+                    transcripts[url.path] = transcript
+
+                    guard !transcript.state.hasSeenTurnBoundary, start > 0, tail < Self.maxInitialTailBytes else { break }
+                    tail *= 4
+                }
             }
         }
     }
@@ -154,6 +167,12 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
                 AgentSession(id: path, kind: transcript.state.kind, project: transcript.state.project, startedAt: $0)
             }
             let transition = transcript.state.consume(Data(line))
+
+            if announces, let transition {
+                let kind = transcript.state.kind.rawValue
+                let change = String(describing: transition)
+                Self.logger.info("\(kind, privacy: .public) \(change, privacy: .public)")
+            }
 
             if announces, case .finished(let duration) = transition, let session, !transcript.state.isSubthread {
                 let onFinish = onFinish

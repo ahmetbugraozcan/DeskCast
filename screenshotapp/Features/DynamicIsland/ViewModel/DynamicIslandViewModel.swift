@@ -952,9 +952,12 @@ extension DynamicIslandViewModel {
 
     // MARK: Activities
 
-    /// Activities going on now, in the automatic order.
+    /// Activities going on now, in the automatic order: music, a working
+    /// agent, the timer. Media from other apps (a browser video) steps
+    /// behind a working agent.
     var availableActivities: [IslandActivity] {
-        IslandActivity.allCases.filter { activity in
+        let order: [IslandActivity] = nowPlaying?.source.player == nil ? [.agent, .media, .timer] : IslandActivity.allCases
+        return order.filter { activity in
             switch activity {
             case .media: hasMedia
             case .agent: preferences.showsAgentActivity && !agentSessions.isEmpty

@@ -71,6 +71,16 @@ struct AgentTranscriptStateTests {
             == .interrupted)
     }
 
+    @Test func codexSkipsUnrelatedLinesAndChatGPTProjectFolders() {
+        var state = AgentTranscriptState(kind: .codex)
+        _ = state.consume(line(["type": "session_meta", "payload": ["cwd": "/Users/me/.codex/.chatgpt-projects/g-p-123"]]))
+        #expect(state.project == nil)
+        #expect(state.consume(line(["type": "response_item", "payload": ["type": "reasoning"]])) == nil)
+        #expect(!state.hasSeenTurnBoundary)
+        _ = state.consume(line(["type": "event_msg", "payload": ["type": "task_complete"]]))
+        #expect(state.hasSeenTurnBoundary)
+    }
+
     @Test func codexSubthreadsAreMarked() {
         var state = AgentTranscriptState(kind: .codex)
         _ = state.consume(line(["type": "session_meta", "payload": ["parent_thread_id": "abc", "cwd": "/x"]]))
@@ -82,4 +92,22 @@ struct AgentTranscriptStateTests {
         #expect(state.consume(Data("{not json".utf8)) == nil)
         #expect(state.consume(Data(repeating: 0x20, count: AgentTranscriptState.maxParsedLineLength + 1)) == nil)
     }
+}
+
+@MainActor
+final class FakeAgentActivity: AgentActivityProviding {
+    var onUpdate: (@MainActor @Sendable ([AgentSession]) -> Void)?
+    var onFinish: (@MainActor @Sendable (AgentSession, TimeInterval) -> Void)?
+    private(set) var isStarted = false
+
+    nonisolated func start() {
+        MainActor.assumeIsolated { isStarted = true }
+    }
+
+    nonisolated func stop() {
+        MainActor.assumeIsolated { isStarted = false }
+    }
+
+    func emit(_ sessions: [AgentSession]) { onUpdate?(sessions) }
+    func finish(_ session: AgentSession, duration: TimeInterval) { onFinish?(session, duration) }
 }

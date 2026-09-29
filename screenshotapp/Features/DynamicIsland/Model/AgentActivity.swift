@@ -66,9 +66,17 @@ nonisolated struct AgentTranscriptState: Equatable, Sendable {
     private(set) var project: String?
     /// A Codex sub-thread (spawned by another thread), shown through its parent.
     private(set) var isSubthread = false
+    /// A prompt or a turn's end was read, so `isWorking` is known rather
+    /// than guessed from the middle of a turn.
+    private(set) var hasSeenTurnBoundary = false
 
     /// Longer lines are tool output (files, images); they never change state.
     static let maxParsedLineLength = 256 * 1024
+
+    /// Codex lines worth decoding; the rest (tool calls, reasoning, token
+    /// counts) are skipped without parsing JSON.
+    private static let codexMarkers = ["session_meta", "turn_context", "task_started", "task_complete", "turn_aborted"]
+        .map { Data($0.utf8) }
 
     private static let finalStopReasons: Set<String> = ["end_turn", "stop_sequence", "max_tokens", "refusal"]
 
@@ -79,6 +87,7 @@ nonisolated struct AgentTranscriptState: Equatable, Sendable {
     mutating func consume(_ line: Data, now: Date = Date()) -> Transition? {
         guard !line.isEmpty,
               line.count <= Self.maxParsedLineLength,
+              kind != .codex || Self.codexMarkers.contains(where: { line.range(of: $0) != nil }),
               let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] else {
             return nil
         }
@@ -120,6 +129,7 @@ nonisolated struct AgentTranscriptState: Equatable, Sendable {
                 return nil
             }
 
+            hasSeenTurnBoundary = true
             return isWorking ? nil : begin(at: date)
         case "assistant":
             if let stopReason = message["stop_reason"] as? String, Self.finalStopReasons.contains(stopReason) {
@@ -153,7 +163,9 @@ nonisolated struct AgentTranscriptState: Equatable, Sendable {
             return nil
         case "event_msg":
             switch payload["type"] as? String {
-            case "task_started": return isWorking ? nil : begin(at: date)
+            case "task_started":
+                hasSeenTurnBoundary = true
+                return isWorking ? nil : begin(at: date)
             case "task_complete": return end(at: date, interrupted: false)
             case "turn_aborted": return end(at: date, interrupted: true)
             default: return nil
@@ -170,6 +182,7 @@ nonisolated struct AgentTranscriptState: Equatable, Sendable {
     }
 
     private mutating func end(at date: Date, interrupted: Bool) -> Transition? {
+        hasSeenTurnBoundary = true
         guard isWorking else { return nil }
         isWorking = false
         let duration = turnStartedAt.map { max(date.timeIntervalSince($0), 0) } ?? 0
@@ -193,6 +206,8 @@ nonisolated struct AgentTranscriptState: Equatable, Sendable {
     }
 
     private static func projectName(_ path: String) -> String? {
+        // ChatGPT projects run in folders named by an opaque id.
+        guard !path.contains("/.codex/.chatgpt-projects/") else { return nil }
         let name = URL(fileURLWithPath: path).lastPathComponent
         return name.isEmpty || name == "/" ? nil : name
     }

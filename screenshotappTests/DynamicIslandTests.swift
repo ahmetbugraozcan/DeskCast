@@ -247,6 +247,23 @@ struct DynamicIslandViewModelTests {
         #expect(viewModel.mode == .compactMedia)
         #expect(viewModel.availableActivities == [.media, .agent])
 
+        // A browser video steps behind a working agent.
+        let browser = makeViewModel()
+        browser.updateAgentSessions([agentSession()])
+        nowPlaying.emit(NowPlayingInfo(snapshot: MediaPlayerTrackSnapshot(
+            source: NowPlayingSource(bundleIdentifier: "com.google.Chrome"),
+            trackID: "v",
+            title: "Video",
+            artist: "",
+            album: "",
+            duration: 600,
+            elapsed: 10,
+            isPlaying: true,
+            artworkURL: nil
+        )))
+        #expect(browser.availableActivities == [.agent, .media])
+        #expect(browser.mode == .compactAgent)
+
         let hidden = makeViewModel(settings: StubIslandSettings { $0.showsAgentActivity = false })
         hidden.updateAgentSessions([agentSession()])
         #expect(hidden.mode == .idle)
@@ -473,24 +490,6 @@ private func weatherReport(_ temperature: Double = 19) -> WeatherReport {
         hourly: [],
         fetchedAt: Date()
     )
-}
-
-@MainActor
-private final class FakeAgentActivity: AgentActivityProviding {
-    var onUpdate: (@MainActor @Sendable ([AgentSession]) -> Void)?
-    var onFinish: (@MainActor @Sendable (AgentSession, TimeInterval) -> Void)?
-    private(set) var isStarted = false
-
-    nonisolated func start() {
-        MainActor.assumeIsolated { isStarted = true }
-    }
-
-    nonisolated func stop() {
-        MainActor.assumeIsolated { isStarted = false }
-    }
-
-    func emit(_ sessions: [AgentSession]) { onUpdate?(sessions) }
-    func finish(_ session: AgentSession, duration: TimeInterval) { onFinish?(session, duration) }
 }
 
 @MainActor
