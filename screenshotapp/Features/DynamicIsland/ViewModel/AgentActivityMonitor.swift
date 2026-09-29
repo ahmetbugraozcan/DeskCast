@@ -46,16 +46,25 @@ final class AgentActivityMonitor {
               duration >= TimeInterval(island.preferences.agentFinishMinimumMinutes * 60) else {
             return
         }
-        island.post(Self.banner(for: session, duration: duration))
+        island.post(Self.banner(for: session, duration: duration, fullBanner: island.preferences.agentFinishFullBanner))
     }
 
-    static func banner(for session: AgentSession, duration: TimeInterval) -> DynamicIslandNotification {
+    /// The full banner names the project and how long the turn took; the
+    /// compact one only says who finished, in the closed island's wings.
+    static func banner(for session: AgentSession, duration: TimeInterval, fullBanner: Bool) -> DynamicIslandNotification {
+        let title = AppLocalization.formatted("island.agents.finished", session.kind.displayName)
+
+        guard fullBanner else {
+            var peek = DynamicIslandNotification(title: title, message: nil, systemImage: session.kind.systemImage, style: .success)
+            peek.isCompact = true
+            return peek
+        }
+
         let minutes = max(Int((duration / 60).rounded()), 1)
-        let length = AppLocalization.formatted("island.agents.minutes", minutes)
         return DynamicIslandNotification(
             caption: session.project,
-            title: AppLocalization.formatted("island.agents.finished", session.kind.displayName),
-            message: length,
+            title: title,
+            message: AppLocalization.formatted("island.agents.minutes", minutes),
             systemImage: session.kind.systemImage,
             style: .success
         )

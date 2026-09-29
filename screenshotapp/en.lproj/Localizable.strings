@@ -421,6 +421,8 @@
 "island.settings.agents.showHint" = "Follows Claude Code and Codex from the transcripts they keep on this Mac. Nothing leaves your Mac.";
 "island.settings.agents.finishAlerts" = "Tell me when a long task finishes";
 "island.settings.agents.finishMinimum" = "For tasks longer than %ld min";
+"island.settings.agents.fullBanner" = "Show as a full banner";
+"island.settings.agents.fullBannerHint" = "Off: a short note in the closed island's wings. On: a banner with the project and how long it took.";
 "island.agents.finished" = "%@ finished";
 "island.agents.minutes" = "%ld min";
 "island.agents.working" = "%@ working";

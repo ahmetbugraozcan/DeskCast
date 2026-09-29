@@ -95,6 +95,22 @@ struct AgentTranscriptStateTests {
 }
 
 @MainActor
+struct AgentFinishBannerTests {
+    private let session = AgentSession(id: "/tmp/a.jsonl", kind: .claude, project: "deskcast", startedAt: Date())
+
+    @Test func finishedPeeksInTheWingsUnlessTheFullBannerIsOn() {
+        let peek = AgentActivityMonitor.banner(for: session, duration: 600, fullBanner: false)
+        #expect(peek.isCompact)
+        #expect(peek.message == nil)
+
+        let banner = AgentActivityMonitor.banner(for: session, duration: 600, fullBanner: true)
+        #expect(!banner.isCompact)
+        #expect(banner.caption == "deskcast")
+        #expect(banner.message == AppLocalization.formatted("island.agents.minutes", 10))
+    }
+}
+
+@MainActor
 struct AgentActivityServiceTests {
     /// Codex keeps its transcript open while it writes, which FSEvents doesn't
     /// report until the file is closed.

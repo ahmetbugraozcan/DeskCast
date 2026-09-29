@@ -325,7 +325,8 @@ struct DynamicIslandViewModelTests {
         provider.finish(agentSession(), duration: 30)
         #expect(viewModel.activeNotification == nil)
         provider.finish(agentSession(), duration: 600)
-        #expect(viewModel.activeNotification?.message == AppLocalization.formatted("island.agents.minutes", 10))
+        #expect(viewModel.mode == .compactToast)
+        #expect(viewModel.activeNotification?.isCompact == true)
     }
 
     @Test func swipesOpenCloseAndSkipTracks() {
