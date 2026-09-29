@@ -250,7 +250,7 @@ private struct LauncherTile: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 Image(systemName: panel.systemImage)
                     .font(.system(size: 20, weight: .regular))
                     .foregroundStyle(panel.tint ?? .white)
@@ -270,7 +270,7 @@ private struct LauncherTile: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 76)
+            .frame(height: 72)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(isSelected || isHovered ? Color(white: 0.17) : IslandPalette.card)

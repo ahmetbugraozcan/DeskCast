@@ -601,4 +601,4 @@
 "island.devices.kind.speaker" = "Speaker";
 "island.devices.kind.other" = "Accessory";
 "island.devices.ok" = "Battery good";
-"island.devices.low" = "Low battery — charge soon";
+"island.devices.low" = "Low battery";

@@ -600,5 +600,5 @@
 "island.devices.kind.gameController" = "Oyun kumandası";
 "island.devices.kind.speaker" = "Hoparlör";
 "island.devices.kind.other" = "Aksesuar";
-"island.devices.ok" = "Pil iyi durumda";
-"island.devices.low" = "Pil azaldı — yakında şarj edin";
+"island.devices.ok" = "Pil iyi";
+"island.devices.low" = "Pil zayıf";

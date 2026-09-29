@@ -375,14 +375,33 @@ enum IslandFormat {
 
 extension View {
     /// Fades a scrolling list out at the bottom edge, so a row cut off by the
-    /// panel reads as "more below" instead of clipped.
+    /// panel reads as "more below" instead of clipped. Apply it directly to a
+    /// `ScrollView`: the fade only shows while content continues below, and a
+    /// list that fits doesn't bounce.
     func islandScrollFade(length: CGFloat = 18) -> some View {
-        mask {
-            VStack(spacing: 0) {
-                Rectangle()
-                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-                    .frame(height: length)
+        modifier(IslandScrollFade(length: length))
+    }
+}
+
+private struct IslandScrollFade: ViewModifier {
+    let length: CGFloat
+    @State private var hasMoreBelow = false
+
+    func body(content: Content) -> some View {
+        content
+            .scrollBounceBehavior(.basedOnSize)
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentSize.height - geometry.contentOffset.y - geometry.containerSize.height > 1
+            } action: { _, newValue in
+                hasMoreBelow = newValue
             }
-        }
+            .mask {
+                VStack(spacing: 0) {
+                    Rectangle()
+                    LinearGradient(colors: [.black, hasMoreBelow ? .clear : .black], startPoint: .top, endPoint: .bottom)
+                        .frame(height: length)
+                }
+            }
+            .animation(.easeOut(duration: 0.15), value: hasMoreBelow)
     }
 }

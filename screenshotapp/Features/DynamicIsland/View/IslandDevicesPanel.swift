@@ -62,22 +62,32 @@ struct DevicesPanelView: View {
     }
 }
 
-/// One component's level: the whole device, or an AirPod / the case.
+/// One AirPod or the case, shown as a small pill under the device name.
 private struct BatteryComponent: Identifiable {
     let id: String
     let percent: Int
     let systemImage: String
-    let label: String?
+    let label: String
+}
+
+/// Red at 20 % or less, like iOS; amber up to 40 %.
+private enum BatteryTint {
+    static func color(for percent: Int?) -> Color {
+        guard let percent else { return IslandPalette.track }
+        switch percent {
+        case ...20: return Color(red: 1, green: 0.27, blue: 0.23)
+        case ...40: return Color(red: 1, green: 0.74, blue: 0.2)
+        default: return IslandPalette.accent
+        }
+    }
 }
 
 private struct DeviceBatteryCard: View {
     let device: DeviceBattery
 
+    /// AirPods report left/right/case instead of one level.
     private var components: [BatteryComponent] {
         var parts: [BatteryComponent] = []
-        if let main = device.main {
-            parts.append(.init(id: "main", percent: main, systemImage: device.kind.systemImage, label: nil))
-        }
         if let left = device.left {
             parts.append(.init(id: "left", percent: left, systemImage: "airpod.left",
                                label: AppLocalization.string("island.devices.left")))
@@ -93,76 +103,114 @@ private struct DeviceBatteryCard: View {
         return parts
     }
 
+    /// The ring shows the emptiest part, so a low AirPod isn't hidden.
+    private var gaugeLevel: Int? {
+        device.lowestLevel ?? device.caseLevel
+    }
+
+    private var isLow: Bool {
+        (gaugeLevel ?? 100) <= 20
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: device.kind.systemImage)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(IslandPalette.secondaryText)
+        HStack(spacing: 12) {
+            BatteryRing(percent: gaugeLevel, systemImage: device.kind.systemImage)
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(device.name)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Spacer(minLength: 0)
-            }
 
-            if components.isEmpty {
-                HStack(spacing: 8) {
-                    BatteryRing(percent: nil, systemImage: device.kind.systemImage)
+                if gaugeLevel == nil {
                     Text(AppLocalization.string("island.devices.noLevel"))
                         .font(.system(size: 10.5))
                         .foregroundStyle(IslandPalette.tertiaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            } else if components.count == 1, let only = components.first {
-                HStack(spacing: 10) {
-                    BatteryRing(percent: only.percent)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(AppLocalization.string(device.kind.titleKey))
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.85))
-                        Text(AppLocalization.string(only.percent <= 20 ? "island.devices.low" : "island.devices.ok"))
-                            .font(.system(size: 10))
-                            .foregroundStyle(only.percent <= 20 ? Color(red: 1, green: 0.4, blue: 0.35) : IslandPalette.tertiaryText)
-                    }
-                }
-            } else {
-                HStack(spacing: 14) {
-                    ForEach(components) { component in
-                        VStack(spacing: 4) {
-                            BatteryRing(percent: component.percent, systemImage: component.label == nil ? nil : component.systemImage)
-                            if let label = component.label {
-                                Text(label)
-                                    .font(.system(size: 9.5, weight: .semibold))
-                                    .foregroundStyle(IslandPalette.secondaryText)
-                            }
-                        }
-                    }
+                } else if device.main != nil || components.isEmpty {
+                    levelText
+                    statusText
+                } else {
+                    statusText
+                    componentPills
                 }
             }
+
+            Spacer(minLength: 0)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, minHeight: 104, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(IslandPalette.card))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
+        .background(cardBackground)
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(IslandPalette.cardStroke, lineWidth: 1))
         .accessibilityElement(children: .combine)
     }
+
+    private var levelText: some View {
+        Text(verbatim: "\(gaugeLevel ?? 0)")
+            .font(.system(size: 20, weight: .bold, design: .rounded).monospacedDigit())
+            .foregroundStyle(.white)
+        + Text(verbatim: "%")
+            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .foregroundStyle(IslandPalette.secondaryText)
+    }
+
+    private var statusText: some View {
+        let kind = Text(AppLocalization.string(device.kind.titleKey))
+            .foregroundStyle(IslandPalette.secondaryText)
+        let status = Text(AppLocalization.string(isLow ? "island.devices.low" : "island.devices.ok"))
+            .foregroundStyle(isLow ? BatteryTint.color(for: gaugeLevel) : IslandPalette.tertiaryText)
+        return (kind + Text(verbatim: " · ").foregroundStyle(IslandPalette.tertiaryText) + status)
+            .font(.system(size: 10.5, weight: .medium))
+            .lineLimit(1)
+    }
+
+    private var componentPills: some View {
+        HStack(spacing: 4) {
+            ForEach(components) { component in
+                HStack(spacing: 3) {
+                    Image(systemName: component.systemImage)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(IslandPalette.secondaryText)
+                    Text(verbatim: "\(component.percent)%")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(component.percent <= 20 ? BatteryTint.color(for: component.percent) : .white)
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Color.white.opacity(0.08), in: Capsule())
+                .accessibilityLabel(Text(verbatim: "\(component.label) \(component.percent)%"))
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    /// A faint glow in the battery color behind the ring.
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(IslandPalette.card)
+            .overlay(alignment: .leading) {
+                RadialGradient(
+                    colors: [BatteryTint.color(for: gaugeLevel).opacity(gaugeLevel == nil ? 0 : 0.16), .clear],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: 60
+                )
+                .frame(width: 120, height: 120)
+                .offset(x: -24)
+                .allowsHitTesting(false)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
 }
 
-/// Circular gauge with the percentage in the middle (or an icon when the
-/// device reports no level). Red at 20 % or less, like iOS.
+/// Circular gauge in the battery color with the device's icon in the middle.
 private struct BatteryRing: View {
     let percent: Int?
-    var systemImage: String?
+    let systemImage: String
 
-    private static let size: CGFloat = 44
-    private static let lineWidth: CGFloat = 4
-
-    private var tint: Color {
-        guard let percent else { return IslandPalette.track }
-        return percent <= 20 ? Color(red: 1, green: 0.27, blue: 0.23) : IslandPalette.accent
-    }
+    private static let size: CGFloat = 48
+    private static let lineWidth: CGFloat = 4.5
 
     var body: some View {
         ZStack {
@@ -171,27 +219,14 @@ private struct BatteryRing: View {
             if let percent {
                 Circle()
                     .trim(from: 0, to: CGFloat(max(percent, 2)) / 100)
-                    .stroke(tint, style: StrokeStyle(lineWidth: Self.lineWidth, lineCap: .round))
+                    .stroke(BatteryTint.color(for: percent), style: StrokeStyle(lineWidth: Self.lineWidth, lineCap: .round))
                     .rotationEffect(.degrees(-90))
+                    .shadow(color: BatteryTint.color(for: percent).opacity(0.45), radius: 4)
                     .animation(.easeOut(duration: 0.5), value: percent)
-                VStack(spacing: 0) {
-                    if let systemImage {
-                        Image(systemName: systemImage)
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(IslandPalette.secondaryText)
-                    }
-                    Text(verbatim: "\(percent)")
-                        .font(.system(size: 13, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundStyle(.white)
-                    + Text(verbatim: "%")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .foregroundStyle(IslandPalette.secondaryText)
-                }
-            } else if let systemImage {
-                Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(IslandPalette.tertiaryText)
             }
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(percent == nil ? IslandPalette.tertiaryText : .white)
         }
         .frame(width: Self.size, height: Self.size)
     }
