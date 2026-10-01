@@ -84,6 +84,8 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// The page shown before an opening jumped to an activity's page; the
     /// next plain opening returns to it, so "last panel" stays the user's.
     private var contentBeforeActivity: IslandExpandedContent?
+    /// The island was pinned open because an agent needs an answer.
+    private var isPinnedForAttention = false
 
     let timer: IslandTimerViewModel
 
@@ -416,6 +418,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     }
 
     func togglePin() {
+        isPinnedForAttention = false
         isPinned.toggle()
 
         if !isPinned {
@@ -426,6 +429,7 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     }
 
     func collapse() {
+        isPinnedForAttention = false
         isPinned = false
         isForcedOpen = false
         suppressesHoverUntilExit = isHovering
@@ -1185,21 +1189,26 @@ extension DynamicIslandViewModel {
     }
 }
 
-// MARK: - Alerts
+// MARK: - Agent attention
 
 extension DynamicIslandViewModel {
-    /// DeskCast's own alerts peek in the closed island's wings unless the user
-    /// asked for full banners.
-    func postAlert(_ banner: DynamicIslandNotification, peek text: String) {
-        post(preferences.fullBanners ? banner : banner.asPeek(showing: text))
+    /// Opens `panel` and keeps the island open until `endAttention()`, for an
+    /// agent waiting on the user (a permission request).
+    func beginAttention(on panel: IslandPanel) {
+        guard isEnabled, preferences.visiblePanels.contains(panel) else { return }
+        select(panel)
+        if !isPinned {
+            isPinned = true
+            isPinnedForAttention = true
+        }
     }
 
-    /// A meeting with a Join button keeps its banner so the button can be clicked.
-    func postReminder(_ banner: DynamicIslandNotification) {
-        if banner.action == nil {
-            postAlert(banner, peek: banner.title)
-        } else {
-            post(banner)
-        }
+    /// Lets an attention-opened island close again once the pointer leaves.
+    func endAttention() {
+        guard isPinnedForAttention else { return }
+        isPinnedForAttention = false
+        isPinned = false
+        isForcedOpen = true
+        pointerEnteredSinceForcedOpen = isHovering
     }
 }

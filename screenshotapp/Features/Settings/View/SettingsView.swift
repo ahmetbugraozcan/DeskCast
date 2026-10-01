@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var updateService: AppUpdateService
+    let agentHub: AgentHubViewModel
 
     @AppStorage(ScreenshotShelfSettings.Keys.previewPosition)
     private var previewPositionRaw = ScreenshotShelfSettings.defaultPreviewPosition.rawValue
@@ -221,6 +222,8 @@ struct SettingsView: View {
             finderPathPane
         case .dynamicIsland:
             DynamicIslandSettingsPane()
+        case .aiAgents:
+            AgentHubSettingsPane(hub: agentHub)
         case .shortcuts:
             shortcutsPane
         case .about:

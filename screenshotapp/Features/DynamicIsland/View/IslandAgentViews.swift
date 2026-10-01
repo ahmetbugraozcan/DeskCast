@@ -20,21 +20,20 @@ struct CompactAgentView: View {
     var showsFocus = false
     let geometry: DynamicIslandGeometry
 
+    @AppStorage(AgentHubSettings.Keys.showsMascot) private var showsMascot = AgentHubSettings.defaultShowsMascot
+
     var body: some View {
         let height = geometry.notchSize.height
         let kinds = AgentKind.allCases.filter { kind in sessions.contains { $0.kind == kind } }
         let tint = kinds.first?.tint ?? IslandPalette.claude
 
         HStack(spacing: 8) {
-            HStack(spacing: -3) {
-                ForEach(kinds, id: \.self) { kind in
-                    Image(systemName: kind.systemImage)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(kind.tint)
-                        .symbolEffect(.pulse, options: .repeating)
-                }
+            if showsMascot {
+                BipMascotView(mood: .working, size: height + 2, isInteractive: false)
+                    .frame(width: height - 8, height: height)
+            } else {
+                agentIcons(kinds, height: height)
             }
-            .frame(minWidth: height - 12)
 
             // Without a hardware notch the middle is visible, so name the project.
             if geometry.hasNotch {
@@ -66,6 +65,18 @@ struct CompactAgentView: View {
         .frame(height: height)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(AppLocalization.formatted("island.agents.working", kinds.map(\.displayName).joined(separator: ", "))))
+    }
+
+    private func agentIcons(_ kinds: [AgentKind], height: CGFloat) -> some View {
+        HStack(spacing: -3) {
+            ForEach(kinds, id: \.self) { kind in
+                Image(systemName: kind.systemImage)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(kind.tint)
+                    .symbolEffect(.pulse, options: .repeating)
+            }
+        }
+        .frame(minWidth: height - 12)
     }
 }
 

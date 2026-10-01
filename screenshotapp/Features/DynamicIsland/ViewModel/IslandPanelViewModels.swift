@@ -718,6 +718,7 @@ final class IslandPanelModels {
     let weather = WeatherViewModel()
     let focus = FocusIndicatorMonitor()
     let agents = AgentActivityMonitor()
+    let agentHub = AgentHubViewModel()
     let timer: IslandTimerViewModel
     let controls = ControlsViewModel()
     let camera = CameraMirrorViewModel()
@@ -753,5 +754,7 @@ final class IslandPanelModels {
         weather.bind(to: island)
         focus.bind(to: island)
         agents.bind(to: island)
+        agentHub.presenter = island
+        agentHub.start()
     }
 }

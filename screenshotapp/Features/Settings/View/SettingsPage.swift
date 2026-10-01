@@ -7,13 +7,14 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
     case dropShelf
     case finderPath
     case dynamicIsland
+    case aiAgents
     case shortcuts
     case about
 
     var id: Self { self }
 
     static let appSections: [Self] = [.menuBar, .shortcuts, .about]
-    static let featureSections: [Self] = [.screenshots, .videoRecording, .dropShelf, .finderPath, .dynamicIsland]
+    static let featureSections: [Self] = [.screenshots, .videoRecording, .dropShelf, .finderPath, .dynamicIsland, .aiAgents]
 
     var title: String {
         switch self {
@@ -23,6 +24,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
         case .dropShelf: AppLocalization.string("Drop Shelf")
         case .finderPath: AppLocalization.string("Finder Path")
         case .dynamicIsland: AppLocalization.string("Dynamic Island")
+        case .aiAgents: AppLocalization.string("AI Agents")
         case .shortcuts: AppLocalization.string("Shortcuts")
         case .about: AppLocalization.string("About DeskCast")
         }
@@ -36,6 +38,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
         case .dropShelf: "tray.and.arrow.down"
         case .finderPath: "folder"
         case .dynamicIsland: ToolboxToolID.dynamicIsland.systemImage
+        case .aiAgents: "sparkles"
         case .shortcuts: "keyboard"
         case .about: "info.circle"
         }
@@ -50,6 +53,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
         case .dropShelf: .orange
         case .finderPath: .cyan
         case .dynamicIsland: .pink
+        case .aiAgents: .teal
         case .shortcuts: .gray
         case .about: .indigo
         }

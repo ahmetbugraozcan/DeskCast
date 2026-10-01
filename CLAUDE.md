@@ -14,6 +14,7 @@ A macOS menu-bar utility toolbox. It bundles several small productivity tools be
 - **Copy Finder Path** — copy the front Finder window's path via AppleScript.
 - **Search Images** — index and search local images by filename + recognized text.
 - **Drop Shelf** — a floating shelf that collects dragged files/folders/links/text/images to send together.
+- **AI agents hub** (`Features/AgentHub`, the island's AI Agents panel; Coucou-inspired) — follows Claude Code sessions through hooks, answers permission requests from the island, with Bip, DeskCast's own code-drawn mascot.
 - **Dynamic Island** — a notch-anchored panel showing the playing song (Music/Spotify), media controls, other apps' notifications, DeskCast toasts, and battery alerts; expands on hover.
 
 ### Naming (important)
@@ -98,6 +99,14 @@ Entitlements grant Apple Events (`com.apple.security.automation.apple-events`) a
 - `EventReminderMonitor` posts an island banner 5 min before timed calendar events (setting `dynamicIsland.showsEventReminders`); it only reads EventKit when access was already granted by the Calendar panel.
 - Panel shortcuts are ⌥⌘+letter `KeyboardShortcuts` names defined on `IslandPanel`, toggled by `DynamicIslandSettings.panelShortcutsEnabled`.
 - `DynamicIslandPanelCoordinator` keeps a fixed-size transparent panel above the menu bar and toggles `ignoresMouseEvents` from global/local mouse-move monitors, so only the island shape takes clicks. Island sizes come from static metrics on `DynamicIslandView`; keep the coordinator's hover rect and the view in sync.
+
+## AI agents hub
+
+- Claude Code hooks: `ClaudeHookConfiguration` (pure, unit-tested) merges/removes DeskCast's entries (command contains `deskcast-hook`) in `~/.claude/settings.json`; `ClaudeHookInstallService` only writes after the user approved the shown diff, makes a dated backup first and refuses if the file changed since the preview. Other tools' hooks stay.
+- The hook command is a Perl relay (`AgentHookRelay`, written to `~/Library/Application Support/DeskCast/bin/deskcast-hook`; Perl because python3 needs the developer tools). It adds terminal context (TERM_PROGRAM, tty, iTerm session) and sends the JSON to `AgentHookServer` (Unix socket `…/DeskCast/agent-hook.sock`, 0600, same-uid check). It always exits 0 and gives up after 0.3 s, so Claude Code is never blocked. Only `PermissionRequest` waits: DeskCast replies with the hook's decision JSON, or an empty line (→ Claude Code asks in the terminal) on timeout (`agentHub.approvalTimeout`), "Answer in terminal", or when any later event of that session shows it was answered there.
+- `AgentHubState` (pure, unit-tested) turns hook events into sessions (phase, last steps, last message, question). `AskUserQuestion` can't be answered by a hook, so questions get a "Answer in terminal" button (`TerminalJumpService`: Terminal tab by tty / iTerm session via osascript, VS Code/Cursor folder, else activate the app).
+- `AgentHubViewModel` (built in `IslandPanelModels`, also handed to Settings) pins the island open on the AI Agents panel while a request waits (`beginAttention`/`endAttention` on `DynamicIslandViewModel`). Settings: `AgentHubSettings` (`agentHub.*`), pane `AgentHubSettingsPane`.
+- Bip (`BipMascotView`, `BipMood`) is drawn in a `Canvas`; its sounds are synthesized by `BipSoundPlayer` (no sound files). Coucou's name, Mochi character, icons and sounds are not MIT-licensed — never copy them.
 
 ## Build & test
 

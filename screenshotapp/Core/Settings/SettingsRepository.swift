@@ -50,6 +50,7 @@ struct SettingsRepository: SettingsProviding {
         DynamicIslandSettings.registerDefaults(in: defaults)
         ColorPickerSettings.registerDefaults(in: defaults)
         ToolboxSettings.registerDefaults(in: defaults)
+        AgentHubSettings.registerDefaults(in: defaults)
     }
 
     func screenshotShelfSettings() -> ScreenshotShelfSettingsSnapshot {

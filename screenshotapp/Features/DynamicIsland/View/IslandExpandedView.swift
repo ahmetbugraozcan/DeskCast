@@ -102,6 +102,8 @@ struct IslandExpandedView: View {
             }
         case .timer:
             TimerModePicker(timer: panels.timer)
+        case .aiAgents:
+            AgentHubTabPicker(hub: panels.agentHub)
         case .weather:
             if !panels.weather.city.isEmpty {
                 IslandIconButton(
@@ -169,7 +171,7 @@ struct IslandExpandedView: View {
         case .scratchpad:
             ScratchpadPanelView()
         case .aiAgents:
-            AIAgentsPanelView(model: panels.aiUsage)
+            AgentHubPanelView(hub: panels.agentHub, usage: panels.aiUsage)
         case .devices:
             DevicesPanelView(model: panels.devices)
         case .weather:

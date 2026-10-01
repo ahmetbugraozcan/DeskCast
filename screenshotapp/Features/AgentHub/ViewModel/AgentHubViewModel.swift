@@ -1,0 +1,308 @@
+import AppKit
+import Combine
+
+/// What the hub asks of the island; implemented by `DynamicIslandViewModel`
+/// through `AgentHubIslandBridge` so this feature doesn't depend on it.
+@MainActor
+protocol AgentHubAttentionPresenting: AnyObject {
+    var canShowAgentHub: Bool { get }
+    func beginAgentAttention()
+    func endAgentAttention()
+    func announce(_ banner: DynamicIslandNotification, peek: String)
+}
+
+/// Follows Claude Code sessions through their hooks, holds permission
+/// requests until the user answers them in the island, and installs the
+/// hooks into Claude Code's settings on request.
+@MainActor
+final class AgentHubViewModel: ObservableObject {
+    @Published private(set) var sessions: [AgentHubSession] = []
+    /// Waiting permission requests, oldest first; the island shows the first.
+    @Published private(set) var approvals: [AgentApprovalRequest] = []
+    @Published private(set) var hooksInstalled = false
+    /// A settings change waiting for the user's OK (shown as a diff).
+    @Published private(set) var pendingHookChange: ClaudeHookChange?
+    @Published private(set) var pendingChangeIsInstall = true
+    @Published private(set) var hookError: String?
+    /// The session the panel shows in detail.
+    @Published var focusedSessionID: String?
+    @Published var tab: AgentHubTab = .sessions
+
+    weak var presenter: AgentHubAttentionPresenting?
+    /// Effects (finish, question…) for the mascot and sounds.
+    let effects = PassthroughSubject<AgentHubEffect, Never>()
+
+    private let server: AgentHookServing
+    private let installer: ClaudeHookInstalling
+    private let terminal: TerminalJumping
+    private let defaults: UserDefaults
+    private var state = AgentHubState()
+    private var replies: [UUID: (String) -> Void] = [:]
+    private var timeouts: [UUID: Task<Void, Never>] = [:]
+    private var pruneTask: Task<Void, Never>?
+    private var defaultsObserver: AnyCancellable?
+    private var isRunning = false
+
+    init(
+        server: AgentHookServing? = nil,
+        installer: ClaudeHookInstalling? = nil,
+        terminal: TerminalJumping? = nil,
+        defaults: UserDefaults = .standard
+    ) {
+        self.server = server ?? AgentHookServer()
+        self.installer = installer ?? ClaudeHookInstallService()
+        self.terminal = terminal ?? TerminalJumpService()
+        self.defaults = defaults
+
+        self.server.onEvent = { [weak self] event in
+            self?.handle(event)
+        }
+        self.server.onPermissionRequest = { [weak self] event, reply in
+            guard let self else {
+                reply("")
+                return
+            }
+            self.handlePermissionRequest(event, reply: reply)
+        }
+    }
+
+    func start() {
+        refreshHookStatus()
+        applySettings()
+        defaultsObserver = NotificationCenter.default
+            .publisher(for: UserDefaults.didChangeNotification, object: defaults)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.applySettings()
+            }
+    }
+
+    var pendingChangeTitleKey: String {
+        pendingChangeIsInstall ? "agentHub.hooks.reviewInstall" : "agentHub.hooks.reviewUninstall"
+    }
+
+    var currentApproval: AgentApprovalRequest? {
+        approvals.first
+    }
+
+    var focusedSession: AgentHubSession? {
+        focusedSessionID.flatMap(state.session) ?? attentionSession ?? sessions.first
+    }
+
+    /// The first session that needs the user.
+    var attentionSession: AgentHubSession? {
+        if let approval = currentApproval, let session = state.session(approval.sessionID) {
+            return session
+        }
+        return sessions.first { $0.phase.needsAttention }
+    }
+
+    var busySessions: [AgentHubSession] {
+        sessions.filter { $0.phase.isBusy || $0.phase.needsAttention }
+    }
+
+    // MARK: - Approvals
+
+    func decide(_ decision: AgentApprovalDecision, for request: AgentApprovalRequest? = nil) {
+        guard let request = request ?? currentApproval else { return }
+        resolve(request, output: decision.hookOutput(for: request))
+    }
+
+    /// Lets Claude Code ask in the terminal instead.
+    func answerInTerminal(_ request: AgentApprovalRequest? = nil) {
+        guard let request = request ?? currentApproval else { return }
+        resolve(request, output: "")
+        jumpToTerminal(sessionID: request.sessionID)
+    }
+
+    private func handlePermissionRequest(_ event: AgentHookEvent, reply: @escaping (String) -> Void) {
+        state.apply(event)
+        publish()
+
+        guard isRunning, let presenter, presenter.canShowAgentHub else {
+            reply("")
+            return
+        }
+
+        // A newer request from the same session replaces an unanswered one.
+        for stale in approvals where stale.sessionID == event.sessionID {
+            resolve(stale, output: "", publishing: false)
+        }
+
+        let request = AgentApprovalRequest(event: event)
+        approvals.append(request)
+        replies[request.id] = reply
+        let timeout = AgentHubSettings.approvalTimeout(in: defaults)
+        timeouts[request.id] = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(timeout))
+            guard !Task.isCancelled else { return }
+            self?.resolve(request, output: "")
+        }
+
+        focusedSessionID = event.sessionID
+        tab = .sessions
+        BipSoundPlayer.shared.play(.approval)
+        effects.send(.question(sessionID: event.sessionID))
+        if defaults.bool(forKey: AgentHubSettings.Keys.opensForAttention) {
+            presenter.beginAgentAttention()
+        }
+    }
+
+    private func resolve(_ request: AgentApprovalRequest, output: String, publishing: Bool = true) {
+        timeouts.removeValue(forKey: request.id)?.cancel()
+        replies.removeValue(forKey: request.id)?(output)
+        approvals.removeAll { $0.id == request.id }
+        state.resolveApproval(sessionID: request.sessionID)
+
+        guard publishing else { return }
+        publish()
+        if approvals.isEmpty, !sessions.contains(where: { $0.phase == .question }) {
+            presenter?.endAgentAttention()
+        }
+    }
+
+    // MARK: - Events
+
+    private func handle(_ event: AgentHookEvent) {
+        // Any later event of a session means its pending request was answered
+        // in the terminal (the permission notification itself comes after it).
+        if event.kind != .notification, event.kind != .subagentStart, event.kind != .subagentStop {
+            for request in approvals where request.sessionID == event.sessionID {
+                resolve(request, output: "", publishing: false)
+            }
+        }
+
+        let effect = state.apply(event)
+        publish()
+        if approvals.isEmpty, attentionSession == nil {
+            presenter?.endAgentAttention()
+        }
+
+        guard let effect else { return }
+        effects.send(effect)
+        react(to: effect)
+    }
+
+    private func react(to effect: AgentHubEffect) {
+        switch effect {
+        case .question(let sessionID):
+            focusedSessionID = sessionID
+            tab = .sessions
+            BipSoundPlayer.shared.play(.question)
+            if defaults.bool(forKey: AgentHubSettings.Keys.opensForAttention) {
+                presenter?.beginAgentAttention()
+            }
+        case .failed(let sessionID), .rateLimited(let sessionID):
+            BipSoundPlayer.shared.play(.error)
+            guard let session = state.session(sessionID) else { return }
+            let title = AppLocalization.formatted(
+                effect == .failed(sessionID: sessionID) ? "agentHub.alert.failed" : "agentHub.alert.rateLimited",
+                session.title
+            )
+            presenter?.announce(
+                DynamicIslandNotification(caption: session.title, title: title, message: session.lastMessage,
+                                          systemImage: "exclamationmark.triangle.fill", style: .warning),
+                peek: title
+            )
+        case .finished:
+            // Long turns are announced by `AgentActivityMonitor`; here only
+            // the mascot and the sound react.
+            BipSoundPlayer.shared.play(.finished)
+        }
+    }
+
+    func dismissResult(of sessionID: String) {
+        state.settle(sessionID: sessionID)
+        publish()
+    }
+
+    func jumpToTerminal(sessionID: String) {
+        guard let session = state.session(sessionID) else { return }
+        terminal.jump(to: session.terminal, cwd: session.cwd)
+    }
+
+    private func publish() {
+        state.pruneStale()
+        sessions = state.sessions
+        if let focusedSessionID, state.session(focusedSessionID) == nil {
+            self.focusedSessionID = nil
+        }
+    }
+
+    // MARK: - Settings and hooks
+
+    private func applySettings() {
+        let enabled = defaults.bool(forKey: AgentHubSettings.Keys.enabled)
+        guard enabled != isRunning else { return }
+        isRunning = enabled
+
+        if enabled {
+            try? AgentHookRelay.install()
+            server.start()
+            pruneTask = Task { [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(60))
+                    self?.publish()
+                }
+            }
+        } else {
+            server.stop()
+            pruneTask?.cancel()
+            pruneTask = nil
+            for request in approvals {
+                resolve(request, output: "", publishing: false)
+            }
+            state = AgentHubState()
+            publish()
+            presenter?.endAgentAttention()
+        }
+    }
+
+    func refreshHookStatus() {
+        hooksInstalled = installer.isInstalled()
+    }
+
+    /// Whether the installed hooks wait as long as the setting asks.
+    var hooksNeedUpdate: Bool {
+        guard hooksInstalled, let timeout = installer.installedApprovalTimeout() else { return false }
+        return timeout != AgentHubSettings.approvalTimeout(in: defaults) + 10
+    }
+
+    func prepareInstall() {
+        prepare(isInstall: true) {
+            try AgentHookRelay.install()
+            return try installer.previewInstall(approvalTimeout: AgentHubSettings.approvalTimeout(in: defaults))
+        }
+    }
+
+    func prepareUninstall() {
+        prepare(isInstall: false) {
+            try installer.previewUninstall()
+        }
+    }
+
+    private func prepare(isInstall: Bool, _ build: () throws -> ClaudeHookChange) {
+        hookError = nil
+        do {
+            pendingChangeIsInstall = isInstall
+            pendingHookChange = try build()
+        } catch {
+            hookError = error.localizedDescription
+        }
+    }
+
+    func confirmPendingChange() {
+        guard let change = pendingHookChange else { return }
+        do {
+            try installer.apply(change)
+            pendingHookChange = nil
+        } catch {
+            hookError = error.localizedDescription
+        }
+        refreshHookStatus()
+    }
+
+    func cancelPendingChange() {
+        pendingHookChange = nil
+    }
+}
