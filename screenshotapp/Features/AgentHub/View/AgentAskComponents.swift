@@ -36,9 +36,11 @@ struct AgentKeySetupCard: View {
                             .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
 
-                    Link(AppLocalization.string("agentHub.ask.getKey"), destination: Self.consoleURL)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(AgentHubPhase.idle.color)
+                    if let consoleURL = Self.consoleURL {
+                        Link(AppLocalization.string("agentHub.ask.getKey"), destination: consoleURL)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(AgentHubPhase.idle.color)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -47,8 +49,7 @@ struct AgentKeySetupCard: View {
         .onChange(of: isFocused) { _, focused in chat.isInputFocused = focused }
     }
 
-    // swiftlint:disable:next force_unwrapping
-    private static let consoleURL = URL(string: "https://console.anthropic.com/settings/keys")!
+    private static let consoleURL = URL(string: "https://console.anthropic.com/settings/keys")
 
     private func save() {
         chat.saveKey(key)
