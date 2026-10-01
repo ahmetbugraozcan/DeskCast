@@ -22,6 +22,7 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
     private var dragPasteboardCountAtMouseDown: Int?
     private var screenObserver: NSObjectProtocol?
     private var workspaceObservers: [NSObjectProtocol] = []
+    private var replyObserver: AnyCancellable?
     private var storeObserver: AnyCancellable?
     private var fullScreenCheckTask: Task<Void, Never>?
     /// A full-screen app covers the island's screen ("Hide in full screen").
@@ -71,6 +72,20 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
                 }
             }
         }
+
+        // Typing a message to a session takes keyboard focus right away.
+        replyObserver = panels.agentHub.$composingSessionID
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] sessionID in
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.updateMouseInteraction()
+                    if sessionID != nil, let panel = self.panel, panel.allowsKey {
+                        panel.makeKey()
+                    }
+                }
+            }
 
         // Re-evaluate the hover region whenever the island changes shape.
         storeObserver = store.objectWillChange
@@ -459,12 +474,17 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
         // The scratchpad and the clipboard search take typing; everything else
         // leaves keyboard focus with the app the user is working in.
         let isExpanded = store.mode == .expanded
-        let asksClaude = store.expandedContent == .panel(.aiAgents) && panels.agentHub.tab == .ask
+        let onAgents = store.expandedContent == .panel(.aiAgents)
+        let asksClaude = onAgents && panels.agentHub.tab == .ask
+        // Only while a message to a session is being typed, so clicking Allow
+        // never takes the keyboard from the terminal.
+        let repliesToSession = onAgents && panels.agentHub.tab == .sessions && panels.agentHub.composingSessionID != nil
         let wantsKeyboard = isExpanded
-            && (store.expandedContent == .panel(.scratchpad) || store.expandedContent == .panel(.clipboard) || asksClaude)
+            && (store.expandedContent == .panel(.scratchpad) || store.expandedContent == .panel(.clipboard)
+                || asksClaude || repliesToSession)
         let holdsTyping = panel.isKeyWindow
             && (store.expandedContent == .panel(.scratchpad) || panels.clipboard.isSearchFocused
-                || (asksClaude && panels.agentChat.isInputFocused))
+                || (asksClaude && panels.agentChat.isInputFocused) || repliesToSession)
         panel.allowsKey = wantsKeyboard
 
         if !wantsKeyboard, panel.isKeyWindow {

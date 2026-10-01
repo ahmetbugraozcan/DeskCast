@@ -268,7 +268,7 @@ struct AgentStepChecklist: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             ForEach(steps) { step in
-                let isCurrent = step.id == steps.last?.id && session.phase.isBusy
+                let isCurrent = step.id == steps.last?.id && session.phase.isBusy && !step.isFinished
                 row(
                     title: step.shortTitle,
                     state: isCurrent ? .running : step.isFailure ? .failed : .done

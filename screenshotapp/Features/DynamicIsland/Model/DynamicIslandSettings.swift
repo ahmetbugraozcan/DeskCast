@@ -397,6 +397,13 @@ enum DynamicIslandSettings {
         }
     }
 
+    /// Changes the stored side buttons (island right-click menus).
+    static func updateSideButtons(in defaults: UserDefaults = .standard, _ change: (inout IslandOrbLayout) -> Void) {
+        var layout = sideButtons(in: defaults)
+        change(&layout)
+        setSideButtons(layout, in: defaults)
+    }
+
     static func clampedNotificationDuration(_ value: Int) -> Int {
         min(max(value, notificationDurationRange.lowerBound), notificationDurationRange.upperBound)
     }

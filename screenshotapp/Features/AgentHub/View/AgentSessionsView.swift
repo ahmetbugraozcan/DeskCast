@@ -134,6 +134,10 @@ private struct AgentSessionCard: View {
                     } else {
                         liveBody
                     }
+                    if hub.composingSessionID == session.id {
+                        AgentReplyBar(hub: hub, agentName: session.agentName)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
@@ -174,6 +178,12 @@ private struct AgentSessionCard: View {
             }
             .fixedSize()
 
+            if hub.canReply(to: session), hub.composingSessionID != session.id {
+                let help = AppLocalization.formatted("agentHub.reply.help", session.agentName)
+                IslandIconButton(systemImage: "text.bubble", help: help, size: 11) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { hub.startReply(to: session.id) }
+                }
+            }
             IslandIconButton(systemImage: "arrow.up.forward.app", help: openTitle, size: 11) {
                 hub.jumpToTerminal(sessionID: session.id)
             }
@@ -187,19 +197,26 @@ private struct AgentSessionCard: View {
         currentStepLine
 
         if session.showsCommand, let run = session.command {
-            AgentTerminalBox(run: run, isRunning: session.phase.isBusy && run.output.isEmpty)
+            AgentTerminalBox(run: run, isRunning: isStepRunning && run.output.isEmpty)
             Spacer(minLength: 0)
         } else if let change = session.codeChange {
-            AgentCodeDiffView(change: change, isLive: session.phase.isBusy && session.currentStep?.isEdit == true)
+            AgentCodeDiffView(change: change, isLive: isStepRunning && session.currentStep?.isEdit == true)
         } else {
             promptBubble
             Spacer(minLength: 0)
         }
     }
 
+    /// The last tool is still running (not just Claude thinking after it).
+    private var isStepRunning: Bool {
+        session.phase.isBusy && session.currentStep?.isFinished == false
+    }
+
     @ViewBuilder
     private var currentStepLine: some View {
-        if let step = session.turnSteps.last {
+        if session.phase.isBusy, let step = session.turnSteps.last, step.isFinished {
+            AgentShimmerText(text: AppLocalization.string("agentHub.phase.thinking"), size: 12.5)
+        } else if let step = session.turnSteps.last {
             HStack(spacing: 6) {
                 Image(systemName: step.systemImage)
                     .font(.system(size: 11, weight: .semibold))
@@ -312,6 +329,75 @@ private struct AgentSessionCard: View {
 
     private var openSymbol: String {
         runsInApp ? "arrow.up.forward.app" : "terminal"
+    }
+}
+
+// MARK: - Reply
+
+/// Types a message into the session's terminal tab (Terminal / iTerm2).
+private struct AgentReplyBar: View {
+    @ObservedObject var hub: AgentHubViewModel
+    let agentName: String
+
+    @State private var text = ""
+    @FocusState private var isFocused: Bool
+
+    private var canSend: Bool {
+        !hub.isSendingReply && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                TextField(AppLocalization.formatted("agentHub.reply.placeholder", agentName), text: $text)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(.white)
+                    .focused($isFocused)
+                    .onSubmit(send)
+                    .onExitCommand(perform: hub.cancelReply)
+
+                IslandIconButton(systemImage: "xmark", help: AppLocalization.string("agentHub.close"), size: 10) {
+                    withAnimation(.easeOut(duration: 0.2)) { hub.cancelReply() }
+                }
+
+                Button(action: send) {
+                    Group {
+                        if hub.isSendingReply {
+                            ProgressView().controlSize(.mini).tint(.black)
+                        } else {
+                            Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold))
+                        }
+                    }
+                    .foregroundStyle(canSend ? Color.black : Color.white.opacity(0.4))
+                    .frame(width: 24, height: 24)
+                    .background(Circle().fill(canSend || hub.isSendingReply ? Color.white : Color.white.opacity(0.1)))
+                }
+                .buttonStyle(IslandScaleButtonStyle())
+                .disabled(!canSend)
+            }
+            .padding(.leading, 10)
+            .padding(.trailing, 4)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(IslandPalette.card))
+            .overlay(Capsule().stroke(Color.white.opacity(isFocused ? 0.2 : 0.08), lineWidth: 1))
+
+            if hub.replyFailed {
+                Text(AppLocalization.string("agentHub.reply.failed"))
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(Color(red: 1, green: 0.55, blue: 0.59))
+            }
+        }
+        .onAppear {
+            // The island becomes key a moment after composing starts.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { isFocused = true }
+        }
+    }
+
+    private func send() {
+        guard canSend else { return }
+        hub.sendReply(text)
+        text = ""
     }
 }
 

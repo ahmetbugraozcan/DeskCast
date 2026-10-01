@@ -395,9 +395,12 @@
 "island.orb.side.right" = "Right";
 "island.orb.side.bottom" = "Below";
 "island.orb.island" = "Island";
-"island.orb.hint" = "Round buttons around the open island. Click one to move or remove it, or a dashed + to add any panel. You can also right-click a button on the island.";
+"island.orb.hint" = "Round buttons around the open island. Click one to move or remove it, or a dashed + to add any panel. On the island, right-click a button or a panel tile to add, move or remove buttons.";
 "island.orb.add" = "Add a button (%@)";
 "island.orb.moveTo" = "Move to";
+"island.orb.addHere" = "Add a button here";
+"island.orb.addAsButton" = "Add as side button";
+"island.orb.removeButton" = "Remove side button";
 "island.orb.remove" = "Remove";
 "island.orb.edit" = "Edit buttons…";
 "island.orb.reset" = "Restore defaults";
@@ -725,6 +728,9 @@
 "agentHub.toolShort.notebook" = "Notebook";
 "agentHub.openClaude" = "Open Claude";
 "agentHub.openCodex" = "Open Codex";
+"agentHub.reply.help" = "Message %@";
+"agentHub.reply.placeholder" = "Message %@…";
+"agentHub.reply.failed" = "Couldn't reach the terminal tab. Is it still open? DeskCast may need Automation access to Terminal or iTerm.";
 "agentHub.close" = "Close";
 "agentHub.showMore" = "Show all";
 "agentHub.showLess" = "Show less";

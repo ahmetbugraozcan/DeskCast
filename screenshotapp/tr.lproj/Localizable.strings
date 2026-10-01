@@ -395,9 +395,12 @@
 "island.orb.side.right" = "Sağ";
 "island.orb.side.bottom" = "Alt";
 "island.orb.island" = "Island";
-"island.orb.hint" = "Açık Island'ın etrafındaki yuvarlak düğmeler. Taşımak ya da kaldırmak için birine tıkla; herhangi bir paneli eklemek için kesikli + düğmesine bas. Island'daki bir düğmeye sağ tıklayarak da kaldırabilirsin.";
+"island.orb.hint" = "Açık Island'ın etrafındaki yuvarlak düğmeler. Taşımak ya da kaldırmak için birine tıkla; herhangi bir paneli eklemek için kesikli + düğmesine bas. Island'da bir düğmeye ya da panel kutucuğuna sağ tıklayarak da ekleyip taşıyabilir veya kaldırabilirsin.";
 "island.orb.add" = "Düğme ekle (%@)";
 "island.orb.moveTo" = "Taşı";
+"island.orb.addHere" = "Buraya düğme ekle";
+"island.orb.addAsButton" = "Yan düğme olarak ekle";
+"island.orb.removeButton" = "Yan düğmeyi kaldır";
 "island.orb.remove" = "Kaldır";
 "island.orb.edit" = "Düğmeleri düzenle…";
 "island.orb.reset" = "Varsayılana dön";
@@ -725,6 +728,9 @@
 "agentHub.toolShort.notebook" = "Notebook";
 "agentHub.openClaude" = "Claude'u aç";
 "agentHub.openCodex" = "Codex'i aç";
+"agentHub.reply.help" = "%@ oturumuna yaz";
+"agentHub.reply.placeholder" = "%@ oturumuna yaz…";
+"agentHub.reply.failed" = "Terminal sekmesine ulaşılamadı. Sekme hâlâ açık mı? DeskCast'in Terminal ya da iTerm için Otomasyon izni gerekebilir.";
 "agentHub.close" = "Kapat";
 "agentHub.showMore" = "Tümünü göster";
 "agentHub.showLess" = "Daha az";

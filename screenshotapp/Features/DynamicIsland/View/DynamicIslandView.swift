@@ -254,10 +254,8 @@ struct DynamicIslandView: View {
 
             ForEach(IslandOrbItem.all, id: \.self) { orb in
                 if let frame = layout.orbFrames[orb] {
-                    IslandOrbButton(orb: orb, isSelected: isOrbSelected(orb)) {
+                    IslandOrbButton(orb: orb, layout: store.preferences.sideButtons, isSelected: isOrbSelected(orb)) {
                         handleOrb(orb)
-                    } onRemove: {
-                        removeOrb(orb)
                     } onEdit: {
                         store.collapse()
                         panels.actions.openSettings()
@@ -300,12 +298,6 @@ struct DynamicIslandView: View {
             store.collapse()
             panels.actions.openSettings()
         }
-    }
-
-    private func removeOrb(_ orb: IslandOrbItem) {
-        var buttons = store.preferences.sideButtons
-        buttons.remove(orb)
-        DynamicIslandSettings.setSideButtons(buttons)
     }
 
     @ViewBuilder
@@ -403,10 +395,14 @@ struct DynamicIslandView: View {
 
 private struct IslandOrbButton: View {
     let orb: IslandOrbItem
+    let layout: IslandOrbLayout
     let isSelected: Bool
     let action: () -> Void
-    let onRemove: () -> Void
     let onEdit: () -> Void
+
+    private var side: IslandOrbSide? {
+        IslandOrbSide.allCases.first { layout[$0].contains(orb) }
+    }
 
     var body: some View {
         Button(action: action) {
@@ -422,7 +418,27 @@ private struct IslandOrbButton: View {
         .buttonStyle(IslandPressButtonStyle())
         .help(AppLocalization.string(orb.titleKey))
         .contextMenu {
-            Button(AppLocalization.string("island.orb.remove"), systemImage: "minus.circle", action: onRemove)
+            if let side, layout[side].count < IslandOrbLayout.maxPerSide, !layout.unusedItems.isEmpty {
+                Menu(AppLocalization.string("island.orb.addHere")) {
+                    ForEach(layout.unusedItems, id: \.self) { item in
+                        Button(AppLocalization.string(item.titleKey), systemImage: item.systemImage) {
+                            DynamicIslandSettings.updateSideButtons { $0.add(item, to: side) }
+                        }
+                    }
+                }
+            }
+            Menu(AppLocalization.string("island.orb.moveTo")) {
+                let targets = IslandOrbSide.allCases.filter { $0 != side && layout[$0].count < IslandOrbLayout.maxPerSide }
+                ForEach(targets, id: \.self) { target in
+                    Button(AppLocalization.string(target.titleKey)) {
+                        DynamicIslandSettings.updateSideButtons { $0.add(orb, to: target) }
+                    }
+                }
+            }
+            Button(AppLocalization.string("island.orb.remove"), systemImage: "minus.circle") {
+                DynamicIslandSettings.updateSideButtons { $0.remove(orb) }
+            }
+            Divider()
             Button(AppLocalization.string("island.orb.edit"), systemImage: "slider.horizontal.3", action: onEdit)
         }
     }

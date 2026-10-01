@@ -126,6 +126,9 @@ struct IslandLauncherView: View {
             if order.count > 1 {
                 Button(AppLocalization.string("island.launcher.hide")) { setHidden(panel, true) }
             }
+            if store.preferences.showsSideButtons {
+                sideButtonMenu(for: panel)
+            }
         }
         .scaleEffect(isDragging ? 1.08 : 1)
         .shadow(color: .black.opacity(isDragging ? 0.5 : 0), radius: 10, y: 4)
@@ -136,6 +139,26 @@ struct IslandLauncherView: View {
     }
 
     // MARK: - Editing
+
+    @ViewBuilder
+    private func sideButtonMenu(for panel: IslandPanel) -> some View {
+        let item = IslandOrbItem.panel(panel)
+        let buttons = store.preferences.sideButtons
+        Divider()
+        if buttons.allItems.contains(item) {
+            Button(AppLocalization.string("island.orb.removeButton"), systemImage: "minus.circle") {
+                DynamicIslandSettings.updateSideButtons { $0.remove(item) }
+            }
+        } else {
+            Menu(AppLocalization.string("island.orb.addAsButton")) {
+                ForEach(IslandOrbSide.allCases.filter { buttons[$0].count < IslandOrbLayout.maxPerSide }, id: \.self) { side in
+                    Button(AppLocalization.string(side.titleKey)) {
+                        DynamicIslandSettings.updateSideButtons { $0.add(item, to: side) }
+                    }
+                }
+            }
+        }
+    }
 
     private func setHidden(_ panel: IslandPanel, _ hide: Bool) {
         var hidden = store.preferences.hiddenPanels

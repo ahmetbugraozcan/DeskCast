@@ -32,6 +32,11 @@ final class AgentHubViewModel: ObservableObject {
     /// The session the panel shows in detail.
     @Published var focusedSessionID: String?
     @Published var tab: AgentHubTab = .sessions
+    /// The session a message is being typed for (the island takes keyboard
+    /// focus only then).
+    @Published private(set) var composingSessionID: String?
+    @Published private(set) var isSendingReply = false
+    @Published private(set) var replyFailed = false
 
     weak var presenter: AgentHubAttentionPresenting?
     /// Effects (finish, question…) for the mascot and sounds.
@@ -230,11 +235,50 @@ final class AgentHubViewModel: ObservableObject {
         terminal.jump(to: session.terminal, cwd: session.cwd)
     }
 
+    // MARK: - Messages
+
+    /// Sessions in a Terminal or iTerm2 tab can be sent a message.
+    func canReply(to session: AgentHubSession) -> Bool {
+        terminal.canSendText(to: session.terminal)
+    }
+
+    func startReply(to sessionID: String) {
+        replyFailed = false
+        composingSessionID = sessionID
+    }
+
+    func cancelReply() {
+        composingSessionID = nil
+        replyFailed = false
+    }
+
+    /// Types the message into the session's terminal; Claude Code queues it
+    /// if a turn is still running.
+    func sendReply(_ text: String) {
+        let message = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !message.isEmpty, !isSendingReply,
+              let sessionID = composingSessionID, let session = state.session(sessionID) else { return }
+        isSendingReply = true
+        replyFailed = false
+        Task {
+            let sent = await terminal.sendText(message, to: session.terminal)
+            isSendingReply = false
+            if sent {
+                composingSessionID = nil
+            } else {
+                replyFailed = true
+            }
+        }
+    }
+
     private func publish() {
         state.pruneStale()
         sessions = state.sessions
         if let focusedSessionID, state.session(focusedSessionID) == nil {
             self.focusedSessionID = nil
+        }
+        if let composingSessionID, state.session(composingSessionID) == nil {
+            self.composingSessionID = nil
         }
     }
 

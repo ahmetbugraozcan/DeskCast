@@ -32,9 +32,11 @@ nonisolated struct AgentHubStep: Identifiable, Equatable, Sendable {
     }
 
     let id: UUID
-    let kind: Kind
+    var kind: Kind
     let detail: String?
     let date: Date
+    /// The tool step's result arrived (PostToolUse or its failure).
+    var isFinished = false
 
     init(kind: Kind, detail: String?, date: Date, id: UUID = UUID()) {
         self.id = id
@@ -96,6 +98,19 @@ nonisolated struct AgentHubSession: Identifiable, Equatable, Sendable {
     var turnSteps: [AgentHubStep] {
         let start = steps.lastIndex { $0.kind == .prompt }.map { steps.index(after: $0) } ?? steps.startIndex
         return Array(steps[start...])
+    }
+
+    /// Marks the turn's last unfinished step of `tool` as done, or turns it
+    /// into a failure. False when there's no such step.
+    @discardableResult
+    mutating func finishTool(_ tool: String, failed: Bool) -> Bool {
+        let start = steps.lastIndex { $0.kind == .prompt } ?? steps.startIndex
+        guard let index = steps[start...].lastIndex(where: { $0.kind == .tool(tool) && !$0.isFinished }) else { return false }
+        steps[index].isFinished = true
+        if failed {
+            steps[index].kind = .failed(tool)
+        }
+        return true
     }
 
     mutating func append(_ step: AgentHubStep) {
@@ -210,12 +225,12 @@ nonisolated struct AgentHubState: Equatable, Sendable {
         case .postToolUse:
             session.question = nil
             session.phase = .working
+            session.finishTool(event.toolName ?? "Tool", failed: false)
             recordOutput(&session, event: event, failed: false)
             return nil
         case .postToolUseFailure:
             session.phase = .working
-            recordOutput(&session, event: event, failed: true)
-            session.append(AgentHubStep(kind: .failed(event.toolName ?? "Tool"), detail: event.toolSummary, date: now))
+            recordFailure(&session, event: event, now: now)
             return nil
         case .permissionRequest:
             session.phase = .approval
@@ -270,6 +285,15 @@ nonisolated struct AgentHubState: Equatable, Sendable {
             session.showsCommand = true
         }
         return nil
+    }
+
+    private static func recordFailure(_ session: inout AgentHubSession, event: AgentHookEvent, now: Date) {
+        recordOutput(&session, event: event, failed: true)
+        let tool = event.toolName ?? "Tool"
+        guard !session.finishTool(tool, failed: true) else { return }
+        var step = AgentHubStep(kind: .failed(tool), detail: event.toolSummary, date: now)
+        step.isFinished = true
+        session.append(step)
     }
 
     private static func recordOutput(_ session: inout AgentHubSession, event: AgentHookEvent, failed: Bool) {

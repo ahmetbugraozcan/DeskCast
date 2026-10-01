@@ -107,6 +107,21 @@ struct AgentHubStateTests {
         #expect(state.sessions.isEmpty)
     }
 
+    @Test func marksToolStepsDoneOrFailedInPlace() {
+        var state = AgentHubState()
+        state.apply(event(.userPromptSubmit), now: start)
+        state.apply(event(.preToolUse, tool: "Bash"), now: start)
+        state.apply(event(.postToolUse, tool: "Bash"), now: start)
+        state.apply(event(.preToolUse, tool: "Bash"), now: start)
+        state.apply(event(.postToolUseFailure, tool: "Bash"), now: start)
+
+        let steps = state.session("s1")?.turnSteps ?? []
+        let expected: [AgentHubStep.Kind] = [.tool("Bash"), .failed("Bash")]
+        #expect(steps.map(\.kind) == expected)
+        #expect(steps.allSatisfy { $0.isFinished })
+        #expect(state.session("s1")?.phase == .working)
+    }
+
     @Test func keepsOnlyTheLastSteps() {
         var state = AgentHubState()
         for index in 0..<(AgentHubSession.maxSteps + 5) {
