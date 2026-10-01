@@ -65,7 +65,8 @@ nonisolated struct AgentHubSession: Identifiable, Equatable, Sendable {
     var title: String {
         let folder = URL(fileURLWithPath: cwd).lastPathComponent
         if let agent {
-            return folder.isEmpty || folder == "/" ? agent : "\(agent) · \(folder)"
+            let name = agent == "codex" ? "Codex" : agent
+            return folder.isEmpty || folder == "/" ? name : "\(name) · \(folder)"
         }
         return folder.isEmpty || folder == "/" ? "Claude Code" : folder
     }
@@ -197,6 +198,11 @@ nonisolated struct AgentHubState: Equatable, Sendable {
             return .rateLimited(sessionID: session.id)
         case .stop:
             return finish(&session, event: event, now: now)
+        case .interrupt:
+            session.phase = .idle
+            session.question = nil
+            session.turnStartedAt = nil
+            return nil
         case .stopFailure:
             session.lastMessage = event.message
             session.turnStartedAt = nil

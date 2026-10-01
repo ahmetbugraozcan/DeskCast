@@ -318,3 +318,52 @@ struct ClaudeCodeChatProtocolTests {
         #expect(!ClaudeCodeChatProtocol.isAskTranscript("/Users/me/.claude/projects/-Users-me-Projects-app/s.jsonl"))
     }
 }
+
+struct CodexHookTests {
+    @Test func installsTaggedHooksNextToOtherToolsInCodexHooksFile() throws {
+        let other: [String: Any] = ["hooks": ["Stop": [["matcher": ".*", "hooks": [["type": "command", "command": "other-tool"]]]]]]
+        let installed = ClaudeHookConfiguration.installing(
+            into: other, scriptPath: "/x/deskcast-hook", approvalTimeout: 110, target: .codex
+        )
+
+        #expect(ClaudeHookConfiguration.isInstalled(in: installed, target: .codex))
+        #expect(ClaudeHookConfiguration.installedApprovalTimeout(in: installed) == 120)
+        let hooks = try #require(installed["hooks"] as? [String: Any])
+        #expect(hooks["Notification"] == nil)
+        #expect(hooks["Interrupt"] != nil)
+        let stop = try #require(hooks["Stop"] as? [[String: Any]])
+        #expect(stop.count == 2)
+        let ours = try #require(stop.last)
+        #expect(ours["matcher"] as? String == ".*")
+        let command = (ours["hooks"] as? [[String: Any]])?.first?["command"] as? String
+        #expect(command == "\"/x/deskcast-hook\" --agent codex")
+
+        let removed = ClaudeHookConfiguration.removing(from: installed)
+        #expect((removed["hooks"] as? [String: Any])?.keys.sorted() == ["Stop"])
+    }
+
+    @Test func codexEventsBecomeACodexSession() throws {
+        let patch = "*** Begin Patch\n*** Update File: Sources/App.swift\n@@\n-a\n+b\n*** Add File: README.md\n+hi\n*** End Patch"
+        let event = try #require(AgentHookEvent(payload: [
+            "hook_event_name": "PreToolUse",
+            "session_id": "c1",
+            "cwd": "/Users/me/Projects/deskcast",
+            "tool_name": "apply_patch",
+            "tool_input": ["command": patch],
+            "deskcast_agent": "codex"
+        ]))
+        #expect(event.agent == "codex")
+        #expect(event.toolSummary == "App.swift, README.md")
+
+        var state = AgentHubState()
+        _ = state.apply(event)
+        #expect(state.session("c1")?.title == "Codex · deskcast")
+        #expect(state.session("c1")?.phase == .working)
+
+        let interrupt = try #require(AgentHookEvent(payload: [
+            "hook_event_name": "Interrupt", "session_id": "c1", "deskcast_agent": "codex"
+        ]))
+        _ = state.apply(interrupt)
+        #expect(state.session("c1")?.phase == .idle)
+    }
+}

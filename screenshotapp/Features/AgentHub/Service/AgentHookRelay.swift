@@ -19,6 +19,14 @@ nonisolated enum AgentHookPaths {
     static var claudeSettings: URL {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/settings.json")
     }
+
+    static var codexHooks: URL {
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/hooks.json")
+    }
+
+    static func hooksFile(for target: AgentHookTarget) -> URL {
+        target == .codex ? codexHooks : claudeSettings
+    }
 }
 
 /// The command Claude Code runs for each hook. It forwards the hook's JSON

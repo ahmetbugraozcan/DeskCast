@@ -47,8 +47,9 @@ nonisolated struct AgentQuestion: Equatable, Sendable {
     var options: [String]
 }
 
-/// One Claude Code hook call, decoded from the JSON the relay forwards.
-/// See https://code.claude.com/docs/en/hooks for the payloads.
+/// One Claude Code (or Codex) hook call, decoded from the JSON the relay
+/// forwards. See https://code.claude.com/docs/en/hooks for the payloads;
+/// Codex's match them (https://learn.chatgpt.com/docs/hooks).
 nonisolated struct AgentHookEvent: Equatable, Sendable {
     enum Kind: String, CaseIterable, Sendable {
         case sessionStart = "SessionStart"
@@ -63,6 +64,8 @@ nonisolated struct AgentHookEvent: Equatable, Sendable {
         case stopFailure = "StopFailure"
         case subagentStart = "SubagentStart"
         case subagentStop = "SubagentStop"
+        /// Codex: the user stopped the turn.
+        case interrupt = "Interrupt"
     }
 
     let kind: Kind
@@ -141,6 +144,13 @@ nonisolated struct AgentHookEvent: Equatable, Sendable {
     }
 
     static func summary(of input: [String: Any]) -> String? {
+        // Codex's apply_patch: the files the patch touches.
+        for value in input.values {
+            if let text = value as? String, let files = patchedFiles(text), !files.isEmpty {
+                return files.joined(separator: ", ")
+            }
+        }
+
         for key in ["command", "file_path", "notebook_path", "path", "pattern", "query", "url", "description", "prompt"] {
             guard let value = input[key] as? String, !value.isEmpty else { continue }
 
@@ -153,6 +163,17 @@ nonisolated struct AgentHookEvent: Equatable, Sendable {
         }
 
         return nil
+    }
+
+    /// File names in a Codex patch ("*** Update File: path"), or `nil` when
+    /// `text` isn't one.
+    static func patchedFiles(_ text: String) -> [String]? {
+        guard text.contains("*** Begin Patch") else { return nil }
+        let prefixes = ["*** Update File: ", "*** Add File: ", "*** Delete File: "]
+        return text.split(whereSeparator: \.isNewline).compactMap { line in
+            guard let prefix = prefixes.first(where: { line.hasPrefix($0) }) else { return nil }
+            return URL(fileURLWithPath: String(line.dropFirst(prefix.count))).lastPathComponent
+        }
     }
 
     private static func question(from input: [String: Any]) -> AgentQuestion? {

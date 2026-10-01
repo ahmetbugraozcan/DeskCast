@@ -18,29 +18,32 @@ protocol ClaudeHookInstalling: AnyObject {
     func apply(_ change: ClaudeHookChange) throws
 }
 
-/// Reads and writes `~/.claude/settings.json`. Every write is preceded by a
-/// dated backup next to it; other tools' hooks are left as they are.
+/// Reads and writes `~/.claude/settings.json` (or Codex's `~/.codex/hooks.json`).
+/// Every write is preceded by a dated backup next to it; other tools' hooks
+/// are left as they are.
 final class ClaudeHookInstallService: ClaudeHookInstalling {
     enum InstallError: LocalizedError {
-        case unreadableSettings
+        case unreadableSettings(String)
         case changedSincePreview
 
         var errorDescription: String? {
             switch self {
-            case .unreadableSettings: AppLocalization.string("agentHub.hooks.error.unreadable")
+            case .unreadableSettings(let file): AppLocalization.formatted("agentHub.hooks.error.unreadable", file)
             case .changedSincePreview: AppLocalization.string("agentHub.hooks.error.changed")
             }
         }
     }
 
     private let settingsURL: URL
+    private let target: AgentHookTarget
 
-    init(settingsURL: URL = AgentHookPaths.claudeSettings) {
-        self.settingsURL = settingsURL
+    init(target: AgentHookTarget = .claudeCode, settingsURL: URL? = nil) {
+        self.target = target
+        self.settingsURL = settingsURL ?? AgentHookPaths.hooksFile(for: target)
     }
 
     func isInstalled() -> Bool {
-        (try? readSettings()).map { ClaudeHookConfiguration.isInstalled(in: $0.object) } ?? false
+        (try? readSettings()).map { ClaudeHookConfiguration.isInstalled(in: $0.object, target: target) } ?? false
     }
 
     func installedApprovalTimeout() -> Int? {
@@ -52,7 +55,8 @@ final class ClaudeHookInstallService: ClaudeHookInstalling {
         let updated = ClaudeHookConfiguration.installing(
             into: current.object,
             scriptPath: AgentHookPaths.relayScript.path,
-            approvalTimeout: approvalTimeout
+            approvalTimeout: approvalTimeout,
+            target: target
         )
         return try change(from: current.text, to: updated)
     }
@@ -76,7 +80,7 @@ final class ClaudeHookInstallService: ClaudeHookInstalling {
             formatter.locale = Locale(identifier: "en_US_POSIX")
             formatter.dateFormat = "yyyyMMdd-HHmmss"
             let backup = settingsURL.deletingLastPathComponent()
-                .appendingPathComponent("settings.json.bak-\(formatter.string(from: Date()))")
+                .appendingPathComponent("\(settingsURL.lastPathComponent).bak-\(formatter.string(from: Date()))")
             try fileManager.copyItem(at: settingsURL, to: backup)
         }
 
@@ -89,7 +93,9 @@ final class ClaudeHookInstallService: ClaudeHookInstalling {
         }
         guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let text = String(data: data, encoding: .utf8) else {
-            throw InstallError.unreadableSettings
+            throw InstallError.unreadableSettings(settingsURL.path.replacingOccurrences(
+                of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~"
+            ))
         }
         return (text, object)
     }

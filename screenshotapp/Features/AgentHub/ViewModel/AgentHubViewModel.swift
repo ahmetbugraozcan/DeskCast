@@ -11,18 +11,23 @@ protocol AgentHubAttentionPresenting: AnyObject {
     func announce(_ banner: DynamicIslandNotification, peek: String)
 }
 
-/// Follows Claude Code sessions through their hooks, holds permission
-/// requests until the user answers them in the island, and installs the
-/// hooks into Claude Code's settings on request.
+/// Follows Claude Code and Codex sessions through their hooks, holds
+/// permission requests until the user answers them in the island, and
+/// installs the hooks into Claude Code's settings or Codex's hooks file on
+/// request.
 @MainActor
 final class AgentHubViewModel: ObservableObject {
     @Published private(set) var sessions: [AgentHubSession] = []
     /// Waiting permission requests, oldest first; the island shows the first.
     @Published private(set) var approvals: [AgentApprovalRequest] = []
     @Published private(set) var hooksInstalled = false
+    @Published private(set) var codexHooksInstalled = false
+    /// Codex is set up on this Mac (`~/.codex` exists).
+    @Published private(set) var hasCodex = false
     /// A settings change waiting for the user's OK (shown as a diff).
     @Published private(set) var pendingHookChange: ClaudeHookChange?
     @Published private(set) var pendingChangeIsInstall = true
+    @Published private(set) var pendingChangeTarget = AgentHookTarget.claudeCode
     @Published private(set) var hookError: String?
     /// The session the panel shows in detail.
     @Published var focusedSessionID: String?
@@ -34,6 +39,7 @@ final class AgentHubViewModel: ObservableObject {
 
     private let server: AgentHookServing
     private let installer: ClaudeHookInstalling
+    private let codexInstaller: ClaudeHookInstalling
     private let terminal: TerminalJumping
     private let defaults: UserDefaults
     private var state = AgentHubState()
@@ -46,11 +52,13 @@ final class AgentHubViewModel: ObservableObject {
     init(
         server: AgentHookServing? = nil,
         installer: ClaudeHookInstalling? = nil,
+        codexInstaller: ClaudeHookInstalling? = nil,
         terminal: TerminalJumping? = nil,
         defaults: UserDefaults = .standard
     ) {
         self.server = server ?? AgentHookServer()
         self.installer = installer ?? ClaudeHookInstallService()
+        self.codexInstaller = codexInstaller ?? ClaudeHookInstallService(target: .codex)
         self.terminal = terminal ?? TerminalJumpService()
         self.defaults = defaults
 
@@ -78,7 +86,8 @@ final class AgentHubViewModel: ObservableObject {
     }
 
     var pendingChangeTitleKey: String {
-        pendingChangeIsInstall ? "agentHub.hooks.reviewInstall" : "agentHub.hooks.reviewUninstall"
+        let key = pendingChangeIsInstall ? "agentHub.hooks.reviewInstall" : "agentHub.hooks.reviewUninstall"
+        return pendingChangeTarget == .codex ? key + ".codex" : key
     }
 
     var currentApproval: AgentApprovalRequest? {
@@ -260,31 +269,43 @@ final class AgentHubViewModel: ObservableObject {
 
     func refreshHookStatus() {
         hooksInstalled = installer.isInstalled()
+        codexHooksInstalled = codexInstaller.isInstalled()
+        let codexFolder = AgentHookPaths.codexHooks.deletingLastPathComponent().path
+        hasCodex = FileManager.default.fileExists(atPath: codexFolder)
+    }
+
+    private func installer(for target: AgentHookTarget) -> ClaudeHookInstalling {
+        target == .codex ? codexInstaller : installer
+    }
+
+    func isInstalled(_ target: AgentHookTarget) -> Bool {
+        target == .codex ? codexHooksInstalled : hooksInstalled
     }
 
     /// Whether the installed hooks wait as long as the setting asks.
-    var hooksNeedUpdate: Bool {
-        guard hooksInstalled, let timeout = installer.installedApprovalTimeout() else { return false }
+    func hooksNeedUpdate(_ target: AgentHookTarget = .claudeCode) -> Bool {
+        guard isInstalled(target), let timeout = installer(for: target).installedApprovalTimeout() else { return false }
         return timeout != AgentHubSettings.approvalTimeout(in: defaults) + 10
     }
 
-    func prepareInstall() {
-        prepare(isInstall: true) {
+    func prepareInstall(_ target: AgentHookTarget = .claudeCode) {
+        prepare(target, isInstall: true) {
             try AgentHookRelay.install()
-            return try installer.previewInstall(approvalTimeout: AgentHubSettings.approvalTimeout(in: defaults))
+            return try installer(for: target).previewInstall(approvalTimeout: AgentHubSettings.approvalTimeout(in: defaults))
         }
     }
 
-    func prepareUninstall() {
-        prepare(isInstall: false) {
-            try installer.previewUninstall()
+    func prepareUninstall(_ target: AgentHookTarget = .claudeCode) {
+        prepare(target, isInstall: false) {
+            try installer(for: target).previewUninstall()
         }
     }
 
-    private func prepare(isInstall: Bool, _ build: () throws -> ClaudeHookChange) {
+    private func prepare(_ target: AgentHookTarget, isInstall: Bool, _ build: () throws -> ClaudeHookChange) {
         hookError = nil
         do {
             pendingChangeIsInstall = isInstall
+            pendingChangeTarget = target
             pendingHookChange = try build()
         } catch {
             hookError = error.localizedDescription
@@ -294,7 +315,7 @@ final class AgentHubViewModel: ObservableObject {
     func confirmPendingChange() {
         guard let change = pendingHookChange else { return }
         do {
-            try installer.apply(change)
+            try installer(for: pendingChangeTarget).apply(change)
             pendingHookChange = nil
         } catch {
             hookError = error.localizedDescription

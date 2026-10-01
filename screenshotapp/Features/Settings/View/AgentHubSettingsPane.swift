@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Settings → AI Agents: the Claude Code hooks (installed only after the
-/// user reviewed the diff), how permission requests are handled, and Bip.
+/// Settings → AI Agents: the Claude Code and Codex hooks (installed only
+/// after the user reviewed the diff), how permission requests are handled,
+/// and Bip.
 struct AgentHubSettingsPane: View {
     @ObservedObject var hub: AgentHubViewModel
     @ObservedObject var chat: AgentChatViewModel
@@ -33,29 +34,22 @@ struct AgentHubSettingsPane: View {
     }
 
     private var claudeCodeSection: some View {
-        SettingsControlSection(title: "Claude Code") {
+        SettingsControlSection(title: AppLocalization.string("agentHub.settings.agentsSection")) {
             SettingsToggleRow(title: AppLocalization.string("agentHub.settings.enabled"), isOn: $enabled)
             SettingsSectionDivider()
 
-            SettingsControlRow(title: AppLocalization.string("agentHub.settings.hooks")) {
-                HStack(spacing: 8) {
-                    Label(
-                        AppLocalization.string("agentHub.settings.hooks.\(hub.hooksInstalled ? "installed" : "missing")"),
-                        systemImage: hub.hooksInstalled ? "checkmark.circle.fill" : "circle.dashed"
-                    )
-                    .foregroundStyle(hub.hooksInstalled ? .green : .secondary)
-                    .font(.system(size: 12))
-
-                    if !hub.hooksInstalled || hub.hooksNeedUpdate {
-                        Button(AppLocalization.string("agentHub.settings.hooks.\(hub.hooksInstalled ? "update" : "install")")) {
-                            hub.prepareInstall()
-                        }
-                    }
-                    if hub.hooksInstalled {
-                        Button(AppLocalization.string("agentHub.settings.hooks.remove")) {
-                            hub.prepareUninstall()
-                        }
-                    }
+            hooksRow(.claudeCode, title: AppLocalization.string("agentHub.settings.hooks"))
+            if hub.hasCodex || hub.codexHooksInstalled {
+                SettingsSectionDivider()
+                hooksRow(.codex, title: AppLocalization.string("agentHub.settings.codexHooks"))
+                if hub.codexHooksInstalled {
+                    Text(AppLocalization.string("agentHub.settings.codexTrust"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
 
@@ -92,6 +86,31 @@ struct AgentHubSettingsPane: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
                 .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func hooksRow(_ target: AgentHookTarget, title: String) -> some View {
+        let installed = hub.isInstalled(target)
+        return SettingsControlRow(title: title) {
+            HStack(spacing: 8) {
+                Label(
+                    AppLocalization.string("agentHub.settings.hooks.\(installed ? "installed" : "missing")"),
+                    systemImage: installed ? "checkmark.circle.fill" : "circle.dashed"
+                )
+                .foregroundStyle(installed ? .green : .secondary)
+                .font(.system(size: 12))
+
+                if !installed || hub.hooksNeedUpdate(target) {
+                    Button(AppLocalization.string("agentHub.settings.hooks.\(installed ? "update" : "install")")) {
+                        hub.prepareInstall(target)
+                    }
+                }
+                if installed {
+                    Button(AppLocalization.string("agentHub.settings.hooks.remove")) {
+                        hub.prepareUninstall(target)
+                    }
+                }
+            }
         }
     }
 

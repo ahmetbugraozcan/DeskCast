@@ -287,6 +287,11 @@ private struct AgentEmptyCard: View {
                                 hub.prepareInstall()
                             }
                         }
+                        if hub.hasCodex, !hub.codexHooksInstalled {
+                            AgentActionButton(title: AppLocalization.string("agentHub.setup.installCodex"), systemImage: "link") {
+                                hub.prepareInstall(.codex)
+                            }
+                        }
                     }
                     .padding(.top, 2)
                 }
