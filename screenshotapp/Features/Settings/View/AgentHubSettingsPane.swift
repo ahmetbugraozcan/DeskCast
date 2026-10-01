@@ -5,6 +5,7 @@ import SwiftUI
 struct AgentHubSettingsPane: View {
     @ObservedObject var hub: AgentHubViewModel
     @ObservedObject var chat: AgentChatViewModel
+    @ObservedObject var integrations: AgentIntegrationsViewModel
 
     @AppStorage(AgentHubSettings.Keys.enabled) private var enabled = AgentHubSettings.defaultEnabled
     @AppStorage(AgentHubSettings.Keys.approvalTimeout) private var approvalTimeout = AgentHubSettings.defaultApprovalTimeout
@@ -24,6 +25,7 @@ struct AgentHubSettingsPane: View {
             VStack(alignment: .leading, spacing: 24) {
                 claudeCodeSection
                 AgentAskSettingsSection(chat: chat)
+                AgentIntegrationsSettingsSection(model: integrations)
                 bipSection
             }
         }

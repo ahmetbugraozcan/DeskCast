@@ -6,6 +6,7 @@ struct SettingsView: View {
     @ObservedObject var updateService: AppUpdateService
     let agentHub: AgentHubViewModel
     let agentChat: AgentChatViewModel
+    let agentIntegrations: AgentIntegrationsViewModel
 
     @AppStorage(ScreenshotShelfSettings.Keys.previewPosition)
     private var previewPositionRaw = ScreenshotShelfSettings.defaultPreviewPosition.rawValue
@@ -224,7 +225,7 @@ struct SettingsView: View {
         case .dynamicIsland:
             DynamicIslandSettingsPane()
         case .aiAgents:
-            AgentHubSettingsPane(hub: agentHub, chat: agentChat)
+            AgentHubSettingsPane(hub: agentHub, chat: agentChat, integrations: agentIntegrations)
         case .shortcuts:
             shortcutsPane
         case .about:

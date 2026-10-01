@@ -8,6 +8,8 @@ import SwiftUI
 struct BipMascotView: View {
     let mood: BipMood
     var size: CGFloat = 56
+    /// Replaces the mood's color (an integration's own Bip).
+    var tint: BipRGB?
     /// Clicks are handled here unless the caller wants them.
     var isInteractive = true
     var onPoke: (() -> Void)?
@@ -26,6 +28,7 @@ struct BipMascotView: View {
             Canvas { canvas, canvasSize in
                 var renderer = BipRenderer(
                     mood: displayedMood(at: context.date),
+                    rgb: tint ?? displayedMood(at: context.date).tint,
                     time: context.date.timeIntervalSinceReferenceDate,
                     sinceMoodChange: context.date.timeIntervalSince(moodChangedAt),
                     sincePoke: pokedAt.map { context.date.timeIntervalSince($0) },
@@ -84,6 +87,7 @@ struct BipMascotView: View {
 /// The drawing itself, in a square canvas.
 private struct BipRenderer {
     let mood: BipMood
+    let rgb: BipRGB
     let time: TimeInterval
     let sinceMoodChange: TimeInterval
     let sincePoke: TimeInterval?
@@ -93,14 +97,17 @@ private struct BipRenderer {
     private var side: CGFloat = 0
     private var tint = Color.white
 
-    init(mood: BipMood, time: TimeInterval, sinceMoodChange: TimeInterval, sincePoke: TimeInterval?, isHovered: Bool, gaze: CGPoint) {
+    init(
+        mood: BipMood, rgb: BipRGB, time: TimeInterval, sinceMoodChange: TimeInterval,
+        sincePoke: TimeInterval?, isHovered: Bool, gaze: CGPoint
+    ) {
         self.mood = mood
+        self.rgb = rgb
         self.time = time
         self.sinceMoodChange = sinceMoodChange
         self.sincePoke = sincePoke
         self.isHovered = isHovered
         self.gaze = gaze
-        let rgb = mood.tint
         tint = Color(red: rgb.red, green: rgb.green, blue: rgb.blue)
     }
 
@@ -258,7 +265,6 @@ private struct BipRenderer {
     // MARK: - Face
 
     private var eyeColor: Color {
-        let rgb = mood.tint
         return Color(red: 0.55 + rgb.red * 0.45, green: 0.55 + rgb.green * 0.45, blue: 0.55 + rgb.blue * 0.45)
     }
 

@@ -15,6 +15,7 @@ final class AppEnvironment: ObservableObject {
     let appUpdate: AppUpdateService
     let agentHub: AgentHubViewModel
     let agentChat: AgentChatViewModel
+    let agentIntegrations: AgentIntegrationsViewModel
 
     // Retained for the app's lifetime; the view models reference them weakly.
     private let dropShelfCoordinator: DropShelfPanelCoordinator
@@ -78,7 +79,7 @@ final class AppEnvironment: ObservableObject {
         self.screenRecorder = screenRecorder
         self.screenshotShelf = screenshotShelf
         self.dynamicIsland = dynamicIsland
-        (agentHub, agentChat) = (islandPanels.agentHub, islandPanels.agentChat)
+        (agentHub, agentChat, agentIntegrations) = (islandPanels.agentHub, islandPanels.agentChat, islandPanels.agentIntegrations)
         colorPicker = ColorPickerViewModel(sampler: ScreenColorSamplingService(), settings: settings, toastPresenter: toastPresenter)
         appUpdate = AppUpdateService()
         scrollingCapture = ScrollingCaptureViewModel(

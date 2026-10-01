@@ -720,6 +720,7 @@ final class IslandPanelModels {
     let agents = AgentActivityMonitor()
     let agentHub = AgentHubViewModel()
     let agentChat = AgentChatViewModel()
+    let agentIntegrations = AgentIntegrationsViewModel()
     let timer: IslandTimerViewModel
     let controls = ControlsViewModel()
     let camera = CameraMirrorViewModel()
@@ -758,6 +759,8 @@ final class IslandPanelModels {
         agentHub.presenter = island
         agentHub.start()
         bindAgentChat(to: island)
+        agentIntegrations.presenter = island
+        agentIntegrations.start()
     }
 
     private func bindAgentChat(to island: DynamicIslandViewModel) {

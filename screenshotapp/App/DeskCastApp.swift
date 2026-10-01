@@ -111,7 +111,12 @@ struct DeskCastApp: App {
         .environment(\.locale, selectedLanguage.locale)
 
         Settings {
-            SettingsView(updateService: environment.appUpdate, agentHub: environment.agentHub, agentChat: environment.agentChat)
+            SettingsView(
+                updateService: environment.appUpdate,
+                agentHub: environment.agentHub,
+                agentChat: environment.agentChat,
+                agentIntegrations: environment.agentIntegrations
+            )
         }
         .environment(\.locale, selectedLanguage.locale)
         .windowResizability(.contentSize)

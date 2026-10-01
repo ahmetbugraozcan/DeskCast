@@ -171,7 +171,10 @@ struct IslandExpandedView: View {
         case .scratchpad:
             ScratchpadPanelView()
         case .aiAgents:
-            AgentHubPanelView(hub: panels.agentHub, chat: panels.agentChat, usage: panels.aiUsage)
+            AgentHubPanelView(
+                hub: panels.agentHub, chat: panels.agentChat, integrations: panels.agentIntegrations,
+                openSettings: panels.actions.openSettings, usage: panels.aiUsage
+            )
         case .devices:
             DevicesPanelView(model: panels.devices)
         case .weather:

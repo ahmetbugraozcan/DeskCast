@@ -6,6 +6,8 @@ import SwiftUI
 struct AgentHubPanelView: View {
     @ObservedObject var hub: AgentHubViewModel
     let chat: AgentChatViewModel
+    let integrations: AgentIntegrationsViewModel
+    let openSettings: () -> Void
     let usage: AIUsageViewModel
 
     var body: some View {
@@ -18,7 +20,7 @@ struct AgentHubPanelView: View {
             case .ask:
                 AgentAskView(chat: chat)
             case .integrations:
-                EmptyView()
+                AgentIntegrationsView(model: integrations, openSettings: openSettings)
             }
         }
         .transition(.opacity)

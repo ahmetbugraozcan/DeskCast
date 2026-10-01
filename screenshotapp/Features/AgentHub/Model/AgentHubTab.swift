@@ -10,7 +10,7 @@ nonisolated enum AgentHubTab: String, CaseIterable, Identifiable, Sendable {
     var id: String { rawValue }
 
     /// Pages that are built so far, in picker order.
-    static let visibleCases: [AgentHubTab] = [.sessions, .ask, .usage]
+    static let visibleCases: [AgentHubTab] = [.sessions, .ask, .usage, .integrations]
 
     var titleKey: String {
         "agentHub.tab.\(rawValue)"
