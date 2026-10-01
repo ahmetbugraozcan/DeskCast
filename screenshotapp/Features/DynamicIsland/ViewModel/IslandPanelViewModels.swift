@@ -719,6 +719,7 @@ final class IslandPanelModels {
     let focus = FocusIndicatorMonitor()
     let agents = AgentActivityMonitor()
     let agentHub = AgentHubViewModel()
+    let agentChat = AgentChatViewModel()
     let timer: IslandTimerViewModel
     let controls = ControlsViewModel()
     let camera = CameraMirrorViewModel()
@@ -756,5 +757,23 @@ final class IslandPanelModels {
         agents.bind(to: island)
         agentHub.presenter = island
         agentHub.start()
+        bindAgentChat(to: island)
+    }
+
+    private func bindAgentChat(to island: DynamicIslandViewModel) {
+        agentChat.onReveal = { [weak island, weak agentHub] in
+            agentHub?.tab = .ask
+            if island?.mode != .expanded || island?.expandedContent != .panel(.aiAgents) {
+                island?.open(.aiAgents)
+            }
+        }
+        // Dragging Bip leaves the island; it must stay open meanwhile.
+        agentChat.holdIsland = { [weak island] hold in
+            if hold {
+                island?.beginAttention(on: .aiAgents)
+            } else {
+                island?.endAttention()
+            }
+        }
     }
 }

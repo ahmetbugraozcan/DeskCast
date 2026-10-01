@@ -4,6 +4,7 @@ import SwiftUI
 /// user reviewed the diff), how permission requests are handled, and Bip.
 struct AgentHubSettingsPane: View {
     @ObservedObject var hub: AgentHubViewModel
+    @ObservedObject var chat: AgentChatViewModel
 
     @AppStorage(AgentHubSettings.Keys.enabled) private var enabled = AgentHubSettings.defaultEnabled
     @AppStorage(AgentHubSettings.Keys.approvalTimeout) private var approvalTimeout = AgentHubSettings.defaultApprovalTimeout
@@ -22,6 +23,7 @@ struct AgentHubSettingsPane: View {
         SettingsPage(section: .aiAgents) {
             VStack(alignment: .leading, spacing: 24) {
                 claudeCodeSection
+                AgentAskSettingsSection(chat: chat)
                 bipSection
             }
         }

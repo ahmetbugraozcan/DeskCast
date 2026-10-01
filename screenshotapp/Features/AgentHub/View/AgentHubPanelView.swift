@@ -5,6 +5,7 @@ import SwiftUI
 /// integrations, one page at a time.
 struct AgentHubPanelView: View {
     @ObservedObject var hub: AgentHubViewModel
+    let chat: AgentChatViewModel
     let usage: AIUsageViewModel
 
     var body: some View {
@@ -14,7 +15,9 @@ struct AgentHubPanelView: View {
                 AgentSessionsView(hub: hub)
             case .usage:
                 AIAgentsPanelView(model: usage)
-            case .ask, .integrations:
+            case .ask:
+                AgentAskView(chat: chat)
+            case .integrations:
                 EmptyView()
             }
         }

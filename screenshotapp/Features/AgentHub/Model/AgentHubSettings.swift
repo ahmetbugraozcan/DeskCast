@@ -25,7 +25,7 @@ nonisolated enum AgentHubSettings {
     static let defaultSoundsEnabled = true
     static let defaultSoundVolume = 0.5
     static let defaultShowsMascot = true
-    static let defaultClaudeModel = "claude-sonnet-5-5"
+    static let defaultClaudeModel = "claude-opus-5-5"
 
     static func registerDefaults(in defaults: UserDefaults) {
         defaults.register(defaults: [

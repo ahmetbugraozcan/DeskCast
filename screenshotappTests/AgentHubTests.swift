@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 @testable import screenshotapp
@@ -183,5 +184,88 @@ struct ClaudeHookConfigurationTests {
         let diff = ClaudeHookInstallService.lineDiff(from: "{\"a\": 1}", to: "{\n  \"a\" : 1,\n  \"b\" : 2\n}\n")
         #expect(diff.contains("+   \"b\" : 2"))
         #expect(ClaudeHookInstallService.lineDiff(from: "{\"a\": 1}", to: "{\n  \"a\" : 1\n}").isEmpty)
+    }
+}
+
+struct ClaudeChatProtocolTests {
+    @Test func requestUsesTheRightSearchToolAndFallbacks() {
+        let current = ClaudeChatProtocol.body(model: "claude-opus-5-5", messages: [])
+        #expect((current["tools"] as? [[String: Any]])?.first?["type"] as? String == "web_search_20260209")
+        #expect(current["fallbacks"] as? String == "default")
+
+        let older = ClaudeChatProtocol.body(model: "claude-haiku-4-5", messages: [])
+        #expect((older["tools"] as? [[String: Any]])?.first?["type"] as? String == "web_search_20250305")
+        #expect(older["fallbacks"] == nil)
+    }
+
+    @Test func attachmentsBecomeContentBlocks() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+
+        let text = folder.appendingPathComponent("notes.md")
+        try Data("# Hello".utf8).write(to: text)
+        let blocks = try ClaudeChatProtocol.userContent(question: "Summarize", attachment: .file(text))
+        #expect(blocks.count == 3)
+        #expect((blocks[0]["text"] as? String)?.contains("# Hello") == true)
+        #expect(blocks.last?["text"] as? String == "Summarize")
+
+        let image = folder.appendingPathComponent("shot.png")
+        try Data([0x89, 0x50]).write(to: image)
+        let imageBlock = try ClaudeChatProtocol.fileBlock(image)
+        #expect(imageBlock["type"] as? String == "image")
+        #expect((imageBlock["source"] as? [String: Any])?["media_type"] as? String == "image/png")
+
+        let binary = folder.appendingPathComponent("blob.bin")
+        try Data([0xFF, 0xFE, 0x00, 0xD8]).write(to: binary)
+        #expect(throws: ClaudeChatError.unsupportedFile("blob.bin")) {
+            try ClaudeChatProtocol.fileBlock(binary)
+        }
+
+        let window = AgentWindowContext(appName: "Safari", title: "Docs", url: "https://example.com/a", image: Data([1]), frame: .zero)
+        #expect(window.label == "Safari · example.com")
+        let windowBlocks = try ClaudeChatProtocol.userContent(question: "What is this?", attachment: .window(window))
+        #expect(windowBlocks.first?["type"] as? String == "image")
+        #expect((windowBlocks[1]["text"] as? String)?.contains("https://example.com/a") == true)
+    }
+
+    @Test func readsTextSourcesAndRefusals() throws {
+        let response: [String: Any] = [
+            "stop_reason": "end_turn",
+            "content": [
+                ["type": "thinking", "thinking": "", "signature": "x"],
+                ["type": "server_tool_use", "id": "1", "name": "web_search", "input": ["query": "q"]],
+                ["type": "web_search_tool_result", "tool_use_id": "1", "content": [
+                    ["type": "web_search_result", "title": "A", "url": "https://a.com"],
+                    ["type": "web_search_result", "title": "A again", "url": "https://a.com"]
+                ]],
+                ["type": "text", "text": "Hello "],
+                ["type": "text", "text": "world"]
+            ]
+        ]
+        let reply = try ClaudeChatProtocol.parseReply(JSONSerialization.data(withJSONObject: response))
+        #expect(reply.text == "Hello world")
+        #expect(reply.sources == [AgentChatSource(title: "A", url: "https://a.com")])
+        let content = try #require(try JSONSerialization.jsonObject(with: reply.content) as? [[String: Any]])
+        #expect(content.count == 5)
+
+        let refusal = try JSONSerialization.data(withJSONObject: ["stop_reason": "refusal", "content": []])
+        #expect(throws: ClaudeChatError.refused) { try ClaudeChatProtocol.parseReply(refusal) }
+    }
+
+    @Test func readsErrorsAndModels() throws {
+        let body: [String: Any] = ["type": "error", "error": ["type": "invalid_request_error", "message": "Bad input"]]
+        let error = try JSONSerialization.data(withJSONObject: body)
+        #expect(ClaudeChatProtocol.errorMessage(error, status: 400, model: "m") == "Bad input")
+
+        let models = try JSONSerialization.data(withJSONObject: ["data": [["id": "claude-opus-5-5", "display_name": "Claude Opus 5.5"]]])
+        #expect(ClaudeChatProtocol.parseModels(models).first?.name == "Claude Opus 5.5")
+    }
+
+    @Test func mailAddressesAreChecked() {
+        #expect(MailSendService.isValidAddress("me@example.com"))
+        #expect(!MailSendService.isValidAddress("me@example"))
+        #expect(!MailSendService.isValidAddress("me @example.com"))
+        #expect(!MailSendService.isValidAddress("@example.com"))
     }
 }

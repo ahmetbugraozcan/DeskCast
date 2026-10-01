@@ -459,10 +459,12 @@ final class DynamicIslandPanelCoordinator: DynamicIslandPresenting {
         // The scratchpad and the clipboard search take typing; everything else
         // leaves keyboard focus with the app the user is working in.
         let isExpanded = store.mode == .expanded
+        let asksClaude = store.expandedContent == .panel(.aiAgents) && panels.agentHub.tab == .ask
         let wantsKeyboard = isExpanded
-            && (store.expandedContent == .panel(.scratchpad) || store.expandedContent == .panel(.clipboard))
+            && (store.expandedContent == .panel(.scratchpad) || store.expandedContent == .panel(.clipboard) || asksClaude)
         let holdsTyping = panel.isKeyWindow
-            && (store.expandedContent == .panel(.scratchpad) || panels.clipboard.isSearchFocused)
+            && (store.expandedContent == .panel(.scratchpad) || panels.clipboard.isSearchFocused
+                || (asksClaude && panels.agentChat.isInputFocused))
         panel.allowsKey = wantsKeyboard
 
         if !wantsKeyboard, panel.isKeyWindow {
