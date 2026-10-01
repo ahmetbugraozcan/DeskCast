@@ -84,6 +84,12 @@ nonisolated struct AgentHookEvent: Equatable, Sendable {
     var question: AgentQuestion?
     /// `permission_suggestions` re-encoded as JSON, sent back for "always allow".
     var permissionSuggestions: Data?
+    /// The edit a file tool is about to make (PreToolUse, PermissionRequest).
+    var codeChange: AgentCodeChange?
+    /// The shell command (Bash), in full.
+    var command: String?
+    /// The end of a shell command's output (PostToolUse, PostToolUseFailure).
+    var commandOutput: [String]?
 
     /// The question tool's name; its questions can't be answered by a hook,
     /// so DeskCast shows them and sends the user to the terminal.
@@ -133,6 +139,47 @@ nonisolated struct AgentHookEvent: Equatable, Sendable {
         if let suggestions = payload["permission_suggestions"] as? [Any], !suggestions.isEmpty {
             permissionSuggestions = try? JSONSerialization.data(withJSONObject: suggestions)
         }
+
+        guard let tool = toolName else { return }
+        if tool == Self.shellTool {
+            command = Self.command(from: input["command"])
+            if kind == .postToolUse || kind == .postToolUseFailure {
+                commandOutput = AgentCommandRun.outputLines(from: payload["tool_response"] ?? payload["error"])
+            }
+        }
+        if kind == .preToolUse || kind == .permissionRequest {
+            // The file as it is before the edit, to number the changed lines.
+            let isEdit = tool == "Edit" || tool == "MultiEdit"
+            let fileText = isEdit ? (input["file_path"] as? String).flatMap(Self.readSmallFile) : nil
+            codeChange = AgentCodeChange.make(tool: tool, input: input, fileText: fileText)
+        }
+    }
+
+    /// Claude Code's and Codex's shell tool.
+    static let shellTool = "Bash"
+
+    /// Codex may pass the command as an argument list.
+    private static func command(from value: Any?) -> String? {
+        if let text = value as? String {
+            return text
+        }
+        if let parts = value as? [String] {
+            // ["bash", "-lc", "npm test"] → "npm test"
+            if parts.count == 3, parts[1] == "-lc" || parts[1] == "-c" {
+                return parts[2]
+            }
+            return parts.joined(separator: " ")
+        }
+        return nil
+    }
+
+    private static func readSmallFile(_ path: String) -> String? {
+        let url = URL(fileURLWithPath: path)
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 512_000,
+              let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
     }
 
     /// A name other agents pass with `--agent`: lowercase letters, digits and

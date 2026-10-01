@@ -33,7 +33,13 @@ struct AgentApprovalCard: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
-                    if let detail = request.detail {
+                    if let change = request.codeChange {
+                        AgentCodeDiffView(change: change, maxLines: 7)
+                            .frame(maxHeight: 140)
+                    } else if let command = request.command {
+                        AgentTerminalBox(run: AgentCommandRun(command: command))
+                            .help(command)
+                    } else if let detail = request.detail {
                         Text(detail)
                             .font(.system(size: 11.5, design: .monospaced))
                             .foregroundStyle(.white.opacity(0.88))

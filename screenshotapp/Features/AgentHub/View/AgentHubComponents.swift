@@ -43,8 +43,29 @@ extension AgentHubStep {
     private static let toolKeys: [String: String] = [
         "Bash": "bash", "Read": "read", "Write": "write", "Edit": "edit", "MultiEdit": "edit",
         "Glob": "search", "Grep": "search", "LS": "list", "WebSearch": "webSearch", "WebFetch": "webFetch",
-        "Task": "agent", "Agent": "agent", "TodoWrite": "todo", "NotebookEdit": "notebook"
+        "Task": "agent", "Agent": "agent", "TodoWrite": "todo", "NotebookEdit": "notebook", "apply_patch": "edit"
     ]
+
+    /// "Read", "Edit", "Bash"… for the checklist under Bip.
+    var shortTitle: String {
+        switch kind {
+        case .prompt: AppLocalization.string("agentHub.step.prompt")
+        case .tool(let tool), .failed(let tool):
+            Self.toolKeys[tool].map { AppLocalization.string("agentHub.toolShort.\($0)") }
+                ?? (tool.components(separatedBy: "__").last ?? tool)
+        case .subagentStarted, .subagentFinished: AppLocalization.string("agentHub.toolShort.agent")
+        }
+    }
+
+    var isEdit: Bool {
+        guard case .tool(let tool) = kind else { return false }
+        return ["Edit", "MultiEdit", "Write", "apply_patch"].contains(tool)
+    }
+
+    var isFailure: Bool {
+        if case .failed = kind { return true }
+        return false
+    }
 
     static func label(for tool: String) -> String {
         if let key = toolKeys[tool] {
@@ -58,7 +79,7 @@ extension AgentHubStep {
         switch tool {
         case "Bash": "terminal"
         case "Read": "doc.text"
-        case "Write", "Edit", "MultiEdit", "NotebookEdit": "pencil"
+        case "Write", "Edit", "MultiEdit", "NotebookEdit", "apply_patch": "pencil"
         case "Glob", "Grep", "LS": "magnifyingglass"
         case "WebSearch", "WebFetch": "globe"
         case "Task", "Agent": "person.2"

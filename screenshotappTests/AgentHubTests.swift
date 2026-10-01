@@ -367,3 +367,100 @@ struct CodexHookTests {
         #expect(state.session("c1")?.phase == .idle)
     }
 }
+
+struct AgentCodeChangeTests {
+    private let file = """
+    import { Item } from './types'
+
+    const TVA = 0.196
+
+    export function total(items: Item[]) {
+      const sum = items.reduce((s, i) => s + i.price, 0)
+      return sum * (1 + TVA)
+    }
+    """
+
+    @Test func numbersAnEditFromTheFileWithContext() throws {
+        let change = try #require(AgentCodeChange.make(
+            tool: "Edit",
+            input: ["file_path": "/p/src/invoice.ts", "old_string": "const TVA = 0.196", "new_string": "const TVA = 0.20"],
+            fileText: file
+        ))
+
+        #expect(change.fileName == "invoice.ts")
+        #expect(change.lines.map(\.kind) == [.context, .context, .removed, .added, .context, .context])
+        #expect(change.lines[2] == AgentCodeLine(kind: .removed, number: 3, text: "const TVA = 0.196"))
+        #expect(change.lines[3] == AgentCodeLine(kind: .added, number: 3, text: "const TVA = 0.20"))
+        #expect(change.lines.first?.number == 1)
+        #expect(change.addedCount == 1 && change.removedCount == 1)
+    }
+
+    @Test func keepsSharedLinesAsContextAndWorksWithoutTheFile() throws {
+        let change = try #require(AgentCodeChange.edit(path: "a.swift", old: "a\nb\nc", new: "a\nB\nc", fileText: nil))
+        #expect(change.lines.map(\.kind) == [.context, .removed, .added, .context])
+        #expect(change.lines.allSatisfy { $0.number == nil })
+        #expect(AgentCodeChange.edit(path: "a.swift", old: "same", new: "same", fileText: nil) == nil)
+    }
+
+    @Test func showsNewFilesAndCodexPatches() throws {
+        let write = try #require(AgentCodeChange.make(
+            tool: "Write", input: ["file_path": "/p/new.md", "content": "# Hi\n\nText\n"], fileText: nil
+        ))
+        #expect(write.lines.map(\.number) == [1, 2, 3])
+        #expect(write.lines.allSatisfy { $0.kind == .added })
+
+        let patch = "*** Begin Patch\n*** Update File: src/App.swift\n@@ func run()\n let a = 1\n-print(a)\n+print(a + 1)\n"
+            + "*** Update File: other.swift\n+x\n*** End Patch"
+        let change = try #require(AgentCodeChange.make(tool: "apply_patch", input: ["command": patch], fileText: nil))
+        #expect(change.fileName == "App.swift")
+        #expect(change.lines.map(\.kind) == [.context, .removed, .added])
+        #expect(change.lines[2].text == "print(a + 1)")
+    }
+
+    @Test func longChangesKeepTheChangeInView() throws {
+        let old = (1...30).map { "line \($0)" }.joined(separator: "\n")
+        let new = (1...30).map { $0 == 20 ? "changed" : "line \($0)" }.joined(separator: "\n")
+        let change = try #require(AgentCodeChange.edit(path: "a.txt", old: old, new: new, fileText: nil))
+        #expect(change.lines.map(\.text) == ["line 18", "line 19", "line 20", "changed", "line 21", "line 22"])
+
+        let big = (1...40).map { "new \($0)" }.joined(separator: "\n")
+        let rewrite = try #require(AgentCodeChange.edit(path: "a.txt", old: "x", new: big, fileText: nil))
+        #expect(rewrite.lines.count == AgentCodeChange.maxLines)
+        #expect(rewrite.lines.first?.kind == .removed)
+    }
+
+    @Test func commandOutputKeepsTheLastLinesWithoutColors() {
+        let response: [String: Any] = ["stdout": "\u{1B}[32mPASS\u{1B}[0m tests/a.test.ts\n\nTests: 48 passed, 48 total\n", "stderr": ""]
+        #expect(AgentCommandRun.outputLines(from: response) == ["PASS tests/a.test.ts", "Tests: 48 passed, 48 total"])
+        #expect(AgentCommandRun.outputLines(from: "a\nb\nc\nd\ne") == ["b", "c", "d", "e"])
+        #expect(AgentCommandRun.outputLines(from: nil).isEmpty)
+    }
+
+    @Test func sessionFollowsEditsAndCommands() throws {
+        var state = AgentHubState()
+        func apply(_ payload: [String: Any]) throws {
+            var payload = payload
+            payload["session_id"] = "s1"
+            _ = state.apply(try #require(AgentHookEvent(payload: payload)))
+        }
+
+        try apply(["hook_event_name": "UserPromptSubmit", "prompt": "Fix tax"])
+        try apply(["hook_event_name": "PreToolUse", "tool_name": "Edit",
+                   "tool_input": ["file_path": "/nonexistent/x.ts", "old_string": "a", "new_string": "b"]])
+        #expect(state.session("s1")?.codeChange?.fileName == "x.ts")
+        #expect(state.session("s1")?.showsCommand == false)
+
+        try apply(["hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": ["command": "npm test"]])
+        #expect(state.session("s1")?.command == AgentCommandRun(command: "npm test"))
+        try apply(["hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_input": ["command": "npm test"],
+                   "tool_response": ["stdout": "ok\nTests: 2 passed"]])
+        #expect(state.session("s1")?.command?.output == ["ok", "Tests: 2 passed"])
+        #expect(state.session("s1")?.showsCommand == true)
+        #expect(state.session("s1")?.turnSteps.count == 2)
+
+        try apply(["hook_event_name": "UserPromptSubmit", "prompt": "Next"])
+        #expect(state.session("s1")?.codeChange == nil)
+        #expect(state.session("s1")?.command == nil)
+        #expect(state.session("s1")?.turnSteps.isEmpty == true)
+    }
+}

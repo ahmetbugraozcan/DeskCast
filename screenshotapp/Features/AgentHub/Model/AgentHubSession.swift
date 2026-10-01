@@ -58,6 +58,12 @@ nonisolated struct AgentHubSession: Identifiable, Equatable, Sendable {
     var question: AgentQuestion?
     var turnStartedAt: Date?
     var updatedAt: Date
+    /// The last edit of this turn, shown as a diff.
+    var codeChange: AgentCodeChange?
+    /// The last shell command of this turn and its output.
+    var command: AgentCommandRun?
+    /// Which of the two came last (the island shows that one).
+    var showsCommand = false
 
     static let maxSteps = 20
 
@@ -73,6 +79,12 @@ nonisolated struct AgentHubSession: Identifiable, Equatable, Sendable {
 
     var currentStep: AgentHubStep? {
         steps.last
+    }
+
+    /// The tool steps since the last prompt.
+    var turnSteps: [AgentHubStep] {
+        let start = steps.lastIndex { $0.kind == .prompt }.map { steps.index(after: $0) } ?? steps.startIndex
+        return Array(steps[start...])
     }
 
     mutating func append(_ step: AgentHubStep) {
@@ -177,6 +189,9 @@ nonisolated struct AgentHubState: Equatable, Sendable {
             session.turnStartedAt = now
             session.lastMessage = nil
             session.question = nil
+            session.codeChange = nil
+            session.command = nil
+            session.showsCommand = false
             session.append(AgentHubStep(kind: .prompt, detail: event.prompt, date: now))
             return nil
         case .preToolUse:
@@ -184,9 +199,11 @@ nonisolated struct AgentHubState: Equatable, Sendable {
         case .postToolUse:
             session.question = nil
             session.phase = .working
+            recordOutput(&session, event: event, failed: false)
             return nil
         case .postToolUseFailure:
             session.phase = .working
+            recordOutput(&session, event: event, failed: true)
             session.append(AgentHubStep(kind: .failed(event.toolName ?? "Tool"), detail: event.toolSummary, date: now))
             return nil
         case .permissionRequest:
@@ -234,7 +251,21 @@ nonisolated struct AgentHubState: Equatable, Sendable {
 
         session.phase = .working
         session.append(AgentHubStep(kind: .tool(event.toolName ?? "Tool"), detail: event.toolSummary, date: now))
+        if let change = event.codeChange {
+            session.codeChange = change
+            session.showsCommand = false
+        } else if event.toolName == AgentHookEvent.shellTool, let command = event.command {
+            session.command = AgentCommandRun(command: AgentHookEvent.singleLine(command))
+            session.showsCommand = true
+        }
         return nil
+    }
+
+    private static func recordOutput(_ session: inout AgentHubSession, event: AgentHookEvent, failed: Bool) {
+        guard event.toolName == AgentHookEvent.shellTool, let output = event.commandOutput else { return }
+        let command = event.command.map(AgentHookEvent.singleLine) ?? session.command?.command ?? ""
+        session.command = AgentCommandRun(command: command, output: output, failed: failed)
+        session.showsCommand = true
     }
 
     private static func finish(_ session: inout AgentHubSession, event: AgentHookEvent, now: Date) -> AgentHubEffect? {

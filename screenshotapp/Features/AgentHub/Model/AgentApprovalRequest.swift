@@ -10,6 +10,10 @@ nonisolated struct AgentApprovalRequest: Identifiable, Equatable, Sendable {
     let detail: String?
     let permissionSuggestions: Data?
     let receivedAt: Date
+    /// The edit it asks to make, shown as a diff.
+    let codeChange: AgentCodeChange?
+    /// The full shell command it asks to run.
+    let command: String?
 
     init(event: AgentHookEvent, id: UUID = UUID(), receivedAt: Date = Date()) {
         self.id = id
@@ -17,6 +21,8 @@ nonisolated struct AgentApprovalRequest: Identifiable, Equatable, Sendable {
         tool = event.toolName ?? "Tool"
         detail = event.toolSummary
         permissionSuggestions = event.permissionSuggestions
+        codeChange = event.codeChange
+        command = event.command
         self.receivedAt = receivedAt
     }
 
