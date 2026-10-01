@@ -62,6 +62,9 @@ struct DeskCastApp: App {
     private var dynamicIslandShowInMenu = ToolboxSettings.defaultDynamicIslandShowInMenu
 
     init() {
+        // A write to a pipe or socket whose reader is gone (a helper process,
+        // the hook relay) must fail with EPIPE, not kill DeskCast silently.
+        signal(SIGPIPE, SIG_IGN)
         // Composition root wires the view models and their dependencies (and
         // registers UserDefaults defaults) in one place.
         let environment = AppEnvironment()
