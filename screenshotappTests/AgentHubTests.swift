@@ -357,7 +357,8 @@ struct CodexHookTests {
 
         var state = AgentHubState()
         _ = state.apply(event)
-        #expect(state.session("c1")?.title == "Codex · deskcast")
+        #expect(state.session("c1")?.title == "deskcast")
+        #expect(state.session("c1")?.agentName == "Codex")
         #expect(state.session("c1")?.phase == .working)
 
         let interrupt = try #require(AgentHookEvent(payload: [
@@ -462,5 +463,48 @@ struct AgentCodeChangeTests {
         #expect(state.session("s1")?.codeChange == nil)
         #expect(state.session("s1")?.command == nil)
         #expect(state.session("s1")?.turnSteps.isEmpty == true)
+    }
+}
+
+struct AgentSessionTitleTests {
+    @Test func opaqueCodexAppFoldersFallBackToTheAgentName() {
+        let folder = "/Users/me/.codex/.chatgpt-projects/g-p-6aa942e230bc8191"
+        let chat = AgentHubSession(id: "a", agent: "codex", cwd: folder, updatedAt: Date())
+        #expect(chat.projectName == nil)
+        #expect(chat.title == "Codex")
+
+        let claude = AgentHubSession(id: "b", cwd: "/Users/me/Projects/app", updatedAt: Date())
+        #expect(claude.title == "app")
+        #expect(claude.agentName == "Claude Code")
+    }
+}
+
+struct IslandOrbLayoutTests {
+    @Test func storedButtonsAreCleanedUp() {
+        let layout = IslandOrbLayout(
+            left: ["launcher", "panel.timer", "launcher", "panel.nope"],
+            right: ["settings", "panel.timer", "panel.volume", "panel.camera", "panel.files", "panel.system"],
+            bottom: []
+        )
+        #expect(layout.left == [.launcher, .panel(.timer)])
+        #expect(layout.right == [.settings, .panel(.volume), .panel(.camera), .panel(.files)])
+        #expect(IslandOrbItem(rawValue: IslandOrbItem.panel(.aiAgents).rawValue) == .panel(.aiAgents))
+    }
+
+    @Test func addingMovesAndRemoving() {
+        var layout = IslandOrbLayout.standard
+        layout.add(.panel(.aiAgents), to: .bottom)
+        #expect(layout.bottom == [.panel(.nowPlaying), .panel(.aiAgents)])
+
+        layout.add(.panel(.timer), to: .right)
+        #expect(layout.left == [.launcher])
+        #expect(layout.right.last == .panel(.timer))
+
+        layout.move(.panel(.timer), by: -1)
+        #expect(layout.right == [.settings, .panel(.timer), .panel(.volume)])
+
+        layout.remove(.settings)
+        #expect(!layout.allItems.contains(.settings))
+        #expect(layout.unusedItems.contains(.settings))
     }
 }

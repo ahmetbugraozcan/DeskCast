@@ -67,14 +67,25 @@ nonisolated struct AgentHubSession: Identifiable, Equatable, Sendable {
 
     static let maxSteps = 20
 
-    /// The working directory's name, or the agent's own name.
+    /// "Claude Code", "Codex" or the agent's own name.
+    var agentName: String {
+        guard let agent else { return "Claude Code" }
+        return agent == "codex" ? "Codex" : agent
+    }
+
+    /// The project folder's name, or the agent's name when there's no
+    /// telling one (the home folder, or a Codex app chat's opaque folder).
+    var projectName: String? {
+        guard !cwd.isEmpty, !cwd.contains("/.codex/.chatgpt-projects/"), !cwd.contains("/.codex/projects/") else { return nil }
+        let url = URL(fileURLWithPath: cwd)
+        let folder = url.lastPathComponent
+        guard !folder.isEmpty, folder != "/", url.path != FileManager.default.homeDirectoryForCurrentUser.path else { return nil }
+        return folder
+    }
+
+    /// The project's name, or the agent's when there is none.
     var title: String {
-        let folder = URL(fileURLWithPath: cwd).lastPathComponent
-        if let agent {
-            let name = agent == "codex" ? "Codex" : agent
-            return folder.isEmpty || folder == "/" ? name : "\(name) · \(folder)"
-        }
-        return folder.isEmpty || folder == "/" ? "Claude Code" : folder
+        projectName ?? agentName
     }
 
     var currentStep: AgentHubStep? {

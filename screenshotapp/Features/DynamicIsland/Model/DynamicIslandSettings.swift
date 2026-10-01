@@ -170,6 +170,7 @@ struct DynamicIslandSettingsSnapshot: Equatable {
     var showsOutline = DynamicIslandSettings.defaultShowsOutline
     var panelShortcutsEnabled = DynamicIslandSettings.defaultPanelShortcutsEnabled
     var showsSideButtons = DynamicIslandSettings.defaultShowsSideButtons
+    var sideButtons = IslandOrbLayout.standard
     var notificationDurationSeconds = DynamicIslandSettings.defaultNotificationDurationSeconds
     /// Launcher order; every panel appears exactly once.
     var panelOrder: [IslandPanel] = IslandPanel.allCases
@@ -212,6 +213,17 @@ enum DynamicIslandSettings {
         static let showsOutline = "dynamicIsland.showsOutline"
         static let panelShortcutsEnabled = "dynamicIsland.panelShortcutsEnabled"
         static let showsSideButtons = "dynamicIsland.showsSideButtons"
+        static let leftSideButtons = "dynamicIsland.leftSideButtons"
+        static let rightSideButtons = "dynamicIsland.rightSideButtons"
+        static let bottomSideButtons = "dynamicIsland.bottomSideButtons"
+
+        static func sideButtons(_ side: IslandOrbSide) -> String {
+            switch side {
+            case .left: leftSideButtons
+            case .right: rightSideButtons
+            case .bottom: bottomSideButtons
+            }
+        }
         static let panelOrder = "dynamicIsland.panelOrder"
         static let hiddenPanels = "dynamicIsland.hiddenPanels"
         static let scratchpadText = "dynamicIsland.scratchpadText"
@@ -318,6 +330,9 @@ enum DynamicIslandSettings {
             Keys.showsOutline: defaultShowsOutline,
             Keys.panelShortcutsEnabled: defaultPanelShortcutsEnabled,
             Keys.showsSideButtons: defaultShowsSideButtons,
+            Keys.leftSideButtons: IslandOrbLayout.standard.rawValues(for: .left),
+            Keys.rightSideButtons: IslandOrbLayout.standard.rawValues(for: .right),
+            Keys.bottomSideButtons: IslandOrbLayout.standard.rawValues(for: .bottom),
             Keys.panelOrder: IslandPanel.allCases.map(\.rawValue),
             Keys.hiddenPanels: [String](),
             Keys.notificationDurationSeconds: defaultNotificationDurationSeconds,
@@ -352,6 +367,7 @@ enum DynamicIslandSettings {
             showsOutline: defaults.bool(forKey: Keys.showsOutline),
             panelShortcutsEnabled: defaults.bool(forKey: Keys.panelShortcutsEnabled),
             showsSideButtons: defaults.bool(forKey: Keys.showsSideButtons),
+            sideButtons: sideButtons(in: defaults),
             notificationDurationSeconds: clampedNotificationDuration(
                 defaults.integer(forKey: Keys.notificationDurationSeconds)
             ),
@@ -365,6 +381,20 @@ enum DynamicIslandSettings {
             agentFinishMinimumMinutes: clampedAgentFinishMinimum(defaults.integer(forKey: Keys.agentFinishMinimumMinutes)),
             fullBanners: defaults.bool(forKey: Keys.fullBanners)
         )
+    }
+
+    static func sideButtons(in defaults: UserDefaults = .standard) -> IslandOrbLayout {
+        IslandOrbLayout(
+            left: defaults.stringArray(forKey: Keys.leftSideButtons) ?? [],
+            right: defaults.stringArray(forKey: Keys.rightSideButtons) ?? [],
+            bottom: defaults.stringArray(forKey: Keys.bottomSideButtons) ?? []
+        )
+    }
+
+    static func setSideButtons(_ layout: IslandOrbLayout, in defaults: UserDefaults = .standard) {
+        for side in IslandOrbSide.allCases {
+            defaults.set(layout.rawValues(for: side), forKey: Keys.sideButtons(side))
+        }
     }
 
     static func clampedNotificationDuration(_ value: Int) -> Int {

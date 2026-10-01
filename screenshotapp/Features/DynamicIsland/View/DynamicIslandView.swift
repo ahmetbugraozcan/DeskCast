@@ -8,30 +8,11 @@ import SwiftUI
 struct DynamicIslandLayout: Equatable {
     let panelSize: CGSize
     let islandFrame: CGRect
-    let orbFrames: [DynamicIslandOrb: CGRect]
+    let orbFrames: [IslandOrbItem: CGRect]
     var chipFrames: [IslandActivityChip: CGRect] = [:]
 
     var interactiveFrames: [CGRect] {
         [islandFrame] + orbFrames.values + chipFrames.values
-    }
-}
-
-/// Round buttons floating beside the expanded island.
-enum DynamicIslandOrb: CaseIterable, Hashable {
-    case launcher
-    case timer
-    case settings
-    case volume
-    case nowPlaying
-
-    var systemImage: String {
-        switch self {
-        case .launcher: "square.grid.2x2"
-        case .timer: "timer"
-        case .settings: "gearshape"
-        case .volume: "speaker.wave.2"
-        case .nowPlaying: "music.note"
-        }
     }
 }
 
@@ -123,7 +104,7 @@ struct DynamicIslandView: View {
             height: size.height
         )
 
-        var orbs: [DynamicIslandOrb: CGRect] = [:]
+        var orbs: [IslandOrbItem: CGRect] = [:]
         let chips = activityChipFrames(for: store, below: islandFrame)
 
         if mode == .expanded, store.preferences.showsSideButtons {
@@ -131,21 +112,26 @@ struct DynamicIslandView: View {
             let leftX = islandFrame.minX + ears - orbGap - orbSize
             let rightX = islandFrame.maxX - ears + orbGap
             let firstY = geometry.notchSize.height + 14
-            let secondY = firstY + orbSize + orbGap
+            let buttons = store.preferences.sideButtons
 
-            orbs[.launcher] = CGRect(x: leftX, y: firstY, width: orbSize, height: orbSize)
-            orbs[.timer] = CGRect(x: leftX, y: secondY, width: orbSize, height: orbSize)
-            orbs[.settings] = CGRect(x: rightX, y: firstY, width: orbSize, height: orbSize)
-            orbs[.volume] = CGRect(x: rightX, y: secondY, width: orbSize, height: orbSize)
+            for (index, item) in buttons.left.enumerated() {
+                orbs[item] = CGRect(x: leftX, y: firstY + CGFloat(index) * (orbSize + orbGap), width: orbSize, height: orbSize)
+            }
+            for (index, item) in buttons.right.enumerated() {
+                orbs[item] = CGRect(x: rightX, y: firstY + CGFloat(index) * (orbSize + orbGap), width: orbSize, height: orbSize)
+            }
 
-            // The activity chips take the spot under the island.
-            if store.expandedContent != .panel(.nowPlaying), chips.isEmpty {
-                orbs[.nowPlaying] = CGRect(
-                    x: islandFrame.midX - orbSize / 2,
-                    y: islandFrame.maxY + orbGap,
-                    width: orbSize,
-                    height: orbSize
-                )
+            // The activity chips take the row under the island.
+            if chips.isEmpty, !buttons.bottom.isEmpty {
+                let rowWidth = CGFloat(buttons.bottom.count) * orbSize + CGFloat(buttons.bottom.count - 1) * orbGap
+                for (index, item) in buttons.bottom.enumerated() {
+                    orbs[item] = CGRect(
+                        x: (islandFrame.midX - rowWidth / 2 + CGFloat(index) * (orbSize + orbGap)).rounded(),
+                        y: islandFrame.maxY + orbGap,
+                        width: orbSize,
+                        height: orbSize
+                    )
+                }
             }
         }
 
@@ -266,10 +252,15 @@ struct DynamicIslandView: View {
             }
             .offset(x: layout.islandFrame.minX, y: layout.islandFrame.minY)
 
-            ForEach(DynamicIslandOrb.allCases, id: \.self) { orb in
+            ForEach(IslandOrbItem.all, id: \.self) { orb in
                 if let frame = layout.orbFrames[orb] {
                     IslandOrbButton(orb: orb, isSelected: isOrbSelected(orb)) {
                         handleOrb(orb)
+                    } onRemove: {
+                        removeOrb(orb)
+                    } onEdit: {
+                        store.collapse()
+                        panels.actions.openSettings()
                     }
                     .frame(width: frame.width, height: frame.height)
                     .offset(x: frame.minX, y: frame.minY)
@@ -293,25 +284,28 @@ struct DynamicIslandView: View {
         .environment(\.locale, AppLocalization.currentLocale)
     }
 
-    private func isOrbSelected(_ orb: DynamicIslandOrb) -> Bool {
+    private func isOrbSelected(_ orb: IslandOrbItem) -> Bool {
         switch orb {
         case .launcher: store.expandedContent == .launcher
-        case .timer: store.expandedContent == .panel(.timer)
-        case .volume: store.expandedContent == .panel(.volume)
-        case .nowPlaying, .settings: false
+        case .panel(let panel): store.expandedContent == .panel(panel)
+        case .settings: false
         }
     }
 
-    private func handleOrb(_ orb: DynamicIslandOrb) {
+    private func handleOrb(_ orb: IslandOrbItem) {
         switch orb {
         case .launcher: store.showLauncher()
-        case .timer: store.select(.timer)
-        case .volume: store.select(.volume)
-        case .nowPlaying: store.select(.nowPlaying)
+        case .panel(let panel): store.select(panel)
         case .settings:
             store.collapse()
             panels.actions.openSettings()
         }
+    }
+
+    private func removeOrb(_ orb: IslandOrbItem) {
+        var buttons = store.preferences.sideButtons
+        buttons.remove(orb)
+        DynamicIslandSettings.setSideButtons(buttons)
     }
 
     @ViewBuilder
@@ -408,9 +402,11 @@ struct DynamicIslandView: View {
 }
 
 private struct IslandOrbButton: View {
-    let orb: DynamicIslandOrb
+    let orb: IslandOrbItem
     let isSelected: Bool
     let action: () -> Void
+    let onRemove: () -> Void
+    let onEdit: () -> Void
 
     var body: some View {
         Button(action: action) {
@@ -424,6 +420,11 @@ private struct IslandOrbButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(IslandPressButtonStyle())
+        .help(AppLocalization.string(orb.titleKey))
+        .contextMenu {
+            Button(AppLocalization.string("island.orb.remove"), systemImage: "minus.circle", action: onRemove)
+            Button(AppLocalization.string("island.orb.edit"), systemImage: "slider.horizontal.3", action: onEdit)
+        }
     }
 }
 

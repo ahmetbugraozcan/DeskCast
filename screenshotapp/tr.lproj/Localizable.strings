@@ -389,6 +389,19 @@
 "island.scratchpad.placeholder" = "Bir şeyler not alın…";
 "island.scratchpad.count" = "%ld karakter";
 "island.settings.sideButtons" = "Yan düğmeleri göster";
+"island.orb.launcher" = "Tüm paneller";
+"island.orb.settings" = "Ayarlar";
+"island.orb.side.left" = "Sol";
+"island.orb.side.right" = "Sağ";
+"island.orb.side.bottom" = "Alt";
+"island.orb.island" = "Island";
+"island.orb.hint" = "Açık Island'ın etrafındaki yuvarlak düğmeler. Taşımak ya da kaldırmak için birine tıkla; herhangi bir paneli eklemek için kesikli + düğmesine bas. Island'daki bir düğmeye sağ tıklayarak da kaldırabilirsin.";
+"island.orb.add" = "Düğme ekle (%@)";
+"island.orb.moveTo" = "Taşı";
+"island.orb.remove" = "Kaldır";
+"island.orb.edit" = "Düğmeleri düzenle…";
+"island.orb.reset" = "Varsayılana dön";
+"island.orb.selectHint" = "Değiştirmek için bir düğme seç.";
 "island.settings.panelShortcuts" = "Panel kısayolları (⌥⌘ + harf)";
 "island.settings.panelShortcutsHint" = "Bir paneli her yerden açar; örneğin Şu An Çalıyor için ⌥⌘M. Bu açıkken bu tuşlar diğer uygulamalarda çalışmaz (örneğin ⌥⌘R, Dock gizleme için ⌥⌘D).";
 

@@ -72,7 +72,9 @@ private struct AgentSessionList: View {
                         .font(.system(size: 11.5, weight: .semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    Text(AppLocalization.string(session.phase.titleKey))
+                    Text(session.projectName == nil
+                         ? AppLocalization.string(session.phase.titleKey)
+                         : "\(session.agentName) · \(AppLocalization.string(session.phase.titleKey))")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(session.phase.color)
                         .lineLimit(1)
@@ -145,25 +147,32 @@ private struct AgentSessionCard: View {
                 .font(.system(size: 13.5, weight: .bold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
-                .layoutPriority(1)
-            Text(session.agent == "codex" ? "Codex" : "Claude Code")
-                .font(.system(size: 11))
-                .foregroundStyle(IslandPalette.tertiaryText)
-                .lineLimit(1)
+                .truncationMode(.middle)
+                .help(session.cwd)
+            if session.projectName != nil {
+                Text(session.agentName)
+                    .font(.system(size: 11))
+                    .foregroundStyle(IslandPalette.tertiaryText)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
 
             Spacer(minLength: 4)
 
-            if let started = session.turnStartedAt {
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text(IslandFormat.clock(context.date.timeIntervalSince(started)))
-                        .font(.system(size: 11, weight: .semibold, design: .rounded).monospacedDigit())
-                        .foregroundStyle(IslandPalette.secondaryText)
+            Group {
+                if let started = session.turnStartedAt {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text(IslandFormat.clock(context.date.timeIntervalSince(started)))
+                            .font(.system(size: 11, weight: .semibold, design: .rounded).monospacedDigit())
+                            .foregroundStyle(IslandPalette.secondaryText)
+                    }
+                } else if !session.turnSteps.isEmpty {
+                    Text(AppLocalization.formatted("agentHub.steps", session.turnSteps.count))
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                        .foregroundStyle(IslandPalette.tertiaryText)
                 }
-            } else if !session.turnSteps.isEmpty {
-                Text(AppLocalization.formatted("agentHub.steps", session.turnSteps.count))
-                    .font(.system(size: 11, weight: .medium).monospacedDigit())
-                    .foregroundStyle(IslandPalette.tertiaryText)
             }
+            .fixedSize()
 
             IslandIconButton(systemImage: "arrow.up.forward.app", help: openTitle, size: 11) {
                 hub.jumpToTerminal(sessionID: session.id)

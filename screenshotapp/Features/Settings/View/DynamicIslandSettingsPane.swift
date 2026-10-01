@@ -182,6 +182,10 @@ struct DynamicIslandSettingsPane: View {
                 isOn: $showsSideButtons
             )
 
+            if showsSideButtons {
+                IslandSideButtonsEditor()
+            }
+
             SettingsSectionDivider()
 
             SettingsToggleRow(
