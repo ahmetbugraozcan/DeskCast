@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// First run of the Ask page: paste an Anthropic API key (kept in the Keychain).
+/// First run of the Ask page: paste an Anthropic API key (kept in the
+/// Keychain), or use the installed Claude Code with the user's Claude plan.
 struct AgentKeySetupCard: View {
     @ObservedObject var chat: AgentChatViewModel
 
@@ -12,41 +13,81 @@ struct AgentKeySetupCard: View {
             HStack(spacing: 14) {
                 BipMascotView(mood: .question, size: 66)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(AppLocalization.string("agentHub.ask.keyTitle"))
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text(AppLocalization.string("agentHub.ask.keyMessage"))
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(IslandPalette.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    HStack(spacing: 6) {
-                        SecureField("sk-ant-…", text: $key)
-                            .textFieldStyle(.plain)
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 10)
-                            .frame(height: 28)
-                            .background(Capsule().fill(Color.white.opacity(0.08)))
-                            .focused($isFocused)
-                            .onSubmit(save)
-
-                        AgentActionButton(title: AppLocalization.string("agentHub.ask.saveKey"), isPrimary: true, action: save)
-                            .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
-
-                    if let consoleURL = Self.consoleURL {
-                        Link(AppLocalization.string("agentHub.ask.getKey"), destination: consoleURL)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(AgentHubPhase.idle.color)
-                    }
+                if chat.backend == .claudeCode {
+                    claudeCodeMissing
+                } else {
+                    keyForm
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: .infinity)
         }
         .onChange(of: isFocused) { _, focused in chat.isInputFocused = focused }
+    }
+
+    /// Claude Code was picked but `claude` isn't installed.
+    private var claudeCodeMissing: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(AppLocalization.string("agentHub.ask.claudeCodeTitle"))
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white)
+            Text(AppLocalization.string("agentHub.ask.claudeCodeMissing"))
+                .font(.system(size: 11.5))
+                .foregroundStyle(IslandPalette.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 6) {
+                AgentActionButton(title: AppLocalization.string("agentHub.ask.checkAgain"), isPrimary: true) {
+                    chat.refreshAvailability()
+                }
+                AgentActionButton(title: AppLocalization.string("agentHub.ask.useKey"), isPrimary: false) {
+                    chat.useBackend(.api)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var keyForm: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(AppLocalization.string("agentHub.ask.keyTitle"))
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white)
+            Text(AppLocalization.string("agentHub.ask.keyMessage"))
+                .font(.system(size: 11.5))
+                .foregroundStyle(IslandPalette.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 6) {
+                SecureField("sk-ant-…", text: $key)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .frame(height: 28)
+                    .background(Capsule().fill(Color.white.opacity(0.08)))
+                    .focused($isFocused)
+                    .onSubmit(save)
+
+                AgentActionButton(title: AppLocalization.string("agentHub.ask.saveKey"), isPrimary: true, action: save)
+                    .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+
+            HStack(spacing: 12) {
+                if let consoleURL = Self.consoleURL {
+                    Link(AppLocalization.string("agentHub.ask.getKey"), destination: consoleURL)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(AgentHubPhase.idle.color)
+                }
+                if chat.hasClaudeCode {
+                    Button(AppLocalization.string("agentHub.ask.useClaudeCode")) {
+                        chat.useBackend(.claudeCode)
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AgentHubPhase.finished.color)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private static let consoleURL = URL(string: "https://console.anthropic.com/settings/keys")
@@ -88,7 +129,18 @@ struct AgentAskInputBar: View {
                 Button(AppLocalization.string("agentHub.ask.clear"), systemImage: "trash") { chat.clear() }
                     .disabled(chat.entries.isEmpty && chat.attachment == nil)
                 Divider()
-                Button(AppLocalization.string("agentHub.ask.removeKey"), systemImage: "key.slash", role: .destructive) { chat.removeKey() }
+                if chat.backend == .api {
+                    if chat.hasClaudeCode {
+                        Button(AppLocalization.string("agentHub.ask.useClaudeCode"), systemImage: "terminal") {
+                            chat.useBackend(.claudeCode)
+                        }
+                    }
+                    Button(AppLocalization.string("agentHub.ask.removeKey"), systemImage: "key.slash", role: .destructive) {
+                        chat.removeKey()
+                    }
+                } else {
+                    Button(AppLocalization.string("agentHub.ask.useKey"), systemImage: "key") { chat.useBackend(.api) }
+                }
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 13, weight: .semibold))

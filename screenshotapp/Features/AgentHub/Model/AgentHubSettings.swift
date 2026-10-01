@@ -10,6 +10,7 @@ nonisolated enum AgentHubSettings {
         static let soundVolume = "agentHub.soundVolume"
         static let showsMascot = "agentHub.showsMascot"
         static let claudeModel = "agentHub.claudeModel"
+        static let askBackend = "agentHub.askBackend"
         static let activeIntegrations = "agentHub.activeIntegrations"
         static let n8nURL = "agentHub.n8nURL"
     }
@@ -26,6 +27,7 @@ nonisolated enum AgentHubSettings {
     static let defaultSoundVolume = 0.5
     static let defaultShowsMascot = true
     static let defaultClaudeModel = "claude-opus-5-5"
+    static let defaultAskBackend = AgentAskBackend.api
 
     static func registerDefaults(in defaults: UserDefaults) {
         defaults.register(defaults: [
@@ -36,6 +38,7 @@ nonisolated enum AgentHubSettings {
             Keys.soundVolume: defaultSoundVolume,
             Keys.showsMascot: defaultShowsMascot,
             Keys.claudeModel: defaultClaudeModel,
+            Keys.askBackend: defaultAskBackend.rawValue,
             Keys.activeIntegrations: [String](),
             Keys.n8nURL: ""
         ])
@@ -48,6 +51,10 @@ nonisolated enum AgentHubSettings {
 
     static func soundVolume(in defaults: UserDefaults) -> Double {
         min(max(defaults.double(forKey: Keys.soundVolume), soundVolumeRange.lowerBound), soundVolumeRange.upperBound)
+    }
+
+    static func askBackend(in defaults: UserDefaults) -> AgentAskBackend {
+        defaults.string(forKey: Keys.askBackend).flatMap(AgentAskBackend.init(rawValue:)) ?? defaultAskBackend
     }
 
     static func claudeModel(in defaults: UserDefaults) -> String {

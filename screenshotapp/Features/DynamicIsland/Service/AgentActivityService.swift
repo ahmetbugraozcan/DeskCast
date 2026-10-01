@@ -345,8 +345,9 @@ nonisolated final class AgentActivityService: AgentActivityProviding, @unchecked
     }
 
     /// Top-level session transcripts; Claude Code's sub-agents live in
-    /// `subagents/` folders and are part of their parent's turn.
+    /// `subagents/` folders and are part of their parent's turn. DeskCast's
+    /// own Ask conversations (run through Claude Code) aren't agent work.
     private static func isTranscript(_ path: String) -> Bool {
-        path.hasSuffix(".jsonl") && !path.contains("/subagents/")
+        path.hasSuffix(".jsonl") && !path.contains("/subagents/") && !ClaudeCodeChatProtocol.isAskTranscript(path)
     }
 }

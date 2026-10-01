@@ -16,7 +16,8 @@ struct AgentMailDraft: Equatable {
 
 /// The Ask page: a conversation with Claude (web search on) about a
 /// question, a dropped file, or a window Bip was dragged onto; dropped files
-/// can also be mailed with Apple Mail.
+/// can also be mailed with Apple Mail. Claude is reached through the
+/// Anthropic API with the user's key, or through their installed Claude Code.
 @MainActor
 final class AgentChatViewModel: ObservableObject {
     @Published private(set) var entries: [AgentChatEntry] = []
@@ -24,6 +25,9 @@ final class AgentChatViewModel: ObservableObject {
     @Published private(set) var attachment: AgentChatAttachment?
     @Published private(set) var isSending = false
     @Published private(set) var hasKey = false
+    @Published private(set) var backend: AgentAskBackend
+    /// The `claude` command was found (checked when the page appears).
+    @Published private(set) var hasClaudeCode = false
     @Published private(set) var models: [AgentModelOption] = []
     @Published var mailDraft: AgentMailDraft?
     @Published private(set) var isMailing = false
@@ -40,6 +44,7 @@ final class AgentChatViewModel: ObservableObject {
     var holdIsland: ((Bool) -> Void)?
 
     private let messaging: ClaudeMessaging
+    private let claudeCode: ClaudeCodeAsking
     private let secrets: AgentSecretStoring
     private let windows: WindowContextProviding
     private let mail: MailSending
@@ -47,6 +52,8 @@ final class AgentChatViewModel: ObservableObject {
     private let defaults: UserDefaults
     /// The conversation as sent to the API (content blocks kept as returned).
     private var history: [[String: Any]] = []
+    /// The Claude Code conversation so far.
+    private var claudeCodeSessionID: String?
     private var attachmentSent = false
     private var sendTask: Task<Void, Never>?
     private var noteTask: Task<Void, Never>?
@@ -55,6 +62,7 @@ final class AgentChatViewModel: ObservableObject {
 
     init(
         messaging: ClaudeMessaging? = nil,
+        claudeCode: ClaudeCodeAsking? = nil,
         secrets: AgentSecretStoring? = nil,
         windows: WindowContextProviding? = nil,
         mail: MailSending? = nil,
@@ -62,12 +70,35 @@ final class AgentChatViewModel: ObservableObject {
         defaults: UserDefaults = .standard
     ) {
         self.messaging = messaging ?? ClaudeMessagesService()
+        self.claudeCode = claudeCode ?? ClaudeCodeChatService()
         self.secrets = secrets ?? AgentKeychain()
         self.windows = windows ?? WindowContextService()
         self.mail = mail ?? MailSendService()
         self.dragPresenter = dragPresenter ?? BipDragPresenter()
         self.defaults = defaults
         hasKey = self.secrets.value(for: .anthropic) != nil
+        backend = AgentHubSettings.askBackend(in: defaults)
+        hasClaudeCode = self.claudeCode.executablePath != nil
+    }
+
+    /// Ready to ask: a saved key, or Claude Code installed.
+    var isReady: Bool {
+        switch backend {
+        case .api: hasKey
+        case .claudeCode: hasClaudeCode
+        }
+    }
+
+    /// Switching starts a new conversation.
+    func useBackend(_ newValue: AgentAskBackend) {
+        hasClaudeCode = claudeCode.executablePath != nil
+        guard newValue != backend else { return }
+        clear()
+        backend = newValue
+        defaults.set(newValue.rawValue, forKey: AgentHubSettings.Keys.askBackend)
+        if newValue == .api, hasKey, models.isEmpty {
+            loadModels()
+        }
     }
 
     var model: String {
@@ -109,12 +140,17 @@ final class AgentChatViewModel: ObservableObject {
     // MARK: - Conversation
 
     var canSend: Bool {
-        hasKey && !isSending && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        isReady && !isSending && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     func send() {
+        guard canSend else { return }
+        if backend == .claudeCode {
+            sendToClaudeCode()
+            return
+        }
         let question = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard canSend, let key = secrets.value(for: .anthropic) else { return }
+        guard let key = secrets.value(for: .anthropic) else { return }
 
         let content: [[String: Any]]
         do {
@@ -171,6 +207,45 @@ final class AgentChatViewModel: ObservableObject {
         }
     }
 
+    private func sendToClaudeCode() {
+        let question = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newAttachment = attachmentSent ? nil : attachment
+        var windowImagePath: String?
+        var extraFolders: [String] = []
+        switch newAttachment {
+        case .file(let url):
+            extraFolders = [url.deletingLastPathComponent().path]
+        case .window(let context):
+            windowImagePath = context.image.flatMap { claudeCode.saveWindowImage($0) }
+        case nil:
+            break
+        }
+        let prompt = ClaudeCodeChatProtocol.prompt(question: question, attachment: newAttachment, windowImagePath: windowImagePath)
+
+        draft = ""
+        entries.append(AgentChatEntry(role: .user, text: question, attachment: newAttachment?.label))
+        attachmentSent = attachment != nil
+        isSending = true
+        BipSoundPlayer.shared.play(.send)
+
+        let sessionID = claudeCodeSessionID
+        sendTask = Task { [weak self] in
+            guard let self else { return }
+            defer { isSending = false }
+            do {
+                let reply = try await claudeCode.ask(prompt: prompt, sessionID: sessionID, extraFolders: extraFolders)
+                guard !Task.isCancelled else { return }
+                claudeCodeSessionID = reply.sessionID ?? sessionID
+                let text = reply.text.isEmpty ? AppLocalization.string("agentHub.ask.empty") : reply.text
+                entries.append(AgentChatEntry(role: .assistant, text: text))
+                BipSoundPlayer.shared.play(.received)
+            } catch {
+                guard !Task.isCancelled, !(error is CancellationError) else { return }
+                fail(error)
+            }
+        }
+    }
+
     private func fail(_ error: Error) {
         let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         entries.append(AgentChatEntry(role: .failure, text: message))
@@ -183,6 +258,7 @@ final class AgentChatViewModel: ObservableObject {
         isSending = false
         entries = []
         history = []
+        claudeCodeSessionID = nil
         attachmentSent = false
         removeAttachment()
         mailDraft = nil
@@ -203,9 +279,10 @@ final class AgentChatViewModel: ObservableObject {
 
     /// A new attachment starts a new conversation about it.
     private func setAttachment(_ newValue: AgentChatAttachment?) {
-        if !history.isEmpty {
+        if !history.isEmpty || claudeCodeSessionID != nil {
             entries = []
             history = []
+            claudeCodeSessionID = nil
         }
         attachmentSent = false
         attachment = newValue
@@ -241,7 +318,14 @@ final class AgentChatViewModel: ObservableObject {
         if case .window(let context) = attachment {
             dragPresenter.showHalo(around: context.frame)
         }
-        if hasKey, models.isEmpty {
+        refreshAvailability()
+    }
+
+    /// Looks for `claude` again (it may have been installed meanwhile) and
+    /// loads the API's model list when needed.
+    func refreshAvailability() {
+        hasClaudeCode = claudeCode.executablePath != nil
+        if backend == .api, hasKey, models.isEmpty {
             loadModels()
         }
     }

@@ -10,7 +10,7 @@ struct AgentAskView: View {
 
     var body: some View {
         Group {
-            if chat.hasKey {
+            if chat.isReady {
                 conversation
             } else {
                 AgentKeySetupCard(chat: chat)

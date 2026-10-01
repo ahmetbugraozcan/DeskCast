@@ -269,3 +269,52 @@ struct ClaudeChatProtocolTests {
         #expect(!MailSendService.isValidAddress("@example.com"))
     }
 }
+
+struct ClaudeCodeChatProtocolTests {
+    @Test func runsReadOnlyWithoutTheUsersSettingsAndResumes() {
+        let first = ClaudeCodeChatProtocol.arguments(prompt: "Hi", resume: nil, extraFolders: [])
+        #expect(Array(first.prefix(2)) == ["-p", "Hi"])
+        #expect(first.contains("--strict-mcp-config"))
+        #expect(!first.contains("--resume"))
+        let tools = first.firstIndex(of: "--tools").map { first[$0 + 1] }
+        #expect(tools == "Read,WebSearch,WebFetch")
+        let sources = first.firstIndex(of: "--setting-sources").map { first[$0 + 1] }
+        #expect(sources == "project")
+
+        let next = ClaudeCodeChatProtocol.arguments(prompt: "And?", resume: "abc", extraFolders: ["/Users/me/Docs"])
+        #expect(next.firstIndex(of: "--resume").map { next[$0 + 1] } == "abc")
+        #expect(next.firstIndex(of: "--add-dir").map { next[$0 + 1] } == "/Users/me/Docs")
+    }
+
+    @Test func promptNamesTheAttachment() {
+        let file = ClaudeCodeChatProtocol.prompt(
+            question: "Summarize",
+            attachment: .file(URL(fileURLWithPath: "/Users/me/Docs/a.pdf")),
+            windowImagePath: nil
+        )
+        #expect(file == "Attached file: /Users/me/Docs/a.pdf\n\nSummarize")
+
+        let context = AgentWindowContext(appName: "Safari", title: "News", url: "https://example.com", image: nil, frame: .zero)
+        let window = ClaudeCodeChatProtocol.prompt(question: "What's this?", attachment: .window(context), windowImagePath: "/tmp/w.jpg")
+        #expect(window.contains("app: Safari, title: News, URL: https://example.com"))
+        #expect(window.contains("Screenshot of the window: /tmp/w.jpg"))
+        #expect(ClaudeCodeChatProtocol.prompt(question: "Hi", attachment: nil, windowImagePath: nil) == "Hi")
+    }
+
+    @Test func readsResultsAndErrors() throws {
+        let ok = Data(#"{"type":"result","subtype":"success","is_error":false,"result":" 4 ","session_id":"s1"}"#.utf8)
+        #expect(try ClaudeCodeChatProtocol.parseReply(ok) == ClaudeCodeReply(text: "4", sessionID: "s1"))
+
+        let loggedOut = Data(#"{"type":"result","is_error":true,"result":"Not logged in · Please run /login"}"#.utf8)
+        #expect(throws: ClaudeChatError.api(AppLocalization.string("agentHub.ask.error.claudeLogin"))) {
+            try ClaudeCodeChatProtocol.parseReply(loggedOut)
+        }
+        #expect(throws: ClaudeChatError.self) { try ClaudeCodeChatProtocol.parseReply(Data("oops".utf8)) }
+    }
+
+    @Test func skipsDeskCastsOwnTranscripts() {
+        let ask = "/Users/me/.claude/projects/-Users-me-Library-Application-Support-DeskCast-DeskCast-Ask/s.jsonl"
+        #expect(ClaudeCodeChatProtocol.isAskTranscript(ask))
+        #expect(!ClaudeCodeChatProtocol.isAskTranscript("/Users/me/.claude/projects/-Users-me-Projects-app/s.jsonl"))
+    }
+}
