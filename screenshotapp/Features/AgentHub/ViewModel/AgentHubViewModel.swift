@@ -80,6 +80,13 @@ final class AgentHubViewModel: ObservableObject {
     }
 
     func start() {
+        #if DEBUG
+        // Screenshots: a made-up session, and no real hook events.
+        if defaults.bool(forKey: "DeskCastDemoAgentSession") {
+            runDemoSession()
+            return
+        }
+        #endif
         refreshHookStatus()
         applySettings()
         defaultsObserver = NotificationCenter.default
@@ -177,7 +184,7 @@ final class AgentHubViewModel: ObservableObject {
 
     // MARK: - Events
 
-    private func handle(_ event: AgentHookEvent) {
+    fileprivate func handle(_ event: AgentHookEvent) {
         // Any later event of a session means its pending request was answered
         // in the terminal (the permission notification itself comes after it).
         if event.kind != .notification, event.kind != .subagentStart, event.kind != .subagentStop {
@@ -371,3 +378,56 @@ final class AgentHubViewModel: ObservableObject {
         pendingHookChange = nil
     }
 }
+
+#if DEBUG
+extension AgentHubViewModel {
+    /// `-DeskCastDemoAgentSession YES`: a Claude Code turn in a Terminal tab
+    /// that ran the tests and is now editing a file (live diff).
+    fileprivate func runDemoSession() {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("ForecastView.swift")
+        try? """
+        struct ForecastView: View {
+            let report: WeatherReport
+
+            var body: some View {
+                VStack(alignment: .leading) {
+                    Text(report.city).font(.title2)
+                    CurrentConditions(report.current)
+                }
+            }
+        }
+        """.write(to: file, atomically: true, encoding: .utf8)
+
+        let base: [String: Any] = [
+            "session_id": "demo",
+            "cwd": "/Users/demo/Projects/weather-app",
+            "term_program": "Apple_Terminal",
+            "tty": "/dev/ttys009"
+        ]
+        let events: [[String: Any]] = [
+            ["hook_event_name": "UserPromptSubmit", "prompt": "Add a 7-day forecast under the current conditions"],
+            ["hook_event_name": "PreToolUse", "tool_name": "Read", "tool_input": ["file_path": file.path]],
+            ["hook_event_name": "PostToolUse", "tool_name": "Read", "tool_input": ["file_path": file.path]],
+            ["hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": ["command": "swift test --filter Forecast"]],
+            [
+                "hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_input": ["command": "swift test --filter Forecast"],
+                "tool_response": ["stdout": "Test Suite 'ForecastTests' passed.\n  Executed 6 tests, with 0 failures in 0.042 s"]
+            ],
+            [
+                "hook_event_name": "PreToolUse", "tool_name": "Edit",
+                "tool_input": [
+                    "file_path": file.path,
+                    "old_string": "            CurrentConditions(report.current)\n",
+                    "new_string": "            CurrentConditions(report.current)\n            Divider()\n"
+                        + "            DailyForecastList(days: report.daily.prefix(7))\n"
+                ]
+            ]
+        ]
+        for event in events {
+            if let decoded = AgentHookEvent(payload: base.merging(event) { _, new in new }) {
+                handle(decoded)
+            }
+        }
+    }
+}
+#endif

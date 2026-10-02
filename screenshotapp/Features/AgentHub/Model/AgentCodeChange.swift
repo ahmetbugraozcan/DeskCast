@@ -85,10 +85,12 @@ nonisolated struct AgentCodeChange: Equatable, Sendable {
             for index in max(0, firstIndex - contextLines)..<firstIndex where index < fileLines.count {
                 before.append(AgentCodeLine(kind: .context, number: index + 1, text: fileLines[index]))
             }
+            // Lines after the change are numbered as they'll be once it's made.
+            let shift = newLines.count - oldLines.count
             let afterEnd = min(fileLines.count - 1, lastIndex + contextLines)
             if lastIndex + 1 <= afterEnd {
                 for index in (lastIndex + 1)...afterEnd {
-                    after.append(AgentCodeLine(kind: .context, number: index + 1, text: fileLines[index]))
+                    after.append(AgentCodeLine(kind: .context, number: index + 1 + shift, text: fileLines[index]))
                 }
             }
         }
@@ -119,8 +121,9 @@ nonisolated struct AgentCodeChange: Equatable, Sendable {
         for index in head..<(newLines.count - tail) {
             middle.append(AgentCodeLine(kind: .added, number: number(index), text: newLines[index]))
         }
+        let shift = newLines.count - oldLines.count
         for index in (oldLines.count - tail)..<min(oldLines.count, oldLines.count - tail + contextLines) {
-            middle.append(AgentCodeLine(kind: .context, number: number(index), text: oldLines[index]))
+            middle.append(AgentCodeLine(kind: .context, number: number(index + shift), text: oldLines[index]))
         }
 
         return AgentCodeChange(filePath: path, lines: trim(before: before, middle: middle, after: after).map(clipped))

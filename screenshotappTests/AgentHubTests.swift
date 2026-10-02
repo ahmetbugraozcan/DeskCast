@@ -411,6 +411,14 @@ struct AgentCodeChangeTests {
         #expect(change.addedCount == 1 && change.removedCount == 1)
     }
 
+    @Test func numbersLinesAfterAnInsertionAsTheyWillBe() throws {
+        let text = "a\nb\nc\nd\ne\n"
+        let change = try #require(AgentCodeChange.edit(path: "a.swift", old: "b\n", new: "b\nx\ny\n", fileText: text))
+        let numbers = change.lines.map(\.number)
+        #expect(numbers == [1, 2, 3, 4, 5, 6])
+        #expect(change.lines.map(\.text) == ["a", "b", "x", "y", "c", "d"])
+    }
+
     @Test func keepsSharedLinesAsContextAndWorksWithoutTheFile() throws {
         let change = try #require(AgentCodeChange.edit(path: "a.swift", old: "a\nb\nc", new: "a\nB\nc", fileText: nil))
         #expect(change.lines.map(\.kind) == [.context, .removed, .added, .context])
