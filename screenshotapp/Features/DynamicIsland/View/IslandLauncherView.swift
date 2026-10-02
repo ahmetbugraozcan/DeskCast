@@ -7,7 +7,7 @@ import SwiftUI
 struct IslandLauncherView: View {
     @ObservedObject var store: DynamicIslandViewModel
 
-    @State private var isEditing = false
+    private var isEditing: Bool { store.isEditingLayout }
     /// Order while a drag is in flight; saved when the drag ends.
     @State private var draftOrder: [IslandPanel]?
     @State private var drag: TileDrag?
@@ -42,7 +42,7 @@ struct IslandLauncherView: View {
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isEditing)
         .onDisappear {
-            isEditing = false
+            store.isEditingLayout = false
             draftOrder = nil
             drag = nil
         }
@@ -64,13 +64,13 @@ struct IslandLauncherView: View {
 
             if isEditing {
                 IslandChipButton(title: AppLocalization.string("island.launcher.done"), systemImage: "checkmark", isOn: true) {
-                    isEditing = false
+                    store.isEditingLayout = false
                 }
             } else {
                 IslandIconButton(
                     systemImage: "slider.horizontal.3",
                     help: AppLocalization.string("island.launcher.edit"),
-                    action: { isEditing = true }
+                    action: { store.isEditingLayout = true }
                 )
             }
 
@@ -103,7 +103,7 @@ struct IslandLauncherView: View {
                     .transition(.scale(scale: 0.8).combined(with: .opacity))
                 }
             } else if !hiddenPanels.isEmpty {
-                AddPanelTile { isEditing = true }
+                AddPanelTile { store.isEditingLayout = true }
             }
         }
         .coordinateSpace(.named(Self.gridSpace))
@@ -122,12 +122,9 @@ struct IslandLauncherView: View {
             onBadge: { setHidden(panel, true) }
         )
         .contextMenu {
-            Button(AppLocalization.string("island.launcher.edit")) { isEditing = true }
+            Button(AppLocalization.string("island.launcher.edit")) { store.isEditingLayout = true }
             if order.count > 1 {
                 Button(AppLocalization.string("island.launcher.hide")) { setHidden(panel, true) }
-            }
-            if store.preferences.showsSideButtons {
-                sideButtonMenu(for: panel)
             }
         }
         .scaleEffect(isDragging ? 1.08 : 1)
@@ -139,26 +136,6 @@ struct IslandLauncherView: View {
     }
 
     // MARK: - Editing
-
-    @ViewBuilder
-    private func sideButtonMenu(for panel: IslandPanel) -> some View {
-        let item = IslandOrbItem.panel(panel)
-        let buttons = store.preferences.sideButtons
-        Divider()
-        if buttons.allItems.contains(item) {
-            Button(AppLocalization.string("island.orb.removeButton"), systemImage: "minus.circle") {
-                DynamicIslandSettings.updateSideButtons { $0.remove(item) }
-            }
-        } else {
-            Menu(AppLocalization.string("island.orb.addAsButton")) {
-                ForEach(IslandOrbSide.allCases.filter { buttons[$0].count < IslandOrbLayout.maxPerSide }, id: \.self) { side in
-                    Button(AppLocalization.string(side.titleKey)) {
-                        DynamicIslandSettings.updateSideButtons { $0.add(item, to: side) }
-                    }
-                }
-            }
-        }
-    }
 
     private func setHidden(_ panel: IslandPanel, _ hide: Bool) {
         var hidden = store.preferences.hiddenPanels

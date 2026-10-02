@@ -395,12 +395,10 @@
 "island.orb.side.right" = "Sağ";
 "island.orb.side.bottom" = "Alt";
 "island.orb.island" = "Island";
-"island.orb.hint" = "Açık Island'ın etrafındaki yuvarlak düğmeler. Taşımak ya da kaldırmak için birine tıkla; herhangi bir paneli eklemek için kesikli + düğmesine bas. Island'da bir düğmeye ya da panel kutucuğuna sağ tıklayarak da ekleyip taşıyabilir veya kaldırabilirsin.";
+"island.orb.hint" = "Açık Island'ın etrafındaki yuvarlak düğmeler. Taşımak ya da kaldırmak için birine tıkla; herhangi bir paneli eklemek için kesikli + düğmesine bas. Island'da panel ızgarasındaki Düzenle ile de: kesikli + yuvalar düğme ekler, düğmedeki − kaldırır.";
 "island.orb.add" = "Düğme ekle (%@)";
 "island.orb.moveTo" = "Taşı";
-"island.orb.addHere" = "Buraya düğme ekle";
-"island.orb.addAsButton" = "Yan düğme olarak ekle";
-"island.orb.removeButton" = "Yan düğmeyi kaldır";
+"island.orb.addSlot" = "Düğme ekle";
 "island.orb.remove" = "Kaldır";
 "island.orb.edit" = "Düğmeleri düzenle…";
 "island.orb.reset" = "Varsayılana dön";

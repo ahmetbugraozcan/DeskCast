@@ -10,9 +10,12 @@ struct DynamicIslandLayout: Equatable {
     let islandFrame: CGRect
     let orbFrames: [IslandOrbItem: CGRect]
     var chipFrames: [IslandActivityChip: CGRect] = [:]
+    /// Dashed "+" placeholders for the next free side-button slot, while
+    /// the launcher is in Edit mode.
+    var slotFrames: [IslandOrbSide: CGRect] = [:]
 
     var interactiveFrames: [CGRect] {
-        [islandFrame] + orbFrames.values + chipFrames.values
+        [islandFrame] + orbFrames.values + chipFrames.values + slotFrames.values
     }
 }
 
@@ -107,35 +110,55 @@ struct DynamicIslandView: View {
         var orbs: [IslandOrbItem: CGRect] = [:]
         let chips = activityChipFrames(for: store, below: islandFrame)
 
+        var slots: [IslandOrbSide: CGRect] = [:]
+
         if mode == .expanded, store.preferences.showsSideButtons {
             let ears = cornerMetrics(for: .expanded).top
             let leftX = islandFrame.minX + ears - orbGap - orbSize
             let rightX = islandFrame.maxX - ears + orbGap
             let firstY = geometry.notchSize.height + 14
             let buttons = store.preferences.sideButtons
+            let showsSlots = store.isEditingLayout && !buttons.unusedItems.isEmpty
+            func columnFrame(originX: CGFloat, index: Int) -> CGRect {
+                CGRect(x: originX, y: firstY + CGFloat(index) * (orbSize + orbGap), width: orbSize, height: orbSize)
+            }
 
             for (index, item) in buttons.left.enumerated() {
-                orbs[item] = CGRect(x: leftX, y: firstY + CGFloat(index) * (orbSize + orbGap), width: orbSize, height: orbSize)
+                orbs[item] = columnFrame(originX: leftX, index: index)
             }
             for (index, item) in buttons.right.enumerated() {
-                orbs[item] = CGRect(x: rightX, y: firstY + CGFloat(index) * (orbSize + orbGap), width: orbSize, height: orbSize)
+                orbs[item] = columnFrame(originX: rightX, index: index)
+            }
+            if showsSlots, buttons.left.count < IslandOrbLayout.maxPerSide {
+                slots[.left] = columnFrame(originX: leftX, index: buttons.left.count)
+            }
+            if showsSlots, buttons.right.count < IslandOrbLayout.maxPerSide {
+                slots[.right] = columnFrame(originX: rightX, index: buttons.right.count)
             }
 
             // The activity chips take the row under the island.
-            if chips.isEmpty, !buttons.bottom.isEmpty {
-                let rowWidth = CGFloat(buttons.bottom.count) * orbSize + CGFloat(buttons.bottom.count - 1) * orbGap
-                for (index, item) in buttons.bottom.enumerated() {
-                    orbs[item] = CGRect(
+            let showsBottomSlot = showsSlots && buttons.bottom.count < IslandOrbLayout.maxPerSide
+            let rowCount = buttons.bottom.count + (showsBottomSlot ? 1 : 0)
+            if chips.isEmpty, rowCount > 0 {
+                let rowWidth = CGFloat(rowCount) * orbSize + CGFloat(rowCount - 1) * orbGap
+                func rowFrame(_ index: Int) -> CGRect {
+                    CGRect(
                         x: (islandFrame.midX - rowWidth / 2 + CGFloat(index) * (orbSize + orbGap)).rounded(),
                         y: islandFrame.maxY + orbGap,
                         width: orbSize,
                         height: orbSize
                     )
                 }
+                for (index, item) in buttons.bottom.enumerated() {
+                    orbs[item] = rowFrame(index)
+                }
+                if showsBottomSlot {
+                    slots[.bottom] = rowFrame(buttons.bottom.count)
+                }
             }
         }
 
-        return DynamicIslandLayout(panelSize: panelSize, islandFrame: islandFrame, orbFrames: orbs, chipFrames: chips)
+        return DynamicIslandLayout(panelSize: panelSize, islandFrame: islandFrame, orbFrames: orbs, chipFrames: chips, slotFrames: slots)
     }
 
     /// A centered row of chips under the island: each activity going on,
@@ -254,11 +277,30 @@ struct DynamicIslandView: View {
 
             ForEach(IslandOrbItem.all, id: \.self) { orb in
                 if let frame = layout.orbFrames[orb] {
-                    IslandOrbButton(orb: orb, layout: store.preferences.sideButtons, isSelected: isOrbSelected(orb)) {
-                        handleOrb(orb)
+                    IslandOrbButton(orb: orb, isSelected: isOrbSelected(orb), isEditing: store.isEditingLayout) {
+                        if store.isEditingLayout {
+                            removeOrb(orb)
+                        } else {
+                            handleOrb(orb)
+                        }
+                    } onRemove: {
+                        removeOrb(orb)
                     } onEdit: {
-                        store.collapse()
-                        panels.actions.openSettings()
+                        store.showLauncher()
+                        store.isEditingLayout = true
+                    }
+                    .frame(width: frame.width, height: frame.height)
+                    .offset(x: frame.minX, y: frame.minY)
+                    .transition(.scale(scale: 0.4).combined(with: .opacity))
+                }
+            }
+
+            ForEach(IslandOrbSide.allCases, id: \.self) { side in
+                if let frame = layout.slotFrames[side] {
+                    IslandOrbSlot(items: store.preferences.sideButtons.unusedItems) { item in
+                        withAnimation(Self.morphAnimation) {
+                            DynamicIslandSettings.updateSideButtons { $0.add(item, to: side) }
+                        }
                     }
                     .frame(width: frame.width, height: frame.height)
                     .offset(x: frame.minX, y: frame.minY)
@@ -287,6 +329,12 @@ struct DynamicIslandView: View {
         case .launcher: store.expandedContent == .launcher
         case .panel(let panel): store.expandedContent == .panel(panel)
         case .settings: false
+        }
+    }
+
+    private func removeOrb(_ orb: IslandOrbItem) {
+        withAnimation(Self.morphAnimation) {
+            DynamicIslandSettings.updateSideButtons { $0.remove(orb) }
         }
     }
 
@@ -395,14 +443,11 @@ struct DynamicIslandView: View {
 
 private struct IslandOrbButton: View {
     let orb: IslandOrbItem
-    let layout: IslandOrbLayout
     let isSelected: Bool
+    let isEditing: Bool
     let action: () -> Void
+    let onRemove: () -> Void
     let onEdit: () -> Void
-
-    private var side: IslandOrbSide? {
-        IslandOrbSide.allCases.first { layout[$0].contains(orb) }
-    }
 
     var body: some View {
         Button(action: action) {
@@ -410,37 +455,65 @@ private struct IslandOrbButton: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: DynamicIslandView.orbSize, height: DynamicIslandView.orbSize)
-                .background(Circle().fill(isSelected ? Color(white: 0.22) : Color.black))
+                .background(Circle().fill(isSelected && !isEditing ? Color(white: 0.22) : Color.black))
                 .overlay(Circle().stroke(.white.opacity(0.08), lineWidth: 1))
+                .overlay(alignment: .topLeading) {
+                    if isEditing {
+                        // Clicking the button in Edit mode removes it.
+                        Image(systemName: "minus.circle.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, Color(red: 1, green: 0.27, blue: 0.23))
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
                 .shadow(color: .black.opacity(0.35), radius: 8, y: 3)
                 .contentShape(Circle())
         }
         .buttonStyle(IslandPressButtonStyle())
-        .help(AppLocalization.string(orb.titleKey))
+        .help(AppLocalization.string(isEditing ? "island.orb.remove" : orb.titleKey))
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isEditing)
         .contextMenu {
-            if let side, layout[side].count < IslandOrbLayout.maxPerSide, !layout.unusedItems.isEmpty {
-                Menu(AppLocalization.string("island.orb.addHere")) {
-                    ForEach(layout.unusedItems, id: \.self) { item in
-                        Button(AppLocalization.string(item.titleKey), systemImage: item.systemImage) {
-                            DynamicIslandSettings.updateSideButtons { $0.add(item, to: side) }
-                        }
-                    }
-                }
-            }
-            Menu(AppLocalization.string("island.orb.moveTo")) {
-                let targets = IslandOrbSide.allCases.filter { $0 != side && layout[$0].count < IslandOrbLayout.maxPerSide }
-                ForEach(targets, id: \.self) { target in
-                    Button(AppLocalization.string(target.titleKey)) {
-                        DynamicIslandSettings.updateSideButtons { $0.add(orb, to: target) }
-                    }
-                }
-            }
-            Button(AppLocalization.string("island.orb.remove"), systemImage: "minus.circle") {
-                DynamicIslandSettings.updateSideButtons { $0.remove(orb) }
-            }
-            Divider()
+            Button(AppLocalization.string("island.orb.remove"), systemImage: "minus.circle", action: onRemove)
             Button(AppLocalization.string("island.orb.edit"), systemImage: "slider.horizontal.3", action: onEdit)
         }
+    }
+}
+
+/// An empty side-button slot in Edit mode: a dashed "+" that lists the
+/// panels (and launcher / Settings) not placed yet.
+private struct IslandOrbSlot: View {
+    let items: [IslandOrbItem]
+    let onPick: (IslandOrbItem) -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        // A borderless Menu drops its label's styling, so the dashed circle
+        // is drawn behind it.
+        Menu {
+            ForEach(items, id: \.self) { item in
+                Button(AppLocalization.string(item.titleKey), systemImage: item.systemImage) { onPick(item) }
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 14, weight: .bold))
+                .frame(width: DynamicIslandView.orbSize, height: DynamicIslandView.orbSize)
+                .contentShape(Circle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .tint(.white)
+        .frame(width: DynamicIslandView.orbSize, height: DynamicIslandView.orbSize)
+        .background {
+            Circle()
+                .fill(Color.black.opacity(isHovered ? 0.85 : 0.6))
+                .overlay(Circle().strokeBorder(.white.opacity(isHovered ? 0.7 : 0.4), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
+                .allowsHitTesting(false)
+        }
+        .contentShape(Circle())
+        .onHover { isHovered = $0 }
+        .help(AppLocalization.string("island.orb.addSlot"))
     }
 }
 

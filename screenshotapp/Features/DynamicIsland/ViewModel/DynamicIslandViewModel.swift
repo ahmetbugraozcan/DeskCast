@@ -56,6 +56,9 @@ final class DynamicIslandViewModel: ObservableObject, DynamicIslandNotificationP
     /// The activity the user picked for the closed island; `nil` shows them
     /// automatically, with a running timer beside music or an agent.
     @Published private(set) var activityChoice: IslandActivity?
+    /// The launcher's Edit mode: panel tiles get remove badges, side buttons
+    /// get remove badges and empty slots show dashed "+" placeholders.
+    @Published var isEditingLayout = false
 
     weak var presenter: DynamicIslandPresenting?
 
@@ -1113,6 +1116,7 @@ extension DynamicIslandViewModel {
         if let rawPanel = defaults.string(forKey: "DeskCastDemoPanel") {
             if rawPanel == "launcher" {
                 expandedContent = .launcher
+                isEditingLayout = defaults.bool(forKey: "DeskCastDemoEditLayout")
             } else if let panel = IslandPanel(rawValue: rawPanel) {
                 select(panel)
             }

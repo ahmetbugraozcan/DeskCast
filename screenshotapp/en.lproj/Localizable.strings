@@ -395,12 +395,10 @@
 "island.orb.side.right" = "Right";
 "island.orb.side.bottom" = "Below";
 "island.orb.island" = "Island";
-"island.orb.hint" = "Round buttons around the open island. Click one to move or remove it, or a dashed + to add any panel. On the island, right-click a button or a panel tile to add, move or remove buttons.";
+"island.orb.hint" = "Round buttons around the open island. Click one to move or remove it, or a dashed + to add any panel. On the island, use Edit in the panel grid: dashed + slots add buttons, a button's − removes it.";
 "island.orb.add" = "Add a button (%@)";
 "island.orb.moveTo" = "Move to";
-"island.orb.addHere" = "Add a button here";
-"island.orb.addAsButton" = "Add as side button";
-"island.orb.removeButton" = "Remove side button";
+"island.orb.addSlot" = "Add a button";
 "island.orb.remove" = "Remove";
 "island.orb.edit" = "Edit buttons…";
 "island.orb.reset" = "Restore defaults";
