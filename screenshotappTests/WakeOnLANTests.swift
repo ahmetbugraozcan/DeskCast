@@ -44,4 +44,30 @@ struct WakeOnLANTests {
         #expect(WakeComputersViewModel.next(status: waking, online: false, now: late) == .offline)
         #expect(WakeComputersViewModel.next(status: .online, online: false, now: start) == .offline)
     }
+
+    @Test func readsPrivateIPv4AddressesOnly() {
+        #expect(LocalNetworkReach.privateIPv4("192.168.1.20") == 0xC0A8_0114)
+        #expect(LocalNetworkReach.privateIPv4(" 10.0.0.5 ") == 0x0A00_0005)
+        #expect(LocalNetworkReach.privateIPv4("172.20.1.1") != nil)
+        #expect(LocalNetworkReach.privateIPv4("169.254.3.4") != nil)
+        for text in ["172.32.0.1", "100.101.102.103", "8.8.8.8", "192.168.1", "192.168.1.256", "pc.local", ""] {
+            #expect(LocalNetworkReach.privateIPv4(text) == nil, "\(text)")
+        }
+        #expect(LocalNetworkReach.isLocalName("Gaming-PC.LOCAL"))
+        #expect(!LocalNetworkReach.isLocalName("pc.tailnet.ts.net"))
+    }
+
+    @Test func showsHomeAddressesAsAwayOnOtherNetworks() {
+        let home = [IPv4Subnet(address: 0xC0A8_0105, mask: 0xFFFF_FF00)] // 192.168.1.5/24
+        let cafe = [IPv4Subnet(address: 0x0A01_0203, mask: 0xFFFF_0000)] // 10.1.2.3/16
+        #expect(!LocalNetworkReach.isAway(host: "192.168.1.20", lastKnownAddress: nil, subnets: home))
+        #expect(LocalNetworkReach.isAway(host: "192.168.1.20", lastKnownAddress: nil, subnets: cafe))
+        #expect(LocalNetworkReach.isAway(host: "192.168.1.20", lastKnownAddress: nil, subnets: []))
+        // A .local name uses the last address it had; unknown means not away.
+        #expect(LocalNetworkReach.isAway(host: "pc.local", lastKnownAddress: "192.168.1.20", subnets: cafe))
+        #expect(!LocalNetworkReach.isAway(host: "pc.local", lastKnownAddress: "192.168.1.20", subnets: home))
+        #expect(!LocalNetworkReach.isAway(host: "pc.local", lastKnownAddress: nil, subnets: cafe))
+        // Tailscale and public addresses are reachable from anywhere.
+        #expect(!LocalNetworkReach.isAway(host: "100.101.102.103", lastKnownAddress: nil, subnets: cafe))
+    }
 }

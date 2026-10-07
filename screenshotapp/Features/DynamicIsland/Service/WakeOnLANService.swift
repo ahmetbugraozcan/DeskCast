@@ -11,6 +11,10 @@ protocol WakeOnLANSending: Sendable {
 protocol HostProbing: Sendable {
     /// Whether `host` answers on the local network.
     func isOnline(host: String) async -> Bool
+    /// The IPv4 address a name resolves to right now, if any.
+    func resolveIPv4(host: String) async -> String?
+    /// The IPv4 networks this Mac's interfaces are on.
+    func localSubnets() -> [IPv4Subnet]
 }
 
 /// Sends magic packets over UDP broadcast: to 255.255.255.255 and to each
@@ -87,6 +91,42 @@ struct HostProbeService: HostProbing {
             }
             return false
         }
+    }
+
+    func resolveIPv4(host: String) async -> String? {
+        await Task.detached {
+            var hints = addrinfo()
+            hints.ai_family = AF_INET
+            hints.ai_socktype = SOCK_STREAM
+            var result: UnsafeMutablePointer<addrinfo>?
+            guard getaddrinfo(host, nil, &hints, &result) == 0, let first = result else { return nil }
+            defer { freeaddrinfo(result) }
+            guard let address = first.pointee.ai_addr else { return nil }
+            var text = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+            guard getnameinfo(address, first.pointee.ai_addrlen, &text, socklen_t(text.count), nil, 0, NI_NUMERICHOST) == 0 else {
+                return nil
+            }
+            return String(cString: text)
+        }.value
+    }
+
+    func localSubnets() -> [IPv4Subnet] {
+        var list: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&list) == 0, let first = list else { return [] }
+        defer { freeifaddrs(list) }
+
+        let value = { (pointer: UnsafeMutablePointer<sockaddr>) in
+            pointer.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { UInt32(bigEndian: $0.pointee.sin_addr.s_addr) }
+        }
+        var subnets: [IPv4Subnet] = []
+        for entry in sequence(first: first, next: { $0.pointee.ifa_next }) {
+            let flags = Int32(entry.pointee.ifa_flags)
+            guard flags & IFF_UP != 0, flags & IFF_LOOPBACK == 0,
+                  let address = entry.pointee.ifa_addr, address.pointee.sa_family == sa_family_t(AF_INET),
+                  let netmask = entry.pointee.ifa_netmask else { continue }
+            subnets.append(IPv4Subnet(address: value(address), mask: value(netmask)))
+        }
+        return subnets
     }
 
     private static func answers(host: String, port: UInt16) async -> Bool {

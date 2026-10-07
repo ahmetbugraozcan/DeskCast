@@ -16,6 +16,11 @@ final class WakeComputersViewModel: ObservableObject, IslandPanelActivating {
     private var timer: Timer?
     private var defaultsObserver: AnyCancellable?
     private var isChecking = false
+    /// The last address each `.local` computer resolved to while online, so
+    /// it can be shown as away when this Mac is on another network.
+    private var lastAddresses: [String: String]
+
+    static let lastAddressesKey = "dynamicIsland.wakeComputerAddresses"
 
     private static let pollInterval: TimeInterval = 4
 
@@ -28,6 +33,7 @@ final class WakeComputersViewModel: ObservableObject, IslandPanelActivating {
         self.prober = prober
         self.defaults = defaults
         computers = WakeComputer.load(from: defaults)
+        lastAddresses = defaults.dictionary(forKey: Self.lastAddressesKey) as? [String: String] ?? [:]
         defaultsObserver = NotificationCenter.default
             .publisher(for: UserDefaults.didChangeNotification, object: defaults)
             .receive(on: RunLoop.main)
@@ -52,7 +58,7 @@ final class WakeComputersViewModel: ObservableObject, IslandPanelActivating {
     }
 
     func wake(_ computer: WakeComputer) {
-        guard let mac = computer.macBytes else { return }
+        guard status(of: computer) != .away, let mac = computer.macBytes else { return }
         failedWake = nil
         Task {
             let sent = await sender.wake(mac: mac)
@@ -76,6 +82,11 @@ final class WakeComputersViewModel: ObservableObject, IslandPanelActivating {
         computers = loaded
         let ids = Set(loaded.map(\.id))
         statuses = statuses.filter { ids.contains($0.key) }
+        let idStrings = Set(ids.map(\.uuidString))
+        if lastAddresses.keys.contains(where: { !idStrings.contains($0) }) {
+            lastAddresses = lastAddresses.filter { idStrings.contains($0.key) }
+            defaults.set(lastAddresses, forKey: Self.lastAddressesKey)
+        }
     }
 
     private func checkAll() {
@@ -97,9 +108,28 @@ final class WakeComputersViewModel: ObservableObject, IslandPanelActivating {
                 return results
             }
             isChecking = false
-            for (id, online) in results {
-                statuses[id] = Self.next(status: statuses[id] ?? .unknown, online: online, now: Date())
+            let subnets = prober.localSubnets()
+            for computer in targets {
+                guard let online = results[computer.id] else { continue }
+                let away = !online && LocalNetworkReach.isAway(
+                    host: computer.trimmedHost,
+                    lastKnownAddress: lastAddresses[computer.id.uuidString],
+                    subnets: subnets
+                )
+                statuses[computer.id] = away ? .away : Self.next(status: statuses[computer.id] ?? .unknown, online: online, now: Date())
+                if online, LocalNetworkReach.isLocalName(computer.trimmedHost) {
+                    rememberAddress(of: computer)
+                }
             }
+        }
+    }
+
+    private func rememberAddress(of computer: WakeComputer) {
+        Task { [prober] in
+            guard let address = await prober.resolveIPv4(host: computer.trimmedHost),
+                  lastAddresses[computer.id.uuidString] != address else { return }
+            lastAddresses[computer.id.uuidString] = address
+            defaults.set(lastAddresses, forKey: Self.lastAddressesKey)
         }
     }
 

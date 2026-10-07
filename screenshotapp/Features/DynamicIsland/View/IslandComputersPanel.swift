@@ -60,7 +60,7 @@ private struct WakeComputerCard: View {
         switch status {
         case .online: Self.onlineColor
         case .waking: Self.wakingColor
-        case .offline, .unknown: IslandPalette.track
+        case .offline, .away, .unknown: IslandPalette.track
         }
     }
 
@@ -112,6 +112,8 @@ private struct WakeComputerCard: View {
                     Text(AppLocalization.string("island.computers.online")).foregroundStyle(Self.onlineColor)
                 case .offline:
                     Text(AppLocalization.string("island.computers.offline")).foregroundStyle(IslandPalette.tertiaryText)
+                case .away:
+                    Text(AppLocalization.string("island.computers.away")).foregroundStyle(IslandPalette.tertiaryText)
                 case .waking(let since):
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         Text(AppLocalization.formatted(
@@ -142,13 +144,15 @@ private struct WakeComputerCard: View {
         }
         .buttonStyle(IslandScaleButtonStyle())
         .disabled(!canWake)
-        .help(AppLocalization.string("island.computers.wake"))
+        .help(AppLocalization.string(status == .away ? "island.computers.awayHelp" : "island.computers.wake"))
         .accessibilityLabel(Text(AppLocalization.formatted("island.computers.wakeNamed", computer.displayName)))
     }
 
     private var canWake: Bool {
         guard hasValidMAC else { return false }
-        if case .online = status { return false }
-        return true
+        switch status {
+        case .online, .away: return false
+        default: return true
+        }
     }
 }

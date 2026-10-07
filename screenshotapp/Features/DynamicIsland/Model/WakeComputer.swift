@@ -60,6 +60,9 @@ nonisolated enum WakeComputerStatus: Equatable, Sendable {
     case unknown
     case online
     case offline
+    /// Its address is on a home network this Mac isn't on right now, so
+    /// whether it's on can't be known (and a wake packet wouldn't reach it).
+    case away
     /// A magic packet went out; waiting for the computer to answer.
     case waking(since: Date)
 
@@ -100,5 +103,51 @@ nonisolated enum WakeOnLAN {
     /// "AA:BB:CC:DD:EE:FF", for display.
     static func formatted(_ mac: [UInt8]) -> String {
         mac.map { String(format: "%02X", $0) }.joined(separator: ":")
+    }
+}
+
+/// An IPv4 network one of this Mac's interfaces is on.
+nonisolated struct IPv4Subnet: Equatable, Sendable {
+    let address: UInt32
+    let mask: UInt32
+
+    func contains(_ other: UInt32) -> Bool {
+        address & mask == other & mask
+    }
+}
+
+/// Whether a computer's address can be reached from the network this Mac
+/// is on. Pure, unit-tested.
+nonisolated enum LocalNetworkReach {
+    /// "192.168.1.20" → its 32-bit value, for private (10/8, 172.16/12,
+    /// 192.168/16) and link-local (169.254/16) addresses only; anything
+    /// else (a public or Tailscale 100.x address, a name) is nil.
+    static func privateIPv4(_ text: String) -> UInt32? {
+        let parts = text.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 4 else { return nil }
+        var octets: [UInt32] = []
+        for part in parts {
+            guard !part.isEmpty, part.count <= 3, part.allSatisfy(\.isASCII), let value = UInt32(part), value <= 255 else { return nil }
+            octets.append(value)
+        }
+        let isPrivate = octets[0] == 10
+            || (octets[0] == 172 && (16...31).contains(octets[1]))
+            || (octets[0] == 192 && octets[1] == 168)
+            || (octets[0] == 169 && octets[1] == 254)
+        guard isPrivate else { return nil }
+        return octets.reduce(0) { $0 << 8 | $1 }
+    }
+
+    /// Whether a `.local` (Bonjour) name, only resolvable on its own network.
+    static func isLocalName(_ host: String) -> Bool {
+        host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasSuffix(".local")
+    }
+
+    /// True when the address (a private IP, or the last address a `.local`
+    /// name had) is on none of this Mac's networks. Unknown addresses and
+    /// public/VPN ones are never "away".
+    static func isAway(host: String, lastKnownAddress: String?, subnets: [IPv4Subnet]) -> Bool {
+        guard let address = privateIPv4(host) ?? lastKnownAddress.flatMap(privateIPv4) else { return false }
+        return !subnets.contains { $0.contains(address) }
     }
 }

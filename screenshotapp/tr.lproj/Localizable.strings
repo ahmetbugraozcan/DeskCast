@@ -626,6 +626,8 @@
 "island.computers.online" = "Açık";
 "island.computers.offline" = "Kapalı";
 "island.computers.waking" = "Açılıyor… %@";
+"island.computers.away" = "Kendi ağının dışında";
+"island.computers.awayHelp" = "Yalnızca aynı ağdan açılabilir";
 "island.computers.checking" = "Kontrol ediliyor…";
 "island.computers.noAddress" = "Durumu görmek için IP ekle";
 "island.computers.invalidMAC" = "MAC adresini kontrol et";
@@ -638,7 +640,7 @@
 "island.settings.computers.mac" = "MAC adresi";
 "island.settings.computers.host" = "IP ya da ad.local";
 "island.settings.computers.remove" = "Kaldır";
-"island.settings.computers.hint" = "Bilgisayarlar paneli bunları yerel ağında bir Wake-on-LAN paketiyle açar. Bir bilgisayarın açık olup olmadığını görmek için IP adresini (ya da pc.local gibi bir ad) ekle: Windows varsayılan olarak ping'e cevap vermediği için DeskCast birkaç yaygın portu dener (dosya paylaşımı, Uzak Masaüstü, SSH). Wake-on-LAN, bilgisayarın BIOS'unda ve ağ kartı ayarlarında açık olmalı. macOS bir kez Yerel Ağ izni ister.";
+"island.settings.computers.hint" = "Bilgisayarlar paneli bunları yerel ağında bir Wake-on-LAN paketiyle açar. Bir bilgisayarın açık olup olmadığını görmek için IP adresini (ya da pc.local gibi bir ad) ekle: Windows varsayılan olarak ping'e cevap vermediği için DeskCast birkaç yaygın portu dener (dosya paylaşımı, Uzak Masaüstü, SSH). Wake-on-LAN, bilgisayarın BIOS'unda ve ağ kartı ayarlarında açık olmalı. macOS bir kez Yerel Ağ izni ister.\n\nEvden uzaktayken evdeki IP'ye ulaşılamaz, bu yüzden bilgisayar “kendi ağının dışında” görünür. Durumunu her yerden görmek için iki bilgisayara da Tailscale kur ve buraya bilgisayarın Tailscale adresini (100.x.x.x) ya da adını yaz.";
 "island.devices.empty" = "Bağlı Bluetooth cihazı yok";
 "island.devices.emptyMessage" = "Bağlı AirPods, klavye ve farelerin pil durumu burada görünür.";
 "island.devices.allowBluetooth" = "Fare ve klavye pilini göster";

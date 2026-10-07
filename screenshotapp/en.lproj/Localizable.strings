@@ -626,6 +626,8 @@
 "island.computers.online" = "Online";
 "island.computers.offline" = "Offline";
 "island.computers.waking" = "Waking… %@";
+"island.computers.away" = "Away from its network";
+"island.computers.awayHelp" = "It can only be woken from the same network";
 "island.computers.checking" = "Checking…";
 "island.computers.noAddress" = "Add an IP to see its status";
 "island.computers.invalidMAC" = "Check the MAC address";
@@ -638,7 +640,7 @@
 "island.settings.computers.mac" = "MAC address";
 "island.settings.computers.host" = "IP or name.local";
 "island.settings.computers.remove" = "Remove";
-"island.settings.computers.hint" = "The Computers panel wakes these with a Wake-on-LAN packet on your local network. Add an IP address (or a name like pc.local) to see whether a computer is online: DeskCast tries a few common ports (file sharing, Remote Desktop, SSH), since Windows doesn't answer ping by default. Wake-on-LAN must be on in the computer's BIOS and network adapter settings. macOS asks once for Local Network access.";
+"island.settings.computers.hint" = "The Computers panel wakes these with a Wake-on-LAN packet on your local network. Add an IP address (or a name like pc.local) to see whether a computer is online: DeskCast tries a few common ports (file sharing, Remote Desktop, SSH), since Windows doesn't answer ping by default. Wake-on-LAN must be on in the computer's BIOS and network adapter settings. macOS asks once for Local Network access.\n\nAway from home, a home IP can't be reached, so the computer shows as away from its network. To see its status from anywhere, install Tailscale on both computers and enter the computer's Tailscale address (100.x.x.x) or name instead.";
 "island.devices.empty" = "No Bluetooth devices connected";
 "island.devices.emptyMessage" = "Connected AirPods, keyboards and mice show their battery here.";
 "island.devices.allowBluetooth" = "Show mouse & keyboard battery";
