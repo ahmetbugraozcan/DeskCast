@@ -715,6 +715,7 @@ final class IslandPanelModels {
     let calendar = CalendarViewModel()
     let downloads = DownloadsViewModel()
     let devices = DevicesViewModel()
+    let computers = WakeComputersViewModel()
     let weather = WeatherViewModel()
     let focus = FocusIndicatorMonitor()
     let agents = AgentActivityMonitor()

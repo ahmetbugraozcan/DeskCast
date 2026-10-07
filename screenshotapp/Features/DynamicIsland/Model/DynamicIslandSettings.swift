@@ -229,6 +229,7 @@ enum DynamicIslandSettings {
         static let scratchpadText = "dynamicIsland.scratchpadText"
         static let notificationDurationSeconds = "dynamicIsland.notificationDurationSeconds"
         static let weatherCity = "dynamicIsland.weatherCity"
+        static let wakeComputers = WakeComputer.storageKey
         static let weatherUnit = "dynamicIsland.weatherUnit"
         static let showsFocusIndicator = "dynamicIsland.showsFocusIndicator"
         static let showsAgentActivity = "dynamicIsland.showsAgentActivity"
@@ -284,10 +285,12 @@ enum DynamicIslandSettings {
     static let defaultFullBanners = false
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
-        // Scratchpad text and the weather city are user content, so they're
-        // registered but never reset.
+        // Scratchpad text, the weather city and the computers to wake are
+        // user content, so they're registered but never reset.
         defaults.register(
-            defaults: defaultValues.merging([Keys.scratchpadText: "", Keys.weatherCity: ""]) { current, _ in current }
+            defaults: defaultValues.merging([
+                Keys.scratchpadText: "", Keys.weatherCity: "", Keys.wakeComputers: [[String: String]]()
+            ]) { current, _ in current }
         )
         migrateIdleContentToAutomatic(in: defaults)
     }

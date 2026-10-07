@@ -67,6 +67,7 @@ struct DynamicIslandView: View {
         .scratchpad: 224,
         .aiAgents: 300,
         .devices: 244,
+        .computers: 214,
         .weather: 214
     ]
 

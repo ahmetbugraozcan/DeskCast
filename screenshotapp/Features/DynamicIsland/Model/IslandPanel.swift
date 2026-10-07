@@ -20,6 +20,7 @@ enum IslandPanel: String, CaseIterable, Identifiable {
     case scratchpad
     case aiAgents
     case devices
+    case computers
     case weather
 
     var id: String { rawValue }
@@ -43,6 +44,7 @@ enum IslandPanel: String, CaseIterable, Identifiable {
         case .scratchpad: "island.panel.scratchpad"
         case .aiAgents: "island.panel.aiAgents"
         case .devices: "island.panel.devices"
+        case .computers: "island.panel.computers"
         case .weather: "island.panel.weather"
         }
     }
@@ -65,6 +67,7 @@ enum IslandPanel: String, CaseIterable, Identifiable {
         case .scratchpad: "note.text"
         case .aiAgents: "sparkles"
         case .devices: "battery.75percent"
+        case .computers: "desktopcomputer"
         case .weather: "cloud.sun.fill"
         }
     }
@@ -99,6 +102,7 @@ enum IslandPanel: String, CaseIterable, Identifiable {
         case .scratchpad: .p
         case .aiAgents: .g
         case .devices: .b
+        case .computers: .l
         case .weather: .h
         }
     }

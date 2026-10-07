@@ -618,6 +618,27 @@
 /* Devices panel */
 "island.panel.devices" = "Devices";
 "island.devices.loading" = "Looking for devices…";
+"island.panel.computers" = "Computers";
+"island.computers.unnamed" = "Computer";
+"island.computers.empty" = "No computers yet";
+"island.computers.emptyMessage" = "Add a computer's MAC address in Settings to wake it from here.";
+"island.computers.addInSettings" = "Add in Settings";
+"island.computers.online" = "Online";
+"island.computers.offline" = "Offline";
+"island.computers.waking" = "Waking… %@";
+"island.computers.checking" = "Checking…";
+"island.computers.noAddress" = "Add an IP to see its status";
+"island.computers.invalidMAC" = "Check the MAC address";
+"island.computers.wake" = "Wake";
+"island.computers.wakeNamed" = "Wake %@";
+"island.computers.sendFailed" = "Couldn't send. Allow Local Network access";
+"island.settings.computers" = "Computers (Wake-on-LAN)";
+"island.settings.computers.add" = "Add computer";
+"island.settings.computers.name" = "Name";
+"island.settings.computers.mac" = "MAC address";
+"island.settings.computers.host" = "IP or name.local";
+"island.settings.computers.remove" = "Remove";
+"island.settings.computers.hint" = "The Computers panel wakes these with a Wake-on-LAN packet on your local network. Add an IP address (or a name like pc.local) to see whether a computer is online: DeskCast tries a few common ports (file sharing, Remote Desktop, SSH), since Windows doesn't answer ping by default. Wake-on-LAN must be on in the computer's BIOS and network adapter settings. macOS asks once for Local Network access.";
 "island.devices.empty" = "No Bluetooth devices connected";
 "island.devices.emptyMessage" = "Connected AirPods, keyboards and mice show their battery here.";
 "island.devices.allowBluetooth" = "Show mouse & keyboard battery";

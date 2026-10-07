@@ -618,6 +618,27 @@
 /* Devices panel */
 "island.panel.devices" = "Cihazlar";
 "island.devices.loading" = "Cihazlar aranıyor…";
+"island.panel.computers" = "Bilgisayarlar";
+"island.computers.unnamed" = "Bilgisayar";
+"island.computers.empty" = "Henüz bilgisayar yok";
+"island.computers.emptyMessage" = "Buradan açmak için Ayarlar'da bir bilgisayarın MAC adresini ekle.";
+"island.computers.addInSettings" = "Ayarlar'da ekle";
+"island.computers.online" = "Açık";
+"island.computers.offline" = "Kapalı";
+"island.computers.waking" = "Açılıyor… %@";
+"island.computers.checking" = "Kontrol ediliyor…";
+"island.computers.noAddress" = "Durumu görmek için IP ekle";
+"island.computers.invalidMAC" = "MAC adresini kontrol et";
+"island.computers.wake" = "Aç";
+"island.computers.wakeNamed" = "%@ bilgisayarını aç";
+"island.computers.sendFailed" = "Gönderilemedi. Yerel Ağ iznini ver";
+"island.settings.computers" = "Bilgisayarlar (Wake-on-LAN)";
+"island.settings.computers.add" = "Bilgisayar ekle";
+"island.settings.computers.name" = "Ad";
+"island.settings.computers.mac" = "MAC adresi";
+"island.settings.computers.host" = "IP ya da ad.local";
+"island.settings.computers.remove" = "Kaldır";
+"island.settings.computers.hint" = "Bilgisayarlar paneli bunları yerel ağında bir Wake-on-LAN paketiyle açar. Bir bilgisayarın açık olup olmadığını görmek için IP adresini (ya da pc.local gibi bir ad) ekle: Windows varsayılan olarak ping'e cevap vermediği için DeskCast birkaç yaygın portu dener (dosya paylaşımı, Uzak Masaüstü, SSH). Wake-on-LAN, bilgisayarın BIOS'unda ve ağ kartı ayarlarında açık olmalı. macOS bir kez Yerel Ağ izni ister.";
 "island.devices.empty" = "Bağlı Bluetooth cihazı yok";
 "island.devices.emptyMessage" = "Bağlı AirPods, klavye ve farelerin pil durumu burada görünür.";
 "island.devices.allowBluetooth" = "Fare ve klavye pilini göster";

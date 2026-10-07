@@ -157,7 +157,7 @@ struct IslandExpandedView: View {
             TimerPanelView(timer: panels.timer, stopwatch: panels.stopwatch)
         case .camera:
             CameraPanelView(model: panels.camera)
-        case .downloads, .scratchpad, .aiAgents, .devices, .weather:
+        case .downloads, .scratchpad, .aiAgents, .devices, .computers, .weather:
             utilityPanelContent(panel)
         }
     }
@@ -177,6 +177,8 @@ struct IslandExpandedView: View {
             )
         case .devices:
             DevicesPanelView(model: panels.devices)
+        case .computers:
+            ComputersPanelView(model: panels.computers, openSettings: panels.actions.openSettings)
         case .weather:
             WeatherPanelView(model: panels.weather, openSettings: panels.actions.openSettings)
         default:
