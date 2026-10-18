@@ -96,10 +96,23 @@ final class WakeComputersViewModel: ObservableObject, IslandPanelActivating {
         isChecking = true
 
         Task { [prober] in
+            let subnets = prober.localSubnets()
+            let arp = await prober.arpAddresses()
+            let plans = targets.map { computer in
+                (computer, LocalNetworkReach.probeHosts(
+                    host: computer.trimmedHost,
+                    arpAddress: computer.macBytes.flatMap { arp[$0] },
+                    subnets: subnets
+                ))
+            }
             let results = await withTaskGroup(of: (UUID, Bool).self) { group in
-                for computer in targets {
-                    let host = computer.trimmedHost
-                    group.addTask { (computer.id, await prober.isOnline(host: host)) }
+                for (computer, hosts) in plans where !hosts.isEmpty {
+                    group.addTask {
+                        for host in hosts where await prober.isOnline(host: host) {
+                            return (computer.id, true)
+                        }
+                        return (computer.id, false)
+                    }
                 }
                 var results: [UUID: Bool] = [:]
                 for await (id, online) in group {
@@ -108,15 +121,22 @@ final class WakeComputersViewModel: ObservableObject, IslandPanelActivating {
                 return results
             }
             isChecking = false
-            let subnets = prober.localSubnets()
-            for computer in targets {
-                guard let online = results[computer.id] else { continue }
-                let away = !online && LocalNetworkReach.isAway(
+            for (computer, hosts) in plans {
+                let online = results[computer.id] ?? false
+                let current = statuses[computer.id] ?? .unknown
+                if !online, LocalNetworkReach.isAway(
                     host: computer.trimmedHost,
                     lastKnownAddress: lastAddresses[computer.id.uuidString],
                     subnets: subnets
-                )
-                statuses[computer.id] = away ? .away : Self.next(status: statuses[computer.id] ?? .unknown, online: online, now: Date())
+                ) {
+                    statuses[computer.id] = .away
+                } else if hosts.isEmpty, case .waking = current {
+                    statuses[computer.id] = Self.next(status: current, online: false, now: Date())
+                } else if hosts.isEmpty {
+                    statuses[computer.id] = .thisMacAddress
+                } else {
+                    statuses[computer.id] = Self.next(status: current, online: online, now: Date())
+                }
                 if online, LocalNetworkReach.isLocalName(computer.trimmedHost) {
                     rememberAddress(of: computer)
                 }

@@ -15,6 +15,8 @@ protocol HostProbing: Sendable {
     func resolveIPv4(host: String) async -> String?
     /// The IPv4 networks this Mac's interfaces are on.
     func localSubnets() -> [IPv4Subnet]
+    /// The ARP table: the address each known MAC has on the local network.
+    func arpAddresses() async -> [[UInt8]: String]
 }
 
 /// Sends magic packets over UDP broadcast: to 255.255.255.255 and to each
@@ -107,6 +109,21 @@ struct HostProbeService: HostProbing {
                 return nil
             }
             return String(cString: text)
+        }.value
+    }
+
+    func arpAddresses() async -> [[UInt8]: String] {
+        await Task.detached {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/sbin/arp")
+            process.arguments = ["-an"]
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = FileHandle.nullDevice
+            guard (try? process.run()) != nil else { return [:] }
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            return LocalNetworkReach.arpAddresses(String(bytes: data, encoding: .utf8) ?? "")
         }.value
     }
 

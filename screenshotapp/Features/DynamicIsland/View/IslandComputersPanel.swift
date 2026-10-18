@@ -60,7 +60,7 @@ private struct WakeComputerCard: View {
         switch status {
         case .online: Self.onlineColor
         case .waking: Self.wakingColor
-        case .offline, .away, .unknown: IslandPalette.track
+        case .offline, .away, .thisMacAddress, .unknown: IslandPalette.track
         }
     }
 
@@ -114,6 +114,9 @@ private struct WakeComputerCard: View {
                     Text(AppLocalization.string("island.computers.offline")).foregroundStyle(IslandPalette.tertiaryText)
                 case .away:
                     Text(AppLocalization.string("island.computers.away")).foregroundStyle(IslandPalette.tertiaryText)
+                case .thisMacAddress:
+                    Text(AppLocalization.string("island.computers.thisMacAddress"))
+                        .foregroundStyle(Color(red: 1, green: 0.74, blue: 0.2))
                 case .waking(let since):
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         Text(AppLocalization.formatted(

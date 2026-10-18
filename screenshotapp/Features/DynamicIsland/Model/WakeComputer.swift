@@ -63,6 +63,9 @@ nonisolated enum WakeComputerStatus: Equatable, Sendable {
     /// Its address is on a home network this Mac isn't on right now, so
     /// whether it's on can't be known (and a wake packet wouldn't reach it).
     case away
+    /// Its address belongs to this Mac (e.g. the router gave the computer's
+    /// old address to the Mac), so it can't be checked.
+    case thisMacAddress
     /// A magic packet went out; waiting for the computer to answer.
     case waking(since: Date)
 
@@ -123,19 +126,13 @@ nonisolated enum LocalNetworkReach {
     /// 192.168/16) and link-local (169.254/16) addresses only; anything
     /// else (a public or Tailscale 100.x address, a name) is nil.
     static func privateIPv4(_ text: String) -> UInt32? {
-        let parts = text.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: ".", omittingEmptySubsequences: false)
-        guard parts.count == 4 else { return nil }
-        var octets: [UInt32] = []
-        for part in parts {
-            guard !part.isEmpty, part.count <= 3, part.allSatisfy(\.isASCII), let value = UInt32(part), value <= 255 else { return nil }
-            octets.append(value)
-        }
-        let isPrivate = octets[0] == 10
-            || (octets[0] == 172 && (16...31).contains(octets[1]))
-            || (octets[0] == 192 && octets[1] == 168)
-            || (octets[0] == 169 && octets[1] == 254)
-        guard isPrivate else { return nil }
-        return octets.reduce(0) { $0 << 8 | $1 }
+        guard let value = ipv4(text) else { return nil }
+        let first = value >> 24, second = value >> 16 & 0xFF
+        let isPrivate = first == 10
+            || (first == 172 && (16...31).contains(second))
+            || (first == 192 && second == 168)
+            || (first == 169 && second == 254)
+        return isPrivate ? value : nil
     }
 
     /// Whether a `.local` (Bonjour) name, only resolvable on its own network.
@@ -146,6 +143,53 @@ nonisolated enum LocalNetworkReach {
     /// True when the address (a private IP, or the last address a `.local`
     /// name had) is on none of this Mac's networks. Unknown addresses and
     /// public/VPN ones are never "away".
+    /// Whether `host` is one of this Mac's own addresses.
+    static func isOwnAddress(_ host: String, subnets: [IPv4Subnet]) -> Bool {
+        guard let address = ipv4(host) else { return false }
+        return subnets.contains { $0.address == address }
+    }
+
+    /// The addresses to check a computer at: its host (unless that's this
+    /// Mac's own address) and the address the ARP table has for its MAC,
+    /// in case the router gave it a new one.
+    static func probeHosts(host: String, arpAddress: String?, subnets: [IPv4Subnet]) -> [String] {
+        var hosts: [String] = []
+        let trimmed = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty, !isOwnAddress(trimmed, subnets: subnets) { hosts.append(trimmed) }
+        if let arpAddress, !hosts.contains(arpAddress), !isOwnAddress(arpAddress, subnets: subnets) {
+            hosts.append(arpAddress)
+        }
+        return hosts
+    }
+
+    /// Any dotted IPv4 address → its 32-bit value.
+    static func ipv4(_ text: String) -> UInt32? {
+        let parts = text.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 4 else { return nil }
+        var value: UInt32 = 0
+        for part in parts {
+            guard !part.isEmpty, part.count <= 3, part.allSatisfy(\.isASCII), let octet = UInt32(part), octet <= 255 else { return nil }
+            value = value << 8 | octet
+        }
+        return value
+    }
+
+    /// `arp -an` lines ("? (192.168.1.7) at a:b:c:d:e:f on en0 …") → the
+    /// address of each MAC that has one. Incomplete entries are skipped.
+    static func arpAddresses(_ output: String) -> [[UInt8]: String] {
+        var table: [[UInt8]: String] = [:]
+        for line in output.split(separator: "\n") {
+            let words = line.split(separator: " ")
+            guard let at = words.firstIndex(of: "at"), at > 0, at + 1 < words.count else { continue }
+            let address = words[at - 1].trimmingCharacters(in: CharacterSet(charactersIn: "()"))
+            let octets = words[at + 1].split(separator: ":")
+            guard ipv4(address) != nil, octets.count == 6, octets.allSatisfy({ (1...2).contains($0.count) }) else { continue }
+            let padded = octets.map { $0.count == 1 ? "0" + $0 : String($0) }.joined()
+            if let mac = WakeOnLAN.macBytes(padded) { table[mac] = address }
+        }
+        return table
+    }
+
     static func isAway(host: String, lastKnownAddress: String?, subnets: [IPv4Subnet]) -> Bool {
         guard let address = privateIPv4(host) ?? lastKnownAddress.flatMap(privateIPv4) else { return false }
         return !subnets.contains { $0.contains(address) }

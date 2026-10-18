@@ -628,6 +628,7 @@
 "island.computers.waking" = "Açılıyor… %@";
 "island.computers.away" = "Kendi ağının dışında";
 "island.computers.awayHelp" = "Yalnızca aynı ağdan açılabilir";
+"island.computers.thisMacAddress" = "Bu IP bu Mac'e ait";
 "island.computers.checking" = "Kontrol ediliyor…";
 "island.computers.noAddress" = "Durumu görmek için IP ekle";
 "island.computers.invalidMAC" = "MAC adresini kontrol et";

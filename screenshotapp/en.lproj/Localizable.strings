@@ -628,6 +628,7 @@
 "island.computers.waking" = "Waking… %@";
 "island.computers.away" = "Away from its network";
 "island.computers.awayHelp" = "It can only be woken from the same network";
+"island.computers.thisMacAddress" = "That IP is this Mac's";
 "island.computers.checking" = "Checking…";
 "island.computers.noAddress" = "Add an IP to see its status";
 "island.computers.invalidMAC" = "Check the MAC address";

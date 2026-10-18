@@ -70,4 +70,26 @@ struct WakeOnLANTests {
         // Tailscale and public addresses are reachable from anywhere.
         #expect(!LocalNetworkReach.isAway(host: "100.101.102.103", lastKnownAddress: nil, subnets: cafe))
     }
+
+    @Test func skipsThisMacsOwnAddressAndUsesTheARPAddress() {
+        let mac = [IPv4Subnet(address: 0xC0A8_0103, mask: 0xFFFF_FF00)] // this Mac is 192.168.1.3/24
+        #expect(LocalNetworkReach.isOwnAddress("192.168.1.3", subnets: mac))
+        #expect(LocalNetworkReach.probeHosts(host: "192.168.1.3", arpAddress: nil, subnets: mac).isEmpty)
+        #expect(LocalNetworkReach.probeHosts(host: "192.168.1.3", arpAddress: "192.168.1.9", subnets: mac) == ["192.168.1.9"])
+        #expect(LocalNetworkReach.probeHosts(host: "192.168.1.9", arpAddress: "192.168.1.9", subnets: mac) == ["192.168.1.9"])
+        #expect(LocalNetworkReach.probeHosts(host: "pc.local", arpAddress: "192.168.1.9", subnets: mac) == ["pc.local", "192.168.1.9"])
+    }
+
+    @Test func readsTheARPTable() {
+        let output = """
+        ? (192.168.1.1) at 4:5f:a7:b:c:d on en0 ifscope [ethernet]
+        ? (192.168.1.9) at aa:bb:cc:1:2:f on en12 ifscope [ethernet]
+        ? (192.168.1.20) at (incomplete) on en0 ifscope [ethernet]
+        ? (224.0.0.251) at 1:0:5e:0:0:fb on en0 ifscope permanent [ethernet]
+        """
+        let table = LocalNetworkReach.arpAddresses(output)
+        #expect(table[[0xAA, 0xBB, 0xCC, 0x01, 0x02, 0x0F]] == "192.168.1.9")
+        #expect(table[[0x04, 0x5F, 0xA7, 0x0B, 0x0C, 0x0D]] == "192.168.1.1")
+        #expect(table.count == 3)
+    }
 }
